@@ -1,0 +1,88 @@
+name: Agent Backlog Sync
+
+# Keeps a GitHub Project (V2) board in sync with docs/moon/ROADMAP.md /
+# docs/moon/CHANGELOG.md by orchestrating git/scripts/sync_backlog.py. Runs on
+# pushes to main that touch either source-of-truth doc, or on demand via
+# workflow_dispatch for maintainers who want to force a resync without a doc
+# edit.
+#
+# NOT PORTABLE TO FORGEJO/GITEA: sync_backlog.py talks to the GitHub
+# Projects (V2) GraphQL API specifically -- Forgejo/Gitea's own "Projects"
+# feature is a simpler kanban board with a different, incompatible REST
+# schema, and there is no drop-in equivalent. Porting the script itself is
+# out of scope for a CI-config mirror; the job below fails fast with a
+# clear message instead of running and failing confusingly deep inside the
+# script on a GraphQL auth/schema error.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/moon/ROADMAP.md"
+      - "docs/moon/CHANGELOG.md"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Print the proposed diff without mutating the board"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: agent-backlog-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync backlog to Project board
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: "Guard: this workflow is GitHub-only"
+        run: |
+          echo "::error::Agent Backlog Sync targets the GitHub Projects (v2) GraphQL API and cannot run against a Forgejo/Gitea instance. This workflow is intentionally a no-op here -- see git/scripts/sync_backlog.py."
+          exit 1
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install automation dependencies
+        run: pip install pyyaml requests google-genai
+
+      - name: Validate automation config
+        run: |
+          python -c "import json,pathlib; json.loads(pathlib.Path('git/config/project_labels.json').read_text())"
+          python -c "import yaml,pathlib; yaml.safe_load(pathlib.Path('git/config/automation_rules.yaml').read_text())"
+
+      - name: Run backlog sync
+        env:
+          GITHUB_TOKEN: ${{ secrets.PROJECT_AUTOMATION_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PROJECT_ID: ${{ vars.PROJECT_ID }}
+        run: |
+          ARGS="--repo-owner ${{ github.repository_owner }} \
+                --repo-name $(basename ${{ github.repository }}) \
+                --project-id ${PROJECT_ID}"
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          python git/scripts/sync_backlog.py $ARGS
+
+      - name: Summarize run
+        if: always()
+        run: |
+          echo "### Agent Backlog Sync" >> "$GITHUB_STEP_SUMMARY"
+          echo "Trigger: ${{ github.event_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Dry run: ${{ inputs.dry_run || 'false' }}" >> "$GITHUB_STEP_SUMMARY"

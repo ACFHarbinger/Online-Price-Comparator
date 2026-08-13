@@ -1,0 +1,11 @@
+# tools/docs — build the documentation site.
+
+set shell := ["bash", "-c"]
+
+# Build MkDocs
+build:
+    uv run mkdocs build --config-file docs/mkdocs.yml --strict
+
+# Serve the MkDocs site locally with live reload
+serve:
+    uv run mkdocs serve --config-file docs/mkdocs.yml

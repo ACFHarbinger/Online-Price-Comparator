@@ -1,0 +1,44 @@
+# infra/cloud/azure-pipelines/azure-pipelines.yml
+# Multi-stage Azure DevOps CI/CD pipeline template.
+
+trigger:
+  - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+- stage: Build
+  displayName: 'Build and Compile Stage'
+  jobs:
+  - job: Compile
+    steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.11'
+    - script: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+      displayName: 'Install python dependencies'
+
+- stage: Test
+  displayName: 'Test Stage'
+  dependsOn: Build
+  jobs:
+  - job: RunTests
+    steps:
+    - script: |
+        pip install pytest
+        pytest
+      displayName: 'Execute PyTest suite'
+
+- stage: Deploy
+  displayName: 'Deploy Stage'
+  dependsOn: Test
+  condition: succeeded()
+  jobs:
+  - job: DeployCloud
+    steps:
+    - script: |
+        echo "Deploying serverless endpoints to cloud environment..."
+      displayName: 'Trigger serverless deployment'

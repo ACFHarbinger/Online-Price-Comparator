@@ -1,0 +1,63 @@
+# automation_rules.yaml
+#
+# Behavioral configuration for the sync_backlog / agent_tools automation
+# suite. This file is read by git/scripts/sync_backlog.py at runtime and
+# is NOT interpreted by GitHub itself -- it is our own DSL for how the
+# LLM-driven backlog agent should behave, particularly under ambiguity or
+# conflict. Keep this human-editable; the agent treats it as policy, not code.
+#
+
+version: 1
+
+project:
+  # GitHub Project (V2) number as shown in the project URL, e.g.
+  # https://github.com/users/<owner>/projects/<number>
+  # TODO (template adoption): update owner/number for your project's board.
+  number: 16
+  owner: "ACFHarbinger"
+  owner_type: "user"        # "user" | "org"
+
+sync:
+  # Files the agent is allowed to read as its source of truth for tickets.
+  source_documents:
+    - "docs/moon/ROADMAP.md"
+    - "docs/moon/CHANGELOG.md"
+  # Directional policy: what happens when the doc and the board disagree.
+  conflict_resolution:
+    # "doc_wins": overwrite board state from markdown
+    # "board_wins": never downgrade a board card from markdown re-parse
+    # "flag_only": never mutate, just label agent:needs-human
+    strategy: "flag_only"
+    escalation_label: "agent:needs-human"
+    max_auto_mutations_per_run: 15   # circuit breaker: refuse to bulk-close/create beyond this
+  # Statuses the agent is permitted to move a ticket into without human sign-off.
+  auto_transition_allowed:
+    - "status:backlog"
+    - "status:ready"
+    - "status:in-progress"
+  # Statuses that always require a human to move (agent may only *suggest*).
+  human_confirm_required:
+    - "status:done"
+    - "status:in-review"
+
+llm:
+  provider: "google-genai"
+  model: "gemini-2.5-pro"
+  temperature: 0.1
+  max_output_tokens: 4096
+  # Refuse to act on LLM output that isn't valid structured JSON matching
+  # the expected ticket schema -- never eval free text into a mutation.
+  require_structured_output: true
+
+commit_ref:
+  # Regex family accepted by check_commit_ref.py, e.g. "Refs: #123", "Fixes DRT-42"
+  patterns:
+    - '(?i)\b(fixes|closes|refs|relates-to)\s*:?\s*#(\d+)\b'
+    - '(?i)\bDRT-(\d+)\b'
+  # If no ticket reference is found on a commit touching src/, warn but do not block.
+  block_commit_on_missing_ref: false
+
+notifications:
+  # Where agent:needs-human escalations get an extra nudge, beyond the label itself.
+  comment_on_issue: true
+  mention_users: []   # e.g. ["ACFHarbinger"]

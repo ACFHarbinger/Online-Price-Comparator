@@ -1,0 +1,49 @@
+name: 🐛 Bug Report
+description: Report a defect (structured for humans and coding agents)
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. This is a polyglot template — telling us which module is
+        affected speeds up triage a lot.
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: Affected module
+      description: Which part of the codebase?
+      options:
+        - Python (python/)
+        - TypeScript (typescript/)
+        - Kotlin (kotlin/)
+        - Rust (rust/)
+        - Go (go/)
+        - Python (src/)
+        - Build / tooling (just, docker, CI)
+        - Other / unknown
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Expected vs actual behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal, exact steps — commands, inputs, environment.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      render: shell

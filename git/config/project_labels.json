@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema#",
+  "description": "Canonical label taxonomy for Python-Module-Template. Consumed by sync_backlog.py to validate/create labels and by agent_tools.py to route tickets to Project V2 fields. TODO (template adoption): rename `component:*` entries to match your project's actual modules once this template seeds a real repo.",
+  "components": [
+    { "name": "component:python",       "color": "3776AB", "description": "python/ module" },
+    { "name": "component:typescript",   "color": "3178C6", "description": "typescript/ module" },
+    { "name": "component:kotlin",       "color": "7F52FF", "description": "kotlin/ module" },
+    { "name": "component:java",         "color": "ED8B00", "description": "java/ module" },
+    { "name": "component:rust",         "color": "000000", "description": "rust/ module" },
+    { "name": "component:go",           "color": "00ADD8", "description": "go/ module" },
+    { "name": "component:python",          "color": "00599C", "description": "Python module" },
+    { "name": "component:dev-tools",    "color": "5319E7", "description": "dev/ developer-assistant tool (see docs/moon/roadmaps/developer_tools.md)" },
+    { "name": "component:ci-automation","color": "C5DEF5", "description": "GitHub Actions, bots, and repo automation" },
+    { "name": "component:docs",         "color": "BFD4F2", "description": "Documentation and ADRs" }
+  ],
+  "priority": [
+    { "name": "priority:p0", "color": "B60205", "description": "Drop everything; blocks release or CI" },
+    { "name": "priority:p1", "color": "D93F0B", "description": "Should land in the current sprint" },
+    { "name": "priority:p2", "color": "FBCA04", "description": "Planned, not urgent" }
+  ],
+  "status": [
+    { "name": "status:backlog",     "color": "EDEDED", "description": "Not yet assessed by agent or maintainer" },
+    { "name": "status:ready",       "color": "0E8A16", "description": "Scoped and ready for work" },
+    { "name": "status:in-progress", "color": "1D76DB", "description": "Actively being worked on" },
+    { "name": "status:in-review",   "color": "5319E7", "description": "PR open, awaiting review" },
+    { "name": "status:done",        "color": "0E8A16", "description": "Merged and verified" }
+  ],
+  "agent": [
+    { "name": "agent:generated",     "color": "E4E669", "description": "Ticket authored by sync_backlog.py from roadmap/changelog" },
+    { "name": "agent:needs-human",   "color": "D93F0B", "description": "Agent flagged ambiguity requiring maintainer input" }
+  ]
+}

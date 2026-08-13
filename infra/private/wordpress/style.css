@@ -1,0 +1,17 @@
+/*
+Theme Name: Python Module Template WordPress Theme
+Theme URI: https://github.com/ACFHarbinger/python-module-template
+Author: ACFHarbinger
+Author URI: https://github.com/ACFHarbinger
+Description: Premium boilerplate theme designed for Python Module Template integration.
+Version: 1.0.0
+License: GNU General Public License v2 or later
+License URI: http://www.gnu.org/licenses/gpl-2.0.html
+Text Domain: python_module_template-wp
+*/
+
+body {
+  font-family: 'Outfit', sans-serif;
+  color: #1e293b;
+  background-color: #f8fafc;
+}

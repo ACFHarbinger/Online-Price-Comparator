@@ -1,0 +1,171 @@
+# GitLab CI/CD Pipeline
+# Native-syntax translation of the GitHub Actions workflows under .github/workflows/:
+# ci.yml, benchmark.yml, security.yml, docs.yml. agent_sync.yml is GitHub-Projects-
+# specific (see the note under the "sync" stage below) and has no GitLab job here.
+
+stages:
+  - test
+  - security
+  - docs
+  - benchmark
+
+# ==========================================
+# STAGE: TEST (ci.yml)
+# ==========================================
+lint-test-python:
+  stage: test
+  image: python:3.12
+  script:
+    - pip install uv
+    - cd python
+    - uv sync --group dev
+    - uv run ruff check .
+    - uv run mypy src
+    - uv run pytest test -v --cov=src --cov-report=xml
+  coverage: '/TOTAL.*\s+(\d+%)$/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: python/coverage.xml
+
+lint-test-typescript:
+  stage: test
+  image: node:22
+  script:
+    - cd typescript
+    - npm ci
+    - npm run lint
+    - npm test
+
+lint-test-rust:
+  stage: test
+  image: rust:latest
+  script:
+    - rustup component add rustfmt clippy
+    - cd rust
+    - cargo fmt -- --check
+    - cargo clippy --all-targets -- -D warnings
+    - cargo test
+
+lint-test-go:
+  stage: test
+  image: golang:1.22
+  script:
+    - cd go
+    - test -z "$(gofmt -l .)"
+    - go vet ./...
+    - go test ./...
+
+lint-test-kotlin:
+  stage: test
+  image: eclipse-temurin:21-jdk
+  script:
+    - cd kotlin
+    - ./gradlew ktlintCheck test
+
+lint-test-java:
+  stage: test
+  image: maven:3-eclipse-temurin-21
+  script:
+    - cd java
+    - mvn -B test
+
+build-test-python:
+  stage: test
+  image: ubuntu:22.04
+  before_script:
+    - apt-get update && apt-get install -y cmake g++ make
+  script:
+    - uv sync
+    - uv run ruff check .
+    - uv run mypy src test
+    - uv run pytest
+
+# ==========================================
+# STAGE: SECURITY (security.yml)
+# ==========================================
+security-cargo-audit:
+  stage: security
+  image: rust:latest
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+  script:
+    - cargo install cargo-audit --locked
+    - cd rust
+    - cargo audit
+
+security-pip-audit:
+  stage: security
+  image: python:3.12
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+  script:
+    - pip install uv
+    - cd python
+    - uv sync --group dev
+    - uv run pip-audit
+
+security-npm-audit:
+  stage: security
+  image: node:22
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+  script:
+    - cd typescript
+    - npm audit --audit-level=high
+
+# ==========================================
+# STAGE: DOCS (docs.yml)
+# ==========================================
+# This special job name "pages" is required by GitLab to deploy to GitLab Pages.
+pages:
+  stage: docs
+  image: python:3.12
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      changes:
+        - "docs/**/*"
+        - "python/validation/docs/**/*"
+        - "mkdocs.yml"
+  script:
+    - pip install uv
+    - uv pip install --system mkdocs-material mkdocstrings[python] mkdocs-jupyter
+    # GitLab Pages requires the output directory to be named "public"
+    - mkdocs build --config-file docs/mkdocs.yml --strict --site-dir public
+  artifacts:
+    paths:
+      - public
+
+# ==========================================
+# STAGE: BENCHMARK (benchmark.yml)
+# ==========================================
+benchmark:
+  stage: benchmark
+  image: rust:latest
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      changes:
+        - "**/benchmark/**/*"
+        - "**/benches/**/*"
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+  script:
+    - cd rust
+    - cargo bench
+    - cd ../python
+    - pip install uv
+    - uv sync --group dev
+    - uv run pytest benchmark --benchmark-only
+
+# ==========================================
+# STAGE: SYNC (agent_sync.yml) -- not portable
+# ==========================================
+# agent_sync.yml orchestrates git/scripts/sync_backlog.py, which talks to
+# the GitHub Projects (V2) GraphQL API specifically. GitLab has its own
+# Issue Boards / epics feature with a different, incompatible API -- no
+# drop-in translation exists, and porting the script itself is out of scope
+# for a CI-config mirror. No GitLab job is defined for this; enable a
+# GitLab-native equivalent separately if backlog automation is needed here.

@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+#
+# pre-commit hook: soft-warn (never block, by default) when the *staged*
+# commit message draft is unavailable to check yet -- ticket-reference
+# enforcement itself happens in commit-msg / post-commit, since the commit
+# message doesn't exist at pre-commit time. This hook's job is limited to
+# fast, local sanity checks that should run before we even open an editor.
+#
+# Currently: verifies git/config/automation_rules.yaml and
+# git/config/project_labels.json are valid, since a broken config would
+# otherwise silently disable all downstream automation.
+
+set -uo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [[ -z "${REPO_ROOT}" ]]; then
+  exit 0
+fi
+
+PYTHON_BIN="${PYTHON_BIN:-python3}"
+
+if ! command -v "${PYTHON_BIN}" >/dev/null 2>&1; then
+  exit 0
+fi
+
+"${PYTHON_BIN}" - "${REPO_ROOT}" <<'PYEOF'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+labels_path = root / "git" / "config" / "project_labels.json"
+rules_path = root / "git" / "config" / "automation_rules.yaml"
+
+try:
+    if labels_path.exists():
+        json.loads(labels_path.read_text(encoding="utf-8"))
+except json.JSONDecodeError as exc:
+    print(f"pre-commit: invalid project_labels.json: {exc}", file=sys.stderr)
+    sys.exit(1)
+
+try:
+    import yaml
+    if rules_path.exists():
+        yaml.safe_load(rules_path.read_text(encoding="utf-8"))
+except Exception as exc:  # noqa: BLE001
+    print(f"pre-commit: invalid automation_rules.yaml: {exc}", file=sys.stderr)
+    sys.exit(1)
+PYEOF
+
+exit $?

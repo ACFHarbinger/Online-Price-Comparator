@@ -1,0 +1,25 @@
+# Example: reverse-proxy nginx in front of an upstream (another nginx,
+# static file server, or container on port 8080).
+#
+# Enable by renaming to reverse-proxy.conf (or including from nginx.conf)
+# and disabling app.conf if you only want the proxy path.
+
+# upstream github_pages_upstream {
+#     server 127.0.0.1:8080;
+#     keepalive 32;
+# }
+#
+# server {
+#     listen 80;
+#     server_name example.com;
+#
+#     location / {
+#         proxy_http_version 1.1;
+#         proxy_set_header Host $host;
+#         proxy_set_header X-Real-IP $remote_addr;
+#         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#         proxy_set_header X-Forwarded-Proto $scheme;
+#         proxy_set_header Connection "";
+#         proxy_pass http://github_pages_upstream;
+#     }
+# }

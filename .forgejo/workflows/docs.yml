@@ -1,0 +1,50 @@
+name: Docs
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "python/validation/docs/**"
+      - "mkdocs.yml"
+
+permissions:
+  contents: write # push to the pages branch (no GitHub Pages OIDC deploy on Forgejo/Gitea)
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv pip install --system mkdocs-material mkdocstrings[python] mkdocs-jupyter
+      - run: mkdocs build --config-file docs/mkdocs.yml --strict
+
+      # No actions/upload-pages-artifact + actions/deploy-pages equivalent on
+      # Forgejo/Gitea (that pair is GitHub's OIDC-based Pages deployment
+      # mechanism). Pushes the built site to a `pages` branch via plain git
+      # instead -- portable to any Forgejo/Gitea instance regardless of
+      # whether Forgejo Pages, Codeberg Pages, or a separately configured
+      # static host is watching that branch. Full overwrite each run (no
+      # PR-preview subdirectory concept here, unlike a multi-tenant preview
+      # setup), so no need to clone the branch first.
+      - name: Deploy to Pages branch
+        run: |
+          set -euo pipefail
+          AUTH_URL="${GITHUB_SERVER_URL/#https:\/\//https:\/\/x-access-token:${{ secrets.GITHUB_TOKEN }}@}/${GITHUB_REPOSITORY}.git"
+          cd site
+          git init -q -b pages
+          git config user.name "forgejo-actions"
+          git config user.email "actions@noreply.localhost"
+          git add -A
+          git commit -q -m "docs: deploy ${GITHUB_SHA}"
+          git push --force "${AUTH_URL}" HEAD:pages
+          # Whether/how this instance serves the `pages` branch as a website
+          # (Forgejo Pages, Codeberg Pages, a separate static host, or not at
+          # all) is instance-specific -- see your Forgejo/Gitea admin's Pages
+          # setup for the actual browsable URL.

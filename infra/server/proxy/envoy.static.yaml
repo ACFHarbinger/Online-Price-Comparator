@@ -1,0 +1,64 @@
+# Envoy serving static files from a mounted volume (no upstream).
+#
+# Requires the envoyproxy/envoy image with a static-file capable filter setup,
+# or pair this with a sidecar. Prefer infra/server/nginx for pure static
+# hosting; use this file when Envoy is the only edge process and the
+# origin is still a local directory via a simple TCP/HTTP file server.
+#
+# Example with a tiny static file server as the origin (host network):
+#   npx --yes serve@latest out -l 8081
+#   docker run --rm -p 8080:8080 --add-host=host.docker.internal:host-gateway \
+#     -v "$PWD/infra/server/proxy/envoy.static.yaml:/etc/envoy/envoy.yaml:ro" \
+#     envoyproxy/envoy:v1.31-latest -c /etc/envoy/envoy.yaml
+
+admin:
+  address:
+    socket_address:
+      address: 0.0.0.0
+      port_value: 9901
+
+static_resources:
+  listeners:
+    - name: listener_http
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 8080
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: github_pages_static
+                codec_type: AUTO
+                route_config:
+                  name: local_route
+                  virtual_hosts:
+                    - name: github_pages
+                      domains: ["*"]
+                      routes:
+                        - match:
+                            prefix: "/"
+                          route:
+                            cluster: local_file_server
+                            timeout: 15s
+                http_filters:
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
+  clusters:
+    - name: local_file_server
+      connect_timeout: 1s
+      type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: local_file_server
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: host.docker.internal
+                      port_value: 8081

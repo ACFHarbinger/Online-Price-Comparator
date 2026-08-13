@@ -1,0 +1,21 @@
+name: Benchmark
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "**/benchmark/**"
+      - "**/benches/**"
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo bench
+        working-directory: rust
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --group dev && uv run pytest benchmark --benchmark-only
+        working-directory: python

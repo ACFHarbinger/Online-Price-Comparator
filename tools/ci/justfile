@@ -1,0 +1,10 @@
+# tools/ci — recipes mirroring what CI runs, for local reproduction.
+
+set shell := ["bash", "-c"]
+
+# Run the same checks as .github/workflows/ci.yml, locally.
+# Run from the repo root as `just ci::reproduce` (it shells out to the root
+# justfile's lint/test recipes rather than importing sub-modules directly,
+# since just doesn't support cross-module recipe calls from a sub-module).
+reproduce:
+    cd ../.. && just lint && just test

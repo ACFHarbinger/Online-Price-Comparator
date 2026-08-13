@@ -1,0 +1,8 @@
+# tools/test — run Python test suite.
+
+set shell := ["bash", "-c"]
+
+all: python
+
+python:
+    uv run pytest

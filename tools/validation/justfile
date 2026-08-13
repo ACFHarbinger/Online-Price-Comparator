@@ -1,0 +1,9 @@
+# tools/validation — run Python quality checks (linter + typechecker).
+
+set shell := ["bash", "-c"]
+
+all: python
+
+python:
+    uv run ruff check .
+    uv run mypy src test

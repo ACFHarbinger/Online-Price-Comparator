@@ -1,0 +1,8 @@
+# tools/bench — run benchmarks for Python.
+
+set shell := ["bash", "-c"]
+
+all: python
+
+python:
+    uv run python benchmark/bench_core.py

@@ -1,0 +1,64 @@
+site_name: Python-Module-Template Documentation
+site_description: >-
+  Documentation portal for Python-Module-Template Python repository.
+site_author: ACFHarbinger
+repo_url: https://github.com/ACFHarbinger/Python-Module-Template
+repo_name: ACFHarbinger/Python-Module-Template
+edit_uri: edit/main/docs/
+
+docs_dir: .
+site_dir: ../site
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [../src]
+          options:
+            docstring_style: google
+            show_source: true
+
+nav:
+  - Home: index.md
+  - Architecture: ARCHITECTURE.md
+  - Development: DEVELOPMENT.md
+  - Testing: TESTING.md
+  - Dependencies: DEPENDENCIES.md
+  - Dependency Policy: DEPENDENCY_POLICY.md
+  - Documentation Standards: DOCUMENTATION_STANDARDS.md
+  - Benchmarks: BENCHMARKS.md
+  - Troubleshooting: TROUBLESHOOTING.md
+  - Glossary: GLOSSARY.md
+  - Architecture Decisions: adr/
+  - Roadmap: moon/ROADMAP.md
+  - Changelog: moon/CHANGELOG.md
+  - Research: moon/research/TEMPLATE.md
+  - Reports: moon/reports/TEMPLATE.md

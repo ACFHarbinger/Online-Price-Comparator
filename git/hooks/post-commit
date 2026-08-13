@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+#
+# post-commit hook: verify the just-made commit references a ticket ID and,
+# if so, best-effort transition that ticket's board status.
+#
+# This file is NOT executed automatically by git -- git only runs hooks
+# from `.git/hooks/`, which is untracked. Run git/hooks/install.sh to
+# symlink this in.
+#
+# Fails open: a non-zero exit here would abort nothing (post-commit cannot
+# block a commit that already happened), but we still exit 0 explicitly so
+# tooling that inspects hook exit codes doesn't misreport a failure.
+
+set -uo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [[ -z "${REPO_ROOT}" ]]; then
+  exit 0
+fi
+
+CHECK_SCRIPT="${REPO_ROOT}/git/scripts/check_commit_ref.py"
+COMMIT_MSG_FILE="${REPO_ROOT}/.git/COMMIT_EDITMSG"
+
+if [[ ! -f "${CHECK_SCRIPT}" ]]; then
+  echo "post-commit: check_commit_ref.py not found, skipping" >&2
+  exit 0
+fi
+
+if ! command -v uv >/dev/null 2>&1; then
+  echo "post-commit: uv not found on PATH, skipping ticket check" >&2
+  exit 0
+fi
+
+# check_commit_ref.py imports agent_tools via a relative import, so it must
+# run as the `git.scripts` package (cwd at the repo root) rather than as a
+# bare script.
+(cd "${REPO_ROOT}" && uv run python -m git.scripts.check_commit_ref --commit-msg-file "${COMMIT_MSG_FILE}") || {
+  echo "post-commit: ticket reference check reported an issue (non-blocking)" >&2
+}
+
+exit 0

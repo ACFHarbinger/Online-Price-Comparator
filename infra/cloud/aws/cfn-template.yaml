@@ -1,0 +1,38 @@
+# infra/cloud/aws/cfn-template.yaml
+# CloudFormation template for a serverless infrastructure stack.
+
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Serverless Backend stack for the Python Module Template.
+
+Resources:
+  # DynamoDB Database Table
+  PythonModuleTemplateTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Name: id
+        Type: String
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+  # Lambda Function
+  PythonModuleTemplateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handler.lambda_handler
+      Runtime: python3.11
+      CodeUri: ./src
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref PythonModuleTemplateTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PythonModuleTemplateTable
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /status
+            Method: get

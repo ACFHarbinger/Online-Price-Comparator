@@ -1,0 +1,32 @@
+# infra/cloud/serverless/serverless.yml
+# Serverless Framework configuration.
+
+service: python-module-template-service
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: python3.11
+  stage: dev
+  region: us-east-1
+  environment:
+    STAGE: ${self:provider.stage}
+
+functions:
+  apiStatus:
+    handler: handler.status
+    events:
+      - httpApi:
+          path: /api/status
+          method: get
+
+  processData:
+    handler: handler.process
+    events:
+      - httpApi:
+          path: /api/process
+          method: post
+
+plugins:
+  - serverless-offline

@@ -1,0 +1,8 @@
+# tools/build — build Python package distribution.
+
+set shell := ["bash", "-c"]
+
+all: python
+
+python:
+    uv build

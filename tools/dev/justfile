@@ -1,0 +1,22 @@
+# tools/dev — environment setup and maintenance.
+
+set shell := ["bash", "-c"]
+
+# Set up the dev environment
+setup:
+    @echo "Setting up dev environment..."
+    uv sync --all-extras --all-groups
+    @echo "Setup complete. Run 'just test' to verify."
+
+# Update dependencies
+update:
+    @echo "Updating dependencies..."
+    uv sync --all-extras --all-groups
+
+# Run pre-commit hooks manually
+pre-commit:
+    uv run pre-commit run --all-files
+
+# Clean build artifacts
+clean:
+    rm -rf .venv .pytest_cache .mypy_cache .ruff_cache site build dist *.egg-info

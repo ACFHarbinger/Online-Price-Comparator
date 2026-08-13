@@ -50,6 +50,15 @@ def _run_search(keywords: str, limit: int) -> int:
     return 0
 
 
+def _run_dashboard(host: str, port: int, debug: bool) -> int:
+    """Launch the Dash dashboard's development server."""
+    from dashboard.app import create_app
+
+    app = create_app()
+    app.run(host=host, port=port, debug=debug)
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """CLI main execution entry point.
 
@@ -73,6 +82,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--limit", type=int, default=20, help="Max results per source"
     )
 
+    dashboard_parser = subparsers.add_parser(
+        "dashboard", help="Launch the Dash price-comparison dashboard"
+    )
+    dashboard_parser.add_argument(
+        "--host", default="127.0.0.1", help="Host to bind the dev server to"
+    )
+    dashboard_parser.add_argument(
+        "--port", type=int, default=8050, help="Port to bind the dev server to"
+    )
+    dashboard_parser.add_argument(
+        "--debug", action="store_true", help="Run the Dash dev server in debug mode"
+    )
+
     args = parser.parse_args(argv)
 
     if args.version:
@@ -81,6 +103,9 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "search":
         return _run_search(args.keywords, args.limit)
+
+    if args.command == "dashboard":
+        return _run_dashboard(args.host, args.port, args.debug)
 
     parser.print_help()
     return 0

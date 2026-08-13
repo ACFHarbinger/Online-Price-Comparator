@@ -24,6 +24,9 @@ docs/sphinx/_build/
 .env
 .env.local
 
+# Runtime data (SQLite DB, etc.)
+data/
+
 # IDE & Editor files
 .vscode/
 .idea/

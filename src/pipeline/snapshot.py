@@ -3,10 +3,16 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 
 from sqlalchemy import Engine
 
-from matching import MatchStatus, build_profile_from_query, match_listing
+from matching import (
+    MatchStatus,
+    build_profile_from_query,
+    detect_anomalies,
+    match_listing,
+)
 from models.listing import RawListing
 from normalize.price import parse_price
 from storage.repository import (
@@ -16,6 +22,16 @@ from storage.repository import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class _ConfirmedObservation:
+    """A parsed, identity-confirmed price, pending an anomaly check."""
+
+    raw: RawListing
+    listing_id: int
+    amount: float
+    currency: str
 
 
 def persist_snapshot(
@@ -31,6 +47,11 @@ def persist_snapshot(
     but excluded from all read-side queries until a later, config-driven
     match mode lets a user promote them. Listings whose price text can't
     be parsed are skipped entirely (logged, not fatal).
+
+    Confirmed listings are then checked for cross-retailer price outliers
+    (`matching.detect_anomalies`, over this snapshot's confirmed prices)
+    before writing `price_history` - an anomalous point is still recorded
+    (never dropped), just flagged so read-side queries skip past it.
     """
     product_repo = ProductRepository(engine)
     listing_repo = ListingRepository(engine)
@@ -39,6 +60,7 @@ def persist_snapshot(
     product_id = product_repo.get_or_create(query_text)
     profile = build_profile_from_query(query_text)
 
+    confirmed: list[_ConfirmedObservation] = []
     for raw in raw_listings:
         try:
             amount, currency = parse_price(raw.price_text, raw.currency_hint)
@@ -73,12 +95,30 @@ def persist_snapshot(
             )
             continue
 
+        confirmed.append(_ConfirmedObservation(raw, listing_id, amount, currency))
+
+    anomalies = detect_anomalies(
+        [observation.amount for observation in confirmed],
+        [observation.raw.title for observation in confirmed],
+    )
+    for observation, anomaly in zip(confirmed, anomalies, strict=True):
+        if anomaly.is_anomalous:
+            logger.warning(
+                "Anomalous price flagged (%s) for %r from %s: %s",
+                anomaly.reason,
+                observation.raw.title,
+                observation.raw.source,
+                anomaly.basis,
+            )
         price_repo.add(
-            listing_id=listing_id,
-            price_amount=amount,
-            currency=currency,
-            observed_at=raw.fetched_at,
-            raw_price_text=raw.price_text,
+            listing_id=observation.listing_id,
+            price_amount=observation.amount,
+            currency=observation.currency,
+            observed_at=observation.raw.fetched_at,
+            raw_price_text=observation.raw.price_text,
+            is_anomalous=anomaly.is_anomalous,
+            anomaly_reason=anomaly.reason,
+            anomaly_basis=anomaly.basis,
         )
 
     return product_id

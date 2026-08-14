@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from sqlalchemy import (
+    Boolean,
     Column,
     DateTime,
     Float,
@@ -56,4 +57,11 @@ price_history = Table(
     Column("currency", String, nullable=False, default="EUR"),
     Column("observed_at", DateTime, nullable=False),
     Column("raw_price_text", String, nullable=True),
+    # Cross-retailer price-outlier flag for this observation (see
+    # src/matching/anomaly.py) - flagged, never deleted. Read-side queries
+    # exclude is_anomalous=True by default so a bad price never surfaces as
+    # "the price" without an explicit reveal.
+    Column("is_anomalous", Boolean, nullable=False, default=False),
+    Column("anomaly_reason", String, nullable=True),
+    Column("anomaly_basis", String, nullable=True),
 )

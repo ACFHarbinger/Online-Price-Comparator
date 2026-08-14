@@ -178,6 +178,7 @@ class ListingRepository:
                 price_history.c.listing_id,
                 func.max(price_history.c.observed_at).label("max_observed_at"),
             )
+            .where(price_history.c.is_anomalous.is_(False))
             .group_by(price_history.c.listing_id)
             .subquery()
         )
@@ -188,6 +189,7 @@ class ListingRepository:
                 price_history.c.currency,
                 price_history.c.observed_at,
             )
+            .where(price_history.c.is_anomalous.is_(False))
             .join(
                 latest_per_listing,
                 (price_history.c.listing_id == latest_per_listing.c.listing_id)
@@ -245,6 +247,9 @@ class PriceHistoryRepository:
         currency: str,
         observed_at: datetime,
         raw_price_text: str | None,
+        is_anomalous: bool = False,
+        anomaly_reason: str | None = None,
+        anomaly_basis: str | None = None,
     ) -> None:
         """Append a new price observation for a listing."""
         with self.engine.begin() as conn:
@@ -255,16 +260,25 @@ class PriceHistoryRepository:
                     currency=currency,
                     observed_at=observed_at,
                     raw_price_text=raw_price_text,
+                    is_anomalous=is_anomalous,
+                    anomaly_reason=anomaly_reason,
+                    anomaly_basis=anomaly_basis,
                 )
             )
 
     def latest_prices_by_site(self, product_id: int) -> list[SitePricePoint]:
-        """One row per site: its most recent observed price, for the snapshot chart."""
+        """One row per site: its most recent observed, non-anomalous price.
+
+        Drives the snapshot chart. Anomalous observations are excluded
+        entirely, not just deprioritized - the "latest" price for a site
+        skips past any flagged rows to the most recent trustworthy one.
+        """
         latest_per_listing = (
             select(
                 price_history.c.listing_id,
                 func.max(price_history.c.observed_at).label("max_observed_at"),
             )
+            .where(price_history.c.is_anomalous.is_(False))
             .group_by(price_history.c.listing_id)
             .subquery()
         )
@@ -285,6 +299,7 @@ class PriceHistoryRepository:
             .where(
                 listings.c.product_id == product_id,
                 listings.c.match_status.in_(MATCHED_STATUSES),
+                price_history.c.is_anomalous.is_(False),
             )
         )
         with self.engine.connect() as conn:
@@ -301,7 +316,11 @@ class PriceHistoryRepository:
         ]
 
     def price_history_by_site(self, product_id: int) -> list[SitePricePoint]:
-        """Full price history for a product, ordered by time. Drives the trend chart."""
+        """Full non-anomalous price history for a product, ordered by time.
+
+        Drives the trend chart. Anomalous points are dropped from the
+        series rather than shown as a spike/dip in the line chart.
+        """
         stmt = (
             select(
                 listings.c.site_key,
@@ -314,6 +333,7 @@ class PriceHistoryRepository:
             .where(
                 listings.c.product_id == product_id,
                 listings.c.match_status.in_(MATCHED_STATUSES),
+                price_history.c.is_anomalous.is_(False),
             )
             .order_by(price_history.c.observed_at)
         )

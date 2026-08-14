@@ -9,8 +9,16 @@ default:
 # Set up local virtual environment and install dependencies
 setup:
     uv venv .venv
-    uv sync --extra dev --extra docs
+    uv sync
     uv run pre-commit install
+
+# Search for a product's price across configured sources
+search *ARGS:
+    uv run online-price-comparator search {{ ARGS }}
+
+# Launch the Dash price-comparison dashboard
+dashboard *ARGS:
+    uv run online-price-comparator dashboard {{ ARGS }}
 
 # Run full test suite with coverage
 test:

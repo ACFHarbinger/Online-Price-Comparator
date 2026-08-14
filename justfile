@@ -12,13 +12,20 @@ setup:
     uv sync
     uv run pre-commit install
 
+# --extra browser on search/dashboard: `uv run` re-syncs the venv to the
+# base dependency set on every invocation, which would otherwise silently
+# uninstall Playwright (an optional extra) the moment any plain
+# `uv run`/`uv sync` runs in between - keeping it here means the
+# PcComponentes browser fallback stays usable even when
+# BROWSER_FALLBACK_ENABLED=false right now.
+
 # Search for a product's price across configured sources
 search *ARGS:
-    uv run online-price-comparator search {{ ARGS }}
+    uv run --extra browser online-price-comparator search {{ ARGS }}
 
 # Launch the Dash price-comparison dashboard
 dashboard *ARGS:
-    uv run online-price-comparator dashboard {{ ARGS }}
+    uv run --extra browser online-price-comparator dashboard {{ ARGS }}
 
 # Run full test suite with coverage
 test:

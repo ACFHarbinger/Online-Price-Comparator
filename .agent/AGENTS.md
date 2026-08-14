@@ -1,11 +1,13 @@
 # AGENTS.md - Instructions for Coding Assistant LLMs
 
-[![C++](https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white)](https://isocpp.org/)
-[![CMake](https://img.shields.io/badge/CMake-Build-064F8C?logo=cmake&logoColor=white)](https://cmake.org/)
+> **Version**: 2.0
+> **Last Updated**: 2026-08-14
+> **Purpose**: Authoritative reference for AI assistants (Claude, Grok, Codex, Gemini, etc.) working in this repository.
 
-> **Version**: 1.0
-> **Last Updated**: 2026-08-06
-> **Purpose**: Authoritative reference for AI assistants (Claude, GPT, Gemini, Copilot, etc.) working in repositories generated from this template.
+This file previously described a C++/CMake/GoogleTest template — that was a
+copy-paste leftover from a sibling variant of the scaffolding this repo was
+generated from and never matched anything actually in this repo. Everything
+below reflects the real, current stack.
 
 ## Table of Contents
 
@@ -13,51 +15,166 @@
 2. [Technical Stack & Governance](#2-technical-stack--governance)
 3. [Module Boundaries](#3-module-boundaries)
 4. [Key CLI Entry Points](#4-key-cli-entry-points)
-5. [Coding Standards](#5-coding-standards)
-6. [Known Constraints](#6-known-constraints)
+5. [Extending the System](#5-extending-the-system)
+6. [Coding Standards](#6-coding-standards)
+7. [Known Constraints](#7-known-constraints)
+8. [Data, Privacy & Scraping Ethics](#8-data-privacy--scraping-ethics)
+9. [Roadmap & Further Reading](#9-roadmap--further-reading)
 
 ## 1. Project Overview & Mission
 
-`Python-Module-Template` is a GitHub template repository designed for single-module C++ projects. It provides modern C++ scaffolding including CMake build configurations, GoogleTest unit testing, Google Benchmark micro-benchmarks, CI/CD pipelines, containerized dev environments, pre-commit hooks, and LLM coding-agent instructions.
+Online Price Comparator is a personal, solo-run watchlist tool: given a
+product's keywords, it discovers listings across a mix of search-API
+providers and site-specific scrapers (currently Amazon.es and PcComponentes,
+more Iberian retailers planned), builds real price history in SQLite over
+repeated runs, and presents a Plotly Dash dashboard showing per-site links, a
+product image, a cross-site snapshot price comparison, and each site's
+historical price trend. It deliberately does **not** try to be a broad
+shopping index (that's Idealo/KuantoKusta's job) — see
+[docs/moon/ROADMAP.md](../docs/moon/ROADMAP.md) for the full product
+direction and explicit scope boundaries.
 
 ## 2. Technical Stack & Governance
 
 | Component | Specification | Notes |
 | --- | --- | --- |
-| C++ | C++17 | Standardized modern C++ language standard |
-| Build System | CMake 3.20+ | Root `CMakeLists.txt` builds libraries, executables, tests, benchmarks |
-| Unit Testing | GoogleTest 1.15+ | Integrated via `FetchContent` / `find_package` |
-| Benchmarks | Google Benchmark 1.9+ | Integrated via `FetchContent` / `find_package` |
-| Task Runner | Just | Command recipes in `justfile` and `tools/` |
-| Config | `.env` / `config/` | JSON / environment configuration |
+| Language | Python 3.11+ | `from __future__ import annotations` in every file |
+| Package manager | [`uv`](https://github.com/astral-sh/uv) | `uv sync`, `uv run ...` |
+| Task runner | [`just`](https://github.com/casey/just) | `just --list` for available recipes |
+| HTTP client | `httpx` | `src/fetch/http_client.py` — shared client factory + retry helper |
+| HTML parsing | `beautifulsoup4` + `lxml` | Used by `src/scrapers/` |
+| Persistence | SQLite via `sqlalchemy` (Core, **no ORM**) | `src/storage/` |
+| Matching | `rapidfuzz` | `src/matching/` — product identity + price anomaly detection |
+| Config | `pydantic-settings` | `src/config/settings.py`, loads `.env` |
+| Dashboard | `dash` + `plotly` | `src/dashboard/` |
+| Lint/format | `ruff` (line-length 88, `select = ["E","F","I","B","UP","SIM","RUF"]`) | `just lint` / `just format` |
+| Type checking | `mypy --strict` | `just typecheck` — every function needs full type annotations |
+| Tests | `pytest` (`test/`, mirrors `src/` layout) | See [Known Constraints](#7-known-constraints) before running |
 
 ## 3. Module Boundaries
 
-- `include/single_module_template/` — Public C++ header files.
-- `src/` — Implementation files (`.cpp`).
-- `test/` — Unit tests using GoogleTest.
-- `benchmark/` — Performance micro-benchmarks using Google Benchmark.
-- `config/` — Configuration assets (`default.json`).
+Each `src/<package>/` has its own `__init__.py` + `py.typed` marker. One-line
+responsibility per package:
+
+| Package | Responsibility |
+| --- | --- |
+| `models/` | Shared data contracts (`RawListing`, `Product`) — no I/O |
+| `config/` | `Settings` (pydantic-settings), loaded from env/`.env` |
+| `search/` | `SearchProvider` Protocol + registry + concrete API providers (SerpAPI/Google CSE — not yet wired up; `NullProvider` is the safe default) |
+| `scrapers/` | `ScraperAdapter` Protocol + registry + concrete site scrapers (`amazon.py`, `pccomponentes.py`) |
+| `fetch/` | Shared HTTP client, retry-with-backoff, process-wide rate limiter, circuit breaker, robots.txt check, short-lived response cache |
+| `normalize/` | Locale-aware price string → `(amount, currency)` parsing; title display-normalization + dedupe keys |
+| `matching/` | Product identity matching (`ProductIdentityProfile`, `match_listing`) and cross-retailer price anomaly detection (`detect_anomalies`) |
+| `storage/` | SQLite schema (SQLAlchemy Core) + repository layer — the only code that touches the DB directly |
+| `pipeline/` | Orchestration: `discover` (fan out to search/scrapers) → `snapshot` (match → anomaly-check → persist) |
+| `dashboard/` | Dash app: `theme.py` (palette/typography), `charts.py`, `layout.py`, `callbacks.py`, `app.py` (factory) |
+| `cli/` | `argparse` entry point tying pipeline/storage/dashboard together |
+| `utils/` | Generic helpers with no other home (currently just `calculate_digest`) |
+
+**Composition flow**: `cli.py` → `pipeline.discover.run_discovery` (fans out to
+every enabled `search`/`scrapers` source concurrently-ish, each fails
+independently) → `pipeline.snapshot.persist_snapshot` (matches each raw
+listing against a `matching.ProductIdentityProfile`, runs
+`matching.detect_anomalies` over the confirmed batch, writes to `storage`) →
+`dashboard`/`cli` read back through `storage.repository`, which filters to
+`confirmed`/`likely` match status and `is_anomalous=False` by default. The
+dashboard never touches `scrapers`/`search` directly — it only reads from
+`storage`.
 
 ## 4. Key CLI Entry Points
 
+### `just` recipes (dev workflow)
+
 | Command | Purpose |
 | --- | --- |
-| `just --list` | List all available command-runner recipes |
-| `just build` | Build the C++ module via CMake |
-| `just test` | Run GoogleTest suite via CTest |
-| `just bench` | Run Google Benchmark suite |
-| `just lint` | Check formatting via `clang-format` |
-| `just docs` | Build the MkDocs documentation site |
+| `just --list` | List all available recipes |
+| `just setup` | Create venv, sync deps, install pre-commit hooks |
+| `just lint` / `just format` | Ruff check / format |
+| `just typecheck` | `mypy --strict` |
+| `just check` | lint + typecheck + test (see constraint below before running the `test` part) |
+| `just test` | Full pytest suite — **see [Known Constraints](#7-known-constraints) first** |
+| `just docs` | Serve the mkdocs documentation portal locally |
+| `just build` | Build distribution packages |
 
-## 5. Coding Standards
+### `online-price-comparator` (the actual product CLI)
 
-- Follow C++ core guidelines and rules specified in `.agent/rules/cpp.md`.
+| Command | Purpose |
+| --- | --- |
+| `online-price-comparator search "<keywords>" [--limit N]` | Discover, persist, and print a confirmed price snapshot |
+| `online-price-comparator dashboard [--host] [--port] [--debug]` | Launch the Dash dashboard's dev server |
+| `online-price-comparator --version` | Print version |
+
+## 5. Extending the System
+
+### Add a new scraper
+
+1. Implement the `ScraperAdapter` Protocol (`src/scrapers/base.py`) in a new
+   `src/scrapers/<site>.py` — needs a `site_key: str` attribute and
+   `search(query, *, limit) -> list[RawListing]`. Must fail closed (log +
+   return `[]`), never raise.
+2. Use `fetch.http_client.build_http_client()` / `get_with_retry()`, a
+   per-site `fetch.rate_limit.HostRateLimiter(min_interval_seconds)` (pick a
+   conservative interval — 8-15s is the current norm, faster only if the
+   site's actual `robots.txt`/observed behavior supports it), and check
+   `fetch.circuit_breaker.CircuitBreaker().is_open(site_key)` /
+   `fetch.robots.is_allowed(...)` before fetching. See `scrapers/amazon.py`
+   or `scrapers/pccomponentes.py` for the full pattern.
+3. Register it in `scrapers/registry.py`'s `_build_all_scrapers()`.
+4. Prefer structured data (`application/ld+json`) over CSS selectors when a
+   site provides it — more robust to layout changes.
+
+### Add a new search-API provider
+
+1. Implement the `SearchProvider` Protocol (`src/search/base.py`) in a new
+   `src/search/providers/<name>.py` — needs `name: str`,
+   `is_configured() -> bool` (checks its own required settings), and
+   `search(query, *, limit) -> list[RawListing]`.
+2. Add any required settings (API keys, etc.) to `config/settings.py` and
+   document them in `.env.example`.
+3. Register it in `search/registry.py`'s `_build_all_providers()`.
+4. Never raise from an unconfigured provider — `enabled_providers()` should
+   just skip it (logged), so the tool keeps working with zero API keys.
+
+## 6. Coding Standards
+
 - Prefer small, reviewable diffs. Do not reformat files unrelated to the change.
-- Every new public header function/class must include documentation comments.
-- Every new feature must include corresponding unit tests in `test/`.
+- Full type annotations everywhere — `mypy --strict` is enforced.
+- Fail closed, log, and return an empty result rather than raising, for
+  anything touching the network (scrapers, search providers) — one broken
+  source must never take down discovery for the others.
+- Flag, never silently delete, data of dubious quality (mismatched listings,
+  anomalous prices) — see `src/matching/`. Read-side filtering happens in
+  `storage/repository.py`, not by deleting rows.
 
-## 6. Known Constraints
+## 7. Known Constraints
 
-- Requires C++17 compliant compiler (GCC 9+, Clang 10+, MSVC 2019+).
-- CMake 3.20 or later required.
+**CPU thermal/cooling issue on the primary dev machine.** This machine has
+had a live CPU cooling failure. Builds, `just start`-style dev-server
+launches, and running the actual app are fine. **Never run any test command**
+(`pytest`, `just test`, `just bench`, `just check`'s test step, or any
+test-suite invocation) without the user's explicit go-ahead for that specific
+run — this has caused real crashes/logouts. Safe alternatives for validation:
+`ruff check`, `mypy`, `python -m py_compile`, `pytest --collect-only`
+(discovery only, no execution). If the user confirms new hardware is
+installed and this constraint is resolved, this section is stale — confirm
+with the user before dropping this caution.
+
+## 8. Data, Privacy & Scraping Ethics
+
+- Respect `robots.txt` (`fetch/robots.py`, fail-open only on a genuine
+  fetch/parse failure, not as a way to ignore a real disallow).
+- Rate-limit every host (`fetch/rate_limit.py`) and back off on repeated
+  failures (`fetch/circuit_breaker.py`) rather than retrying aggressively.
+- Do not add CAPTCHA-solving, proxy rotation/IP-reputation evasion, or any
+  other anti-bot circumvention — explicitly out of scope, see
+  [docs/moon/roadmaps/scrapers_and_retailers.md](../docs/moon/roadmaps/scrapers_and_retailers.md).
+- No credentials, PII, or payment data are ever stored — the SQLite DB holds
+  only product queries, listing URLs/prices, and match/anomaly metadata.
+
+## 9. Roadmap & Further Reading
+
+- [docs/moon/ROADMAP.md](../docs/moon/ROADMAP.md) — milestones, scope
+  boundaries, "won't do" list.
+- [docs/moon/roadmaps/](../docs/moon/roadmaps/) — per-feature design docs
+  (product matching, scraper reliability, dashboard UX, alerting, settings).
+- GitHub Project board tracks individual roadmap items as issues.

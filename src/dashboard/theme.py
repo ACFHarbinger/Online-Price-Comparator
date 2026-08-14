@@ -36,7 +36,11 @@ button, input {{ font: inherit; }}
 .search-input {{ flex: 1; min-width: 0; padding: 11px 13px; color: {PRIMARY_TEXT}; background: {PANEL_BACKGROUND}; border: 1px solid {PANEL_BORDER}; border-radius: 6px; }}
 .search-button {{ padding: 10px 18px; color: {PAGE_BACKGROUND}; background: {POSITIVE}; border: 0; border-radius: 6px; font-weight: 700; cursor: pointer; }}
 .product-select {{ margin-bottom: 20px; }}
-.show-browser-checkbox {{ margin: -6px 0 16px; color: {MUTED_TEXT}; font-size: .82rem; }}
+.show-browser-checkbox {{ margin: -6px 0 16px; font-size: .82rem; }}
+.show-browser-checkbox label, .show-browser-checkbox label:hover,
+.show-browser-checkbox label span, .show-browser-checkbox label:hover span {{
+    color: {PRIMARY_TEXT} !important; opacity: 1 !important;
+}}
 .show-browser-checkbox input {{ margin-right: 6px; accent-color: {POSITIVE}; }}
 .hero, .panel {{ background: {PANEL_BACKGROUND}; border: 1px solid {PANEL_BORDER}; border-radius: 8px; }}
 .hero {{ display: flex; gap: 22px; align-items: center; min-height: 190px; padding: 22px; margin-bottom: 16px; }}

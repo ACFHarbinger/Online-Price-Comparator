@@ -86,10 +86,23 @@ class PcComponentesScraper:
         listings = self._listings_from_html(html, limit=limit) if html else []
 
         if not listings and self._browser_fallback_allowed(settings):
-            LOGGER.info(
-                "httpx path failed for %s; trying browser fallback", self.site_key
+            headless = settings.browser_fallback_headless
+            wait_seconds = (
+                settings.browser_fallback_headless_wait_seconds
+                if headless
+                else settings.browser_fallback_manual_wait_seconds
             )
-            html = fetch_rendered_html(search_url, user_agent=DEFAULT_USER_AGENT)
+            LOGGER.info(
+                "httpx path failed for %s; trying browser fallback (headless=%s)",
+                self.site_key,
+                headless,
+            )
+            html = fetch_rendered_html(
+                search_url,
+                headless=headless,
+                wait_seconds=wait_seconds,
+                user_agent=DEFAULT_USER_AGENT,
+            )
             listings = self._listings_from_html(html, limit=limit) if html else []
 
         if listings:

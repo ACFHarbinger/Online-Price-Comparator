@@ -43,6 +43,15 @@ class Settings(BaseSettings):
     browser_fallback_enabled: bool = False
     browser_fallback_sites: str = ""
 
+    # False opens a real, visible browser window instead of a headless one,
+    # for sites whose challenge doesn't auto-resolve and needs a human to
+    # click through it - a person solving their own challenge, not
+    # automated CAPTCHA-solving. The wait is extended accordingly so
+    # there's real time to interact with it before the page is captured.
+    browser_fallback_headless: bool = True
+    browser_fallback_headless_wait_seconds: float = 5.0
+    browser_fallback_manual_wait_seconds: float = 45.0
+
     def enabled_scraper_keys(self) -> set[str] | None:
         """Return the configured scraper allowlist, or None to mean "all"."""
         keys = {key.strip() for key in self.enabled_scrapers.split(",") if key.strip()}

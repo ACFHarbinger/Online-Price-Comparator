@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dash import dcc, html
-
 from dashboard.charts import build_bar_chart, build_line_chart
 
 
@@ -33,6 +32,21 @@ def build_layout() -> html.Div:
                         "Search", id="product-search-button", className="search-button"
                     ),
                 ],
+            ),
+            dcc.Checklist(
+                id="show-browser-checkbox",
+                className="show-browser-checkbox",
+                options=[
+                    {
+                        "label": (
+                            " Show browser window for this search (helps with "
+                            "sites like PcComponentes that need a human to "
+                            "click through a challenge)"
+                        ),
+                        "value": "visible",
+                    }
+                ],
+                value=[],
             ),
             dcc.Dropdown(
                 id="tracked-product-dropdown",

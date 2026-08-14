@@ -2,7 +2,16 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
+from typing import Any
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_overrides: ContextVar[dict[str, Any] | None] = ContextVar(
+    "online_price_comparator_settings_overrides", default=None
+)
 
 
 class Settings(BaseSettings):
@@ -65,5 +74,33 @@ class Settings(BaseSettings):
 
 
 def get_settings() -> Settings:
-    """Load settings from the environment / .env file."""
-    return Settings()
+    """Load settings from the environment / .env file.
+
+    Applies any active in-process override from `override_settings` on top
+    of the env-derived values - every scraper/provider calls this fresh
+    rather than receiving a `Settings` instance from its caller, so this is
+    the one place a per-request override (e.g. the dashboard's "show
+    browser" checkbox) can reach them without threading a parameter through
+    every layer.
+    """
+    settings = Settings()
+    overrides = _overrides.get()
+    if overrides:
+        settings = settings.model_copy(update=overrides)
+    return settings
+
+
+@contextmanager
+def override_settings(**overrides: Any) -> Iterator[None]:
+    """Temporarily override specific `Settings` fields for this context only.
+
+    Every `get_settings()` call made while this context is active (in this
+    thread/async task - `ContextVar` does not leak across concurrent
+    requests) sees the overridden values; nothing outside it is affected,
+    and no `.env`/environment variable is touched.
+    """
+    token = _overrides.set(overrides)
+    try:
+        yield
+    finally:
+        _overrides.reset(token)

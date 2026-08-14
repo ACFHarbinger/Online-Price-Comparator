@@ -2,22 +2,44 @@
 
 from __future__ import annotations
 
+import contextlib
 from typing import Any
 
+from config.settings import get_settings, override_settings
 from dash import Dash, Input, Output, State, ctx, html, no_update
 from dash.exceptions import PreventUpdate
-from sqlalchemy import Engine
-
-from config.settings import get_settings
 from dashboard.charts import build_bar_chart, build_line_chart
 from pipeline.discover import run_discovery
 from pipeline.snapshot import persist_snapshot
+from sqlalchemy import Engine
 from storage.repository import (
     ListingRepository,
     ListingSummary,
     PriceHistoryRepository,
     ProductRepository,
 )
+
+
+def _visible_browser_override(
+    show_browser: list[str] | None,
+) -> contextlib.AbstractContextManager[None]:
+    """Build the settings-override context for the "show browser" checkbox.
+
+    Checked: force-enables the browser fallback (regardless of .env) with a
+    real, visible window - the union of whatever sites were already
+    allowlisted plus every site that actually implements the fallback
+    (currently just PcComponentes) - for this one search only. Unchecked:
+    a no-op context, .env's settings apply unchanged.
+    """
+    if not show_browser or "visible" not in show_browser:
+        return contextlib.nullcontext()
+    base = get_settings()
+    sites = base.browser_fallback_site_keys() | {"pccomponentes"}
+    return override_settings(
+        browser_fallback_enabled=True,
+        browser_fallback_headless=False,
+        browser_fallback_sites=",".join(sorted(sites)),
+    )
 
 
 def _product_options(product_repository: ProductRepository) -> list[dict[str, Any]]:
@@ -131,6 +153,7 @@ def register_callbacks(app: Dash, engine: Engine) -> None:
         Input("tracked-product-dropdown", "value"),
         Input("tracked-products-loader", "n_intervals"),
         State("product-search-input", "value"),
+        State("show-browser-checkbox", "value"),
         prevent_initial_call=True,
     )
     def select_product(
@@ -139,6 +162,7 @@ def register_callbacks(app: Dash, engine: Engine) -> None:
         dropdown_product_id: int | None,
         _load_interval: int | None,
         query: str | None,
+        show_browser: list[str] | None,
     ) -> tuple[Any, list[dict[str, Any]], Any]:
         """Persist a requested search or select an existing product."""
         if ctx.triggered_id == "tracked-products-loader":
@@ -153,9 +177,11 @@ def register_callbacks(app: Dash, engine: Engine) -> None:
             )
         if not query or not query.strip():
             raise PreventUpdate
-        product_id = persist_snapshot(
-            query.strip(), run_discovery(query.strip(), get_settings()), engine
-        )
+
+        with _visible_browser_override(show_browser):
+            product_id = persist_snapshot(
+                query.strip(), run_discovery(query.strip(), get_settings()), engine
+            )
         return product_id, _product_options(product_repository), product_id
 
     @app.callback(

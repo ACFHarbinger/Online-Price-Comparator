@@ -11,6 +11,11 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from models.product import Product
 from storage.schema import listings, price_history, products
 
+# Listings with any other match_status ("review"/"rejected") are kept in
+# the DB for audit/debugging but never surfaced by the read methods below -
+# see src/matching/ for how a listing's status is decided.
+MATCHED_STATUSES = ("confirmed", "likely")
+
 
 @dataclass(frozen=True)
 class SitePricePoint:
@@ -118,8 +123,16 @@ class ListingRepository:
         url: str,
         image_url: str | None,
         seen_at: datetime,
+        match_status: str,
+        match_score: float | None,
+        match_reason: str | None,
     ) -> int:
-        """Insert a listing, or update its `last_seen_at`/image if it already exists."""
+        """Insert a listing, or refresh it (incl. its match verdict) if it exists.
+
+        The match verdict is re-evaluated and overwritten on every upsert
+        (not just set once) since a re-run's matching logic/title may
+        change the correct verdict for the same URL over time.
+        """
         with self.engine.begin() as conn:
             stmt = sqlite_insert(listings).values(
                 product_id=product_id,
@@ -129,10 +142,19 @@ class ListingRepository:
                 image_url=image_url,
                 first_seen_at=seen_at,
                 last_seen_at=seen_at,
+                match_status=match_status,
+                match_score=match_score,
+                match_reason=match_reason,
             )
             stmt = stmt.on_conflict_do_update(
                 index_elements=["product_id", "site_key", "url"],
-                set_={"last_seen_at": seen_at, "image_url": image_url},
+                set_={
+                    "last_seen_at": seen_at,
+                    "image_url": image_url,
+                    "match_status": match_status,
+                    "match_score": match_score,
+                    "match_reason": match_reason,
+                },
             )
             conn.execute(stmt)
             listing_id = conn.execute(
@@ -185,7 +207,10 @@ class ListingRepository:
             )
             .select_from(listings)
             .outerjoin(latest_price, latest_price.c.listing_id == listings.c.id)
-            .where(listings.c.product_id == product_id)
+            .where(
+                listings.c.product_id == product_id,
+                listings.c.match_status.in_(MATCHED_STATUSES),
+            )
             .order_by(
                 latest_price.c.price_amount.is_(None), latest_price.c.price_amount
             )
@@ -257,7 +282,10 @@ class PriceHistoryRepository:
                 (price_history.c.listing_id == latest_per_listing.c.listing_id)
                 & (price_history.c.observed_at == latest_per_listing.c.max_observed_at),
             )
-            .where(listings.c.product_id == product_id)
+            .where(
+                listings.c.product_id == product_id,
+                listings.c.match_status.in_(MATCHED_STATUSES),
+            )
         )
         with self.engine.connect() as conn:
             rows = conn.execute(stmt).all()
@@ -283,7 +311,10 @@ class PriceHistoryRepository:
                 price_history.c.observed_at,
             )
             .join(listings, listings.c.id == price_history.c.listing_id)
-            .where(listings.c.product_id == product_id)
+            .where(
+                listings.c.product_id == product_id,
+                listings.c.match_status.in_(MATCHED_STATUSES),
+            )
             .order_by(price_history.c.observed_at)
         )
         with self.engine.connect() as conn:

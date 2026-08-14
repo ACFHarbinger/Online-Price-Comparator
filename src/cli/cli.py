@@ -7,17 +7,16 @@ import sys
 from collections.abc import Sequence
 
 from config.settings import get_settings
-from models.listing import RawListing
-from normalize.price import parse_price
 from pipeline.discover import run_discovery
 from pipeline.snapshot import persist_snapshot
 from storage.db import create_db_engine
+from storage.repository import ListingRepository
 
 __version__ = "0.1.0"
 
 
 def _run_search(keywords: str, limit: int) -> int:
-    """Discover, persist, and print a price snapshot for `keywords`."""
+    """Discover, persist, and print a confirmed price snapshot for `keywords`."""
     settings = get_settings()
     engine = create_db_engine(settings.database_path)
 
@@ -26,27 +25,26 @@ def _run_search(keywords: str, limit: int) -> int:
         print(f"No listings found for {keywords!r}.")
         return 0
 
-    persist_snapshot(keywords, raw_listings, engine)
+    product_id = persist_snapshot(keywords, raw_listings, engine)
 
-    priced: list[tuple[float, str, RawListing]] = []
-    for raw in raw_listings:
-        try:
-            amount, currency = parse_price(raw.price_text, raw.currency_hint)
-        except ValueError:
-            continue
-        priced.append((amount, currency, raw))
+    # Read back from the repository (not the raw discovery results) so the
+    # terminal output reflects the same identity-matching and anomaly
+    # filtering the dashboard uses - never an unfiltered/unmatched listing.
+    listings = ListingRepository(engine).list_with_latest_price(product_id)
+    priced = [listing for listing in listings if listing.price_amount is not None]
 
     if not priced:
-        print(f"Found {len(raw_listings)} listing(s), but none had a parseable price.")
+        print(
+            f"Found {len(raw_listings)} listing(s) for {keywords!r}, but none "
+            "were confirmed matches with a parseable price."
+        )
         return 0
 
-    priced.sort(key=lambda p: p[0])
-    print(f"Prices for {keywords!r} (results may include loosely-matched items):")
-    for amount, currency, raw in priced:
-        price = f"{amount:>10.2f} {currency}"
-        title = raw.title[:60]
-        print(f"  {price}  [{raw.site_display_name:<12}] {title}")
-        print(f"             {raw.url}")
+    print(f"Confirmed prices for {keywords!r}:")
+    for listing in priced:
+        assert listing.price_amount is not None and listing.currency is not None
+        price = f"{listing.price_amount:>10.2f} {listing.currency}"
+        print(f"  {price}  [{listing.site_display_name:<12}] {listing.url}")
     return 0
 
 

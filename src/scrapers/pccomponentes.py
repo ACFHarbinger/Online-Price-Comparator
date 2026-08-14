@@ -10,12 +10,17 @@ from urllib.parse import quote_plus, urljoin
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 
-from fetch.http_client import build_http_client
+from config.settings import get_settings
+from fetch.circuit_breaker import CircuitBreaker
+from fetch.http_client import DEFAULT_USER_AGENT, build_http_client, get_with_retry
 from fetch.rate_limit import HostRateLimiter
+from fetch.response_cache import get_cached, set_cached
+from fetch.robots import is_allowed
 from models.listing import RawListing
 
 LOGGER = logging.getLogger(__name__)
 
+_MIN_INTERVAL_SECONDS: Final = 15.0
 _BASE_URL: Final = "https://www.pccomponentes.com"
 _SEARCH_URL: Final = f"{_BASE_URL}/buscar/?query={{query}}"
 _CARD_SELECTOR: Final = (
@@ -39,32 +44,83 @@ class PcComponentesScraper:
         if limit <= 0:
             return []
 
-        try:
-            search_url = _SEARCH_URL.format(query=quote_plus(query))
-            limiter = HostRateLimiter()
-            limiter.wait("pccomponentes.com")
-            with build_http_client() as client:
-                response = client.get(search_url)
-                response.raise_for_status()
+        settings = get_settings()
+        breaker = CircuitBreaker()
+        if breaker.is_open(self.site_key):
+            until = breaker.open_until(self.site_key)
+            until_text = until.isoformat() if until is not None else "unknown"
+            LOGGER.info(
+                "skipping %s, circuit breaker open until %s",
+                self.site_key,
+                until_text,
+            )
+            return []
 
-            soup = BeautifulSoup(response.text, "lxml")
-            cards = soup.select(_CARD_SELECTOR)
-            if not cards:
-                LOGGER.warning("PcComponentes returned no recognizable product cards")
+        try:
+            cached = get_cached(self.site_key, query)
+            if cached is not None:
+                listings = self._listings_from_html(cached, limit=limit)
+                if listings:
+                    breaker.record_success(self.site_key)
+                    return listings
+                breaker.record_failure(self.site_key)
                 return []
 
-            fetched_at = datetime.now().astimezone()
-            listings: list[RawListing] = []
-            for card in cards:
-                if len(listings) >= limit:
-                    break
-                listing = self._parse_card(card, fetched_at)
-                if listing is not None:
-                    listings.append(listing)
-            return listings
+            search_url = _SEARCH_URL.format(query=quote_plus(query))
+            if not is_allowed(
+                search_url,
+                DEFAULT_USER_AGENT,
+                cache_ttl_hours=settings.robots_cache_ttl_hours,
+            ):
+                LOGGER.warning(
+                    "robots.txt disallows fetching %s; skipping %s",
+                    search_url,
+                    self.site_key,
+                )
+                return []
+
+            limiter = HostRateLimiter(_MIN_INTERVAL_SECONDS)
+            limiter.wait("pccomponentes.com")
+            with build_http_client() as client:
+                response = get_with_retry(
+                    client,
+                    search_url,
+                    max_attempts=settings.retry_max_attempts,
+                    initial_backoff_seconds=settings.retry_initial_backoff_seconds,
+                    max_backoff_seconds=settings.retry_max_backoff_seconds,
+                )
+                response.raise_for_status()
+
+            html = response.text
+            listings = self._listings_from_html(html, limit=limit)
+            if listings:
+                set_cached(self.site_key, query, html)
+                breaker.record_success(self.site_key)
+                return listings
+            breaker.record_failure(self.site_key)
+            return []
         except Exception:
+            breaker.record_failure(self.site_key)
             LOGGER.warning("PcComponentes search failed", exc_info=True)
             return []
+
+    def _listings_from_html(self, html: str, *, limit: int) -> list[RawListing]:
+        """Parse a search-results HTML body into listings (or [] if unusable)."""
+        soup = BeautifulSoup(html, "lxml")
+        cards = soup.select(_CARD_SELECTOR)
+        if not cards:
+            LOGGER.warning("PcComponentes returned no recognizable product cards")
+            return []
+
+        fetched_at = datetime.now().astimezone()
+        listings: list[RawListing] = []
+        for card in cards:
+            if len(listings) >= limit:
+                break
+            listing = self._parse_card(card, fetched_at)
+            if listing is not None:
+                listings.append(listing)
+        return listings
 
     def _parse_card(self, card: Tag, fetched_at: datetime) -> RawListing | None:
         """Convert one product card to a listing when all required values exist."""

@@ -14,11 +14,17 @@ from urllib.parse import quote_plus, urljoin
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 
-from fetch.http_client import build_http_client
+from config.settings import get_settings
+from fetch.circuit_breaker import CircuitBreaker
+from fetch.http_client import DEFAULT_USER_AGENT, build_http_client, get_with_retry
 from fetch.rate_limit import HostRateLimiter
+from fetch.response_cache import get_cached, set_cached
+from fetch.robots import is_allowed
 from models.listing import RawListing
 
 LOGGER = logging.getLogger(__name__)
+
+_MIN_INTERVAL_SECONDS: Final = 8.0
 
 _CARD_SELECTOR: Final = (
     'div[data-component-type="s-search-result"], '
@@ -72,59 +78,107 @@ class AmazonScraper:
         self.site_key = domain
         self._config = _DOMAIN_CONFIG[domain]
         self._base_url = f"https://www.{domain}"
-        self._limiter = HostRateLimiter()
+        self._limiter = HostRateLimiter(_MIN_INTERVAL_SECONDS)
 
     def search(self, query: str, *, limit: int = 20) -> list[RawListing]:
         """Return up to ``limit`` listings, or an empty list on any failure."""
         if limit <= 0 or not query.strip():
             return []
 
+        settings = get_settings()
+        breaker = CircuitBreaker()
+        if breaker.is_open(self.site_key):
+            until = breaker.open_until(self.site_key)
+            until_text = until.isoformat() if until is not None else "unknown"
+            LOGGER.info(
+                "skipping %s, circuit breaker open until %s",
+                self.site_key,
+                until_text,
+            )
+            return []
+
         try:
+            cached = get_cached(self.site_key, query)
+            if cached is not None:
+                listings = self._listings_from_html(cached, limit=limit)
+                if listings:
+                    breaker.record_success(self.site_key)
+                    return listings
+                breaker.record_failure(self.site_key)
+                return []
+
             search_url = f"{self._base_url}/s?k={quote_plus(query)}"
+            if not is_allowed(
+                search_url,
+                DEFAULT_USER_AGENT,
+                cache_ttl_hours=settings.robots_cache_ttl_hours,
+            ):
+                LOGGER.warning(
+                    "robots.txt disallows fetching %s; skipping %s",
+                    search_url,
+                    self.site_key,
+                )
+                return []
+
             locale = self._config["locale"]
             language = locale.split("-", 1)[0]
             self._limiter.wait(self.domain)
             with build_http_client() as client:
-                response = client.get(
+                response = get_with_retry(
+                    client,
                     search_url,
                     headers={
                         "Accept-Language": (
                             f"{locale},{language};q=0.9,en;q=0.8"
                         ),
                     },
+                    max_attempts=settings.retry_max_attempts,
+                    initial_backoff_seconds=settings.retry_initial_backoff_seconds,
+                    max_backoff_seconds=settings.retry_max_backoff_seconds,
                 )
                 response.raise_for_status()
 
             html = response.text
-            if _is_blocked_page(html):
-                LOGGER.warning(
-                    "Amazon search blocked or challenged for %s", self.domain
-                )
-                return []
-
-            soup = BeautifulSoup(html, "lxml")
-            cards = soup.select(_CARD_SELECTOR)
-            if not cards:
-                LOGGER.warning(
-                    "Amazon (%s) returned no recognizable product cards",
-                    self.domain,
-                )
-                return []
-
-            fetched_at = datetime.now().astimezone()
-            listings: list[RawListing] = []
-            for card in cards:
-                if len(listings) >= limit:
-                    break
-                listing = self._parse_card(card, fetched_at)
-                if listing is not None:
-                    listings.append(listing)
-            return listings
+            listings = self._listings_from_html(html, limit=limit)
+            if listings:
+                set_cached(self.site_key, query, html)
+                breaker.record_success(self.site_key)
+                return listings
+            breaker.record_failure(self.site_key)
+            return []
         except Exception:
+            breaker.record_failure(self.site_key)
             LOGGER.warning(
                 "Amazon (%s) search failed", self.domain, exc_info=True
             )
             return []
+
+    def _listings_from_html(self, html: str, *, limit: int) -> list[RawListing]:
+        """Parse a search-results HTML body into listings (or [] if unusable)."""
+        if _is_blocked_page(html):
+            LOGGER.warning(
+                "Amazon search blocked or challenged for %s", self.domain
+            )
+            return []
+
+        soup = BeautifulSoup(html, "lxml")
+        cards = soup.select(_CARD_SELECTOR)
+        if not cards:
+            LOGGER.warning(
+                "Amazon (%s) returned no recognizable product cards",
+                self.domain,
+            )
+            return []
+
+        fetched_at = datetime.now().astimezone()
+        listings: list[RawListing] = []
+        for card in cards:
+            if len(listings) >= limit:
+                break
+            listing = self._parse_card(card, fetched_at)
+            if listing is not None:
+                listings.append(listing)
+        return listings
 
     def _parse_card(self, card: Tag, fetched_at: datetime) -> RawListing | None:
         """Convert one search-result card when title, URL, and price exist."""

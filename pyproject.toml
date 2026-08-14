@@ -19,6 +19,7 @@ dependencies = [
     "plotly>=5.22.0",
     "sqlalchemy>=2.0.0",
     "pydantic-settings>=2.3.0",
+    "rapidfuzz>=3.9.0",
 ]
 
 [project.optional-dependencies]

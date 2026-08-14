@@ -29,7 +29,10 @@ DEFAULT_EXCLUDED_TERMS = frozenset(
         "equipos de sobremesa",
         "pc completo",
         "pc gaming",
+        "pc racing",
         "torre gaming",
+        "desktop",
+        "personalizado",
     }
 )
 """Common bundle, accessory, and category-conflict terms for v1 matching."""
@@ -54,9 +57,7 @@ def build_profile_from_query(query_text: str) -> ProductIdentityProfile:
         canonical_name=canonical_name,
         required_model_tokens=_extract_model_tokens(normalized_query),
         required_brand_tokens=frozenset(),
-        excluded_terms=frozenset(
-            dedupe_key(term) for term in DEFAULT_EXCLUDED_TERMS
-        ),
+        excluded_terms=frozenset(dedupe_key(term) for term in DEFAULT_EXCLUDED_TERMS),
         allowed_variant_terms=frozenset(),
     )
 

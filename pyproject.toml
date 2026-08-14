@@ -28,6 +28,9 @@ git = [
     "pyyaml>=6.0",
     "requests>=2.31.0",
 ]
+browser = [
+    "playwright>=1.45.0",
+]
 
 [dependency-groups]
 dev = [

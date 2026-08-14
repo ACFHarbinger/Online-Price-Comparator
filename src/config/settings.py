@@ -34,10 +34,25 @@ class Settings(BaseSettings):
     response_cache_ttl_seconds: int = 600
     robots_cache_ttl_hours: float = 24.0
 
+    # Headless-browser fallback (Playwright) for sites whose Cloudflare/
+    # similar JS challenge blocks a plain httpx request. Off by default;
+    # explicitly allowlisted per site. Renders the page with a plain,
+    # honestly-identified browser and nothing more - no stealth plugins,
+    # fingerprint spoofing, or CAPTCHA-solving. See
+    # docs/moon/roadmaps/scrapers_and_retailers.md.
+    browser_fallback_enabled: bool = False
+    browser_fallback_sites: str = ""
+
     def enabled_scraper_keys(self) -> set[str] | None:
         """Return the configured scraper allowlist, or None to mean "all"."""
         keys = {key.strip() for key in self.enabled_scrapers.split(",") if key.strip()}
         return keys or None
+
+    def browser_fallback_site_keys(self) -> set[str]:
+        """Return the set of site keys allowed to use the browser fallback."""
+        return {
+            key.strip() for key in self.browser_fallback_sites.split(",") if key.strip()
+        }
 
 
 def get_settings() -> Settings:

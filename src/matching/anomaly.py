@@ -58,8 +58,7 @@ def detect_anomalies(prices: list[float], titles: list[str]) -> list[AnomalyResu
     n = min(len(prices), len(titles))
     if n < 2:
         return [
-            AnomalyResult(is_anomalous=False, reason=None, basis=None)
-            for _ in range(n)
+            AnomalyResult(is_anomalous=False, reason=None, basis=None) for _ in range(n)
         ]
 
     if n >= 4:

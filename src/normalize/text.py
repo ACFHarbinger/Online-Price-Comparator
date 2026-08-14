@@ -29,7 +29,5 @@ def dedupe_key(title: str) -> str:
     not meant to catch every paraphrase.
     """
     normalized = normalize_title(title).lower()
-    cleaned_chars: list[str] = [
-        ch if ch.isalnum() else " " for ch in normalized
-    ]
+    cleaned_chars: list[str] = [ch if ch.isalnum() else " " for ch in normalized]
     return " ".join("".join(cleaned_chars).split())

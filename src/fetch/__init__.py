@@ -1,5 +1,6 @@
 """Shared low-level HTTP fetching concerns."""
 
+from .browser import fetch_rendered_html
 from .circuit_breaker import CircuitBreaker
 from .http_client import DEFAULT_USER_AGENT, build_http_client, get_with_retry
 from .rate_limit import HostRateLimiter
@@ -11,6 +12,7 @@ __all__ = [
     "CircuitBreaker",
     "HostRateLimiter",
     "build_http_client",
+    "fetch_rendered_html",
     "get_cached",
     "get_with_retry",
     "is_allowed",

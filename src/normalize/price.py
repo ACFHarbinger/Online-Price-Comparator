@@ -57,9 +57,7 @@ _CURRENCY_REGEX = re.compile(
 _NUMBER_CANDIDATE_REGEX = re.compile(r"[-+]?\d+(?:[\s.,'\xa0\u200b]\d+)*")
 
 
-def _extract_currency(
-    price_text: str, currency_hint: str | None
-) -> tuple[str, str]:
+def _extract_currency(price_text: str, currency_hint: str | None) -> tuple[str, str]:
     """Find ISO 4217 currency code in text, or fallback to hint / default 'EUR'."""
     match = _CURRENCY_REGEX.search(price_text)
     if match:
@@ -137,9 +135,7 @@ def _parse_number_string(num_str: str, currency: str) -> float:
         raise ValueError(f"Invalid decimal string: {clean_s!r}") from err
 
 
-def parse_price(
-    price_text: str, currency_hint: str | None = None
-) -> tuple[float, str]:
+def parse_price(price_text: str, currency_hint: str | None = None) -> tuple[float, str]:
     """Parse a raw scraped price string into (amount, ISO 4217 currency code).
 
     Must handle, at minimum:

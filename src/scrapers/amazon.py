@@ -13,7 +13,6 @@ from urllib.parse import quote_plus, urljoin
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
-
 from config.settings import get_settings
 from fetch.circuit_breaker import CircuitBreaker
 from fetch.http_client import DEFAULT_USER_AGENT, build_http_client, get_with_retry
@@ -27,8 +26,7 @@ LOGGER = logging.getLogger(__name__)
 _MIN_INTERVAL_SECONDS: Final = 8.0
 
 _CARD_SELECTOR: Final = (
-    'div[data-component-type="s-search-result"], '
-    "div.s-result-item[data-asin]"
+    'div[data-component-type="s-search-result"], div.s-result-item[data-asin]'
 )
 _TITLE_HEADING_SELECTOR: Final = "h2"
 _PRICE_SELECTOR: Final = "span.a-price"
@@ -71,8 +69,7 @@ class AmazonScraper:
         if domain not in _DOMAIN_CONFIG:
             supported = ", ".join(sorted(_DOMAIN_CONFIG))
             raise ValueError(
-                f"unsupported Amazon domain {domain!r}; "
-                f"configured domains: {supported}"
+                f"unsupported Amazon domain {domain!r}; configured domains: {supported}"
             )
         self.domain = domain
         self.site_key = domain
@@ -128,9 +125,7 @@ class AmazonScraper:
                     client,
                     search_url,
                     headers={
-                        "Accept-Language": (
-                            f"{locale},{language};q=0.9,en;q=0.8"
-                        ),
+                        "Accept-Language": (f"{locale},{language};q=0.9,en;q=0.8"),
                     },
                     max_attempts=settings.retry_max_attempts,
                     initial_backoff_seconds=settings.retry_initial_backoff_seconds,
@@ -148,17 +143,13 @@ class AmazonScraper:
             return []
         except Exception:
             breaker.record_failure(self.site_key)
-            LOGGER.warning(
-                "Amazon (%s) search failed", self.domain, exc_info=True
-            )
+            LOGGER.warning("Amazon (%s) search failed", self.domain, exc_info=True)
             return []
 
     def _listings_from_html(self, html: str, *, limit: int) -> list[RawListing]:
         """Parse a search-results HTML body into listings (or [] if unusable)."""
         if _is_blocked_page(html):
-            LOGGER.warning(
-                "Amazon search blocked or challenged for %s", self.domain
-            )
+            LOGGER.warning("Amazon search blocked or challenged for %s", self.domain)
             return []
 
         soup = BeautifulSoup(html, "lxml")

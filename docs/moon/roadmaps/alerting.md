@@ -23,7 +23,8 @@ new price, whether it's a new 30-day low, direct buy link.
 | New all-time low | Current confirmed, non-anomalous price is at least `max(2%, EUR 5)` below the prior all-time low for that listing. |
 | Meaningful drop | Current price is at least `10%` **and** `EUR 10` below that listing's 7-day rolling median; requires ≥3 observations in that window. |
 | Target price | Current price `<= user_target_price`; notify once on crossing below, not on every refresh. |
-| Tiered historical low (v2.14, revised) | Current confirmed price is at/below the minimum of that listing's confirmed, same-[condition](product_matching.md#condition-as-a-first-class-field-v211)-bucket observations over a fixed ladder of lookback windows — **30-day / 90-day / 180-day / 365-day / all-time**. Fires at the *highest* tier reached (an all-time-low implies all the shorter tiers too; notify once, at the strongest claim, not five separate messages). Each tier requires data coverage proportional to its own window (can't claim a "1-year low" off 60 days of history) — reuses and generalizes the existing [30-day-low / ATL badge](dashboard_ux.md#borrowed-ux-ideas-v25-v26) pattern rather than introducing a separate percentile system. Purely descriptive — "the lowest confirmed price seen in the last N days," never a forecast. |
+| Tiered historical low (v2.14) | Current confirmed price is at/below the minimum of that listing's confirmed, same-[condition](product_matching.md#condition-as-a-first-class-field-v211)-bucket observations over a fixed ladder of lookback windows — **30-day / 90-day / 180-day / 365-day / all-time**. Fires at the *highest* tier reached (an all-time-low implies all the shorter tiers too; notify once, at the strongest claim, not five separate messages). Each tier requires data coverage proportional to its own window. Generalizes the existing [30-day-low / ATL badge](dashboard_ux.md#borrowed-ux-ideas-v25-v26) pattern. Purely descriptive — "the lowest confirmed price seen in the last N days," never a forecast. |
+| Percentile rarity (v2.14) | Current price is at/below a **configurable percentile** (default 5th) of that listing's confirmed, same-condition-bucket observations over a **configurable trailing window** (default 180 days), requiring a minimum sample size scaled to that window. A second, independent mode alongside the tiered rule, not a replacement — see [Two configurable modes](#two-configurable-historical-low-modes-v214) below. Also purely descriptive. |
 
 Only `confirmed` (non-anomalous) listings can trigger an alert — `review`/
 `rejected`/anomalous observations are ignored (see
@@ -48,6 +49,30 @@ Only `confirmed` (non-anomalous) listings can trigger an alert — `review`/
   absolute floor — the user's explicit number wins.
 - Never alert on a price *increase* — Keepa gates increase-watches behind a
   paid tier for a reason; it's not the job of this tool.
+
+## Two configurable historical-low modes (v2.14)
+
+Both modes exist because they answer different real questions, and which one
+you want depends on urgency, not correctness:
+
+- **Tiered** answers "is this the best price in a clearly-labeled window?" —
+  interpretable, discrete, good when you're time-pressed and 90-day-best is
+  genuinely good enough to act on.
+- **Percentile** answers "how rare is this, continuously?" — tunable to be as
+  strict as you want (e.g. bottom 2% of a full year), good when you can wait
+  for a genuinely unusual price and don't want to be notified every time
+  something merely beats the last 90 days.
+
+**Configuration** (per `tracked_products` row, extending
+[settings_and_config.md](settings_and_config.md#currency-and-fx-normalization)):
+`historical_low_alert_mode` enum — `tiered` / `percentile` / `both`. When
+`both`, the two fire independently (a price can trigger the percentile rule
+without hitting a tier boundary, or vice versa) — they're not merged into one
+combined score, since collapsing them would lose exactly the distinction that
+makes having both worthwhile. Percentile-specific fields:
+`rarity_percentile` (default `5`), `rarity_window_days` (default `180`),
+`rarity_min_observations` (scaled to window; e.g. roughly one observation
+per ~9 days of window as a floor, tunable).
 
 ## Refresh scheduling: per-site cadence via a tick script, not a daemon (v2.14)
 

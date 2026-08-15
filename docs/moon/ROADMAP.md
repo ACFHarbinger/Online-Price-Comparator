@@ -67,7 +67,7 @@ price meaningful instead of just a number.
 | v2.2 | Scheduled/passive refresh (daily) | 📋 Planned | [settings_and_config.md](roadmaps/settings_and_config.md) |
 | v2.3 | Price-drop alerting: all-time-low, meaningful-drop, target-price rules | 📋 Planned | [alerting.md](roadmaps/alerting.md) |
 | v2.4 | Telegram bot + Discord webhook alert channels | 📋 Planned | [alerting.md](roadmaps/alerting.md) |
-| v2.5 | Delta-vs-average callouts in dashboard; badge design **superseded by v2.14's five-tier ladder** (30d/90d/180d/365d/ATL replaces the original two-tier 30-day/ATL badge) | 📋 Planned | [dashboard_ux.md](roadmaps/dashboard_ux.md) |
+| v2.5 | Delta-vs-average callouts in dashboard; badge design **superseded by v2.14's tiered ladder + percentile modes** (30d/90d/180d/365d/ATL and a configurable rarity percentile replace the original two-tier 30-day/ATL badge) | 📋 Planned | [dashboard_ux.md](roadmaps/dashboard_ux.md) |
 | v2.6 | Stock / "not seen recently" honesty (stale-data banners) | 📋 Planned | [dashboard_ux.md](roadmaps/dashboard_ux.md) |
 | v2.7 | Retailer #3–#5: PCDIGA, Worten, Fnac.pt, then Chip7 | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
 | v2.8 | KuantoKusta as a candidate-URL hint source (verified against the real shop, not trusted directly) | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
@@ -94,7 +94,7 @@ Valuable but not urgent, or genuinely needs v1/v2 trust to be worth building.
 | Item | Why parked | Notes |
 |---|---|---|
 | 🅿️ Browser extension / userscript | Real UX win, real maintenance cost | Revisit only if you're opening Amazon/PCC in-browser more than the dashboard. Personal userscript first, not a store listing. |
-| 🅿️ Simple buy-now-vs-wait guidance | Explicitly **not** ML/prediction — grok's warning against "prediction theater" stands | Operationalized as descriptive stats via v2.14's tiered historical-low badge/alert ("price is at a 90-day low" is a fact). Kept parked here only for true forecasting (see next row), which is still out of scope. |
+| 🅿️ Simple buy-now-vs-wait guidance | Explicitly **not** ML/prediction — grok's warning against "prediction theater" stands | Operationalized as descriptive stats via v2.14's two configurable modes (tiered historical-low, and percentile rarity for when you can afford to wait for something genuinely unusual). Kept parked here only for true forecasting (see next row), which is still out of scope. |
 | 🅿️ Price forecasting (ARIMA or similar time-series methods) | Genuinely different from v2.14's descriptive tiers — this would be an actual prediction, which the roadmap has twice now explicitly rejected for the shipped product ("prediction theater"). Noted 2026-08-15 as worth investigating **as a separate research track**, not a feature to build | If pursued, must stay clearly separated from the tiered-low alert/badge — never blended into the same UI surface or presented with the same confidence, so a forecast can't be mistaken for the descriptive fact it sits next to. |
 
 ### Scope boundaries

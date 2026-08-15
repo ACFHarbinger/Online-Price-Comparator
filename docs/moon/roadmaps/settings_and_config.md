@@ -103,9 +103,13 @@ New tables alongside the existing `products` / `listings` / `price_history`
 
 - **`tracked_products`** — query text, canonical name, enabled flag,
   per-product refresh-interval override, target price + currency,
-  `search_scope_tier` (`local`/`eu_wide`/`global`, see above), created/
-  last-checked timestamps. This is what turns an ad-hoc `search` into a
-  persistent watchlist entry.
+  `search_scope_tier` (`local`/`eu_wide`/`global`, see above),
+  `historical_low_alert_mode` (`tiered`/`percentile`/`both`) plus
+  `rarity_percentile`/`rarity_window_days`/`rarity_min_observations` for the
+  percentile mode (see
+  [alerting.md](alerting.md#two-configurable-historical-low-modes-v214)),
+  created/last-checked timestamps. This is what turns an ad-hoc `search`
+  into a persistent watchlist entry.
 - **`product_identity_rules`** — required model tokens, brand tokens, excluded/
   allowed terms, `match_mode`, user-approved aliases (feeds
   [product_matching.md](product_matching.md)).

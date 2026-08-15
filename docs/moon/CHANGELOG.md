@@ -31,6 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Price forecasting (ARIMA or similar) noted as a genuinely separate future
   research track in the Parked table, explicitly not blended into the
   descriptive tiered-low feature.
+  **Revised again same day**: percentile rarity restored as a second,
+  independent configurable mode alongside the tiered ladder (not replaced by
+  it) — `historical_low_alert_mode` (`tiered`/`percentile`/`both`) lets the
+  tier ladder and the percentile rule fire independently, since they answer
+  different questions (interpretable window-based vs. continuously tunable
+  rarity) and which one you want depends on urgency, not correctness.
 
 - Created templates and placeholder documents for research and reports directories under `docs/research/` and `docs/reports/`.
 - Created a beautiful, interactive Vue documentation portal in `docs/website/` that parses and displays all repository documentation files dynamically with search, dark mode, alert styling, and navigation.

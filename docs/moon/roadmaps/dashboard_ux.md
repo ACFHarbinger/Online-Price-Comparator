@@ -87,19 +87,29 @@ never silently included in "cheapest" or the charts.
 | Stale-data honesty banner ("PCC failed last run") | — | Never show a dead scraper's last-known price as if it were live; ties into the scraper circuit-breaker status from [scrapers_and_retailers.md](scrapers_and_retailers.md). |
 | Out-of-stock strikethrough/greyed display | Camel/Keepa | Prevents false "great price" reads on an item you can't actually buy. |
 
-## Tiered historical-low badge (v2.14, revised)
+## Historical-low badge: tiered + percentile (v2.14)
 
 Operationalizes the roadmap's parked "wait vs. buy" idea — the parked note
 already said descriptive stats would be acceptable ("price is at a 90-day
-low" is a fact; a forecast isn't). Generalizes the existing [30-day-low / ATL
-badge](#borrowed-ux-ideas-v25-v26) pattern (already planned for v2.5) into a
-full ladder: **30-day / 90-day / 180-day / 365-day / all-time low**, badge
-shows the strongest tier reached, same-condition-bucket only. Purely
-retrospective — no claim about future prices. Same tier calculation powers
-[alerting.md](alerting.md#alert-types-and-default-thresholds)'s tiered
-historical-low alert; implement once, surface in both places (this
-supersedes v2.5's badge as a separate, narrower item — v2.5's two-tier
-30-day/ATL badge is now v2.14's five-tier ladder, not an additional design).
+low" is a fact; a forecast isn't). Two badge styles, matching
+[alerting.md](alerting.md#two-configurable-historical-low-modes-v214)'s two
+alert modes — the dashboard shows whichever mode(s) the product's
+`historical_low_alert_mode` setting has enabled, since the badge and the
+alert should never disagree about which mode is active:
+
+- **Tiered**: generalizes the existing [30-day-low / ATL
+  badge](#borrowed-ux-ideas-v25-v26) pattern (already planned for v2.5) into
+  a full ladder — **30-day / 90-day / 180-day / 365-day / all-time low**,
+  badge shows the strongest tier reached. (This supersedes v2.5's original
+  two-tier badge design as a UI implementation — same underlying idea, more
+  tiers.)
+- **Percentile**: a continuous rarity readout (e.g. "cheaper than 95% of the
+  last 180 days") for products configured in `percentile` or `both` mode —
+  useful specifically because it doesn't collapse to a fixed boundary the way
+  the tiered badge does.
+
+Both purely retrospective — no claim about future prices. Same calculations
+power the alert; implement once, surface in both places.
 
 ## Condition badge/filter (v2.11)
 

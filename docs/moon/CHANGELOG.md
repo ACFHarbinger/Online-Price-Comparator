@@ -38,6 +38,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   different questions (interpretable window-based vs. continuously tunable
   rarity) and which one you want depends on urgency, not correctness.
 
+- **Custom sites, site scoring, source discovery, and PC configurator
+  (2026-08-15):** added v2.15 (custom user-added sites — track a specific
+  listing URL now, a custom searchable site later), v2.16 (site
+  value-proposition scoring: extreme-value + consistency/volatility pair +
+  inferred proximity + reliability, sample-size-gated), and v2.17 (per-product
+  source discovery, scoped to avoid the existing full-catalog-indexing
+  boundary; found and flagged that v1.1's search-API abstraction has no real
+  provider implementation yet, only `null_provider.py`, despite being marked
+  Done). Added `pc_configurator.md`, a new, explicitly experimental and
+  un-sequenced side-tool roadmap (hand-specified build cost/value comparison
+  at v0, compatibility-aware automatic enumeration as a later explicit
+  escalation, not assumed) — supersedes and replaces the original "dumb
+  basket" v3+ item.
+
 - Created templates and placeholder documents for research and reports directories under `docs/research/` and `docs/reports/`.
 - Created a beautiful, interactive Vue documentation portal in `docs/website/` that parses and displays all repository documentation files dynamically with search, dark mode, alert styling, and navigation.
 - Created `website/javascript/` workspace similar to the typescript/ directory but for JavaScript, and added it to root workspace settings and `justfile` tasks.

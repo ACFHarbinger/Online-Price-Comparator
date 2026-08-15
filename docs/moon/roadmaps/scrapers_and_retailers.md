@@ -1,6 +1,6 @@
 # Scrapers & Retailer Coverage Roadmap
 
-**Status:** 🚧 In progress (2 of ~7 retailers live) · 📋 Planned (v2.12, v2.13) · **Source:** codex research (reliability), grok research (retailer priority); v2.12/v2.13 from the 2026-08-15 global-scope brainstorm
+**Status:** 🚧 In progress (2 of ~7 retailers live) · 📋 Planned (v2.12, v2.13, v2.15-v2.17) · **Source:** codex research (reliability), grok research (retailer priority); v2.12/v2.13/v2.15-v2.17 from the 2026-08-15 global-scope brainstorm
 
 ## Current state
 
@@ -113,6 +113,93 @@ covers. Precise customs/duty calculation is genuinely hard (depends on
 declared value, carrier, IOSS pre-collection) — ship an honest **estimate**
 labeled as such, not a false-precision number, and never claim a landed cost
 as final before actual checkout.
+
+## Custom user-added sites (v2.15)
+
+**Why:** the geographic tiers cover categories of retailers, not genuinely
+niche sources — e.g. an NVLink bridge sold almost nowhere in the EU except a
+couple of specialized French/German datacenter-hardware stores. No fixed
+tier list will anticipate every such case.
+
+**Two tiers, deliberately different scope:**
+
+- **Tier A (v2.15, build first): track a specific product-page URL.** User
+  pastes one known listing URL against a tracked product; the tool
+  periodically re-fetches *that exact page* and extracts price/stock via the
+  same structured-data-first parsing (`application/ld+json` schema.org
+  `Product`/`Offer`) already committed to for reliability hardening. No
+  search capability needed — directly solves the "I already found the one
+  listing" case. New table: `custom_listing_urls` (tracked_product_id, url,
+  added_at, last_checked_at, parser_confidence). Goes through the same
+  identity-matching, condition-detection, and currency-normalization
+  pipeline as every other listing — a custom URL is not a trust shortcut.
+- **Tier B (later, more valuable, more fragile): a custom *searchable*
+  site.** User provides a search-URL template; a new `GenericScraperAdapter`
+  (implementing the existing `ScraperAdapter` protocol) substitutes the
+  query and applies the same structured-data-first parsing to extract
+  multiple results, not just one page. Keeps discovering new listings on
+  that site over time. Explicitly lower-reliability than the purpose-built
+  scrapers (no site-specific tuning) — surfaced honestly as such, same
+  spirit as the stale-data/circuit-breaker honesty already built into the
+  dashboard.
+
+## Site value-proposition scoring (v2.16)
+
+A composite, sample-size-gated score per site (or site × product-category),
+used to help decide whether a custom-added or discovered site is worth
+keeping tracked — a ranking/prioritization signal, never a hard gate.
+
+**Two independent dimensions, shown as a pair, not collapsed into one
+number** (same principle as keeping v2.14's tiered and percentile alert
+modes separate rather than merged):
+
+- **Extreme-value potential**: reuses v2.14's percentile-rank calculation,
+  aggregated per-site — how low does this site's price get, at its best?
+- **Consistency**: `median_percentile_rank` (this site's *typical* position
+  in the cross-site price distribution, not its best-ever showing) paired
+  with `price_volatility` (coefficient of variation of this site's own price
+  over time). Low volatility + good median rank = a reliable fallback while
+  waiting to see if a more volatile, occasionally-spectacular site hits a
+  real low — directly supports the wait-vs-buy decision, not just a
+  reliability metric for its own sake.
+- **Inferred proximity/speed tier**, from declared shipping estimates,
+  bucketed (same/1-day ⇒ likely Iberia/SW-France, 2-3 day ⇒ likely wider EU,
+  etc.). Explicitly labeled as an **inference**, never presented as a
+  verified fact — a site can have fast shipping via a distributed warehouse
+  network without being physically nearby. Same "honest estimate, not false
+  precision" discipline as the landed-cost work (v2.13).
+- **Reliability**: the scraper circuit-breaker/uptime telemetry already
+  planned (v1.8, v2.6) surfaced as a user-facing trust signal instead of
+  staying internal-only plumbing.
+- Any dimension with too few observations reports as low-confidence rather
+  than silently scoring — same minimum-sample-size discipline used
+  throughout this roadmap (meaningful-drop, all-time-low, rarity alerts all
+  already gate on sample size).
+
+## Per-product source discovery (v2.17)
+
+**Scope discipline first, since this is adjacent to an explicit boundary:**
+this stays "find more sources for a product you already track," never
+general web/shop indexing — the [scope boundary](../ROADMAP.md#scope-boundaries)
+against full catalog indexing is not being softened. Every discovered
+candidate goes through the existing identity-matching pipeline (v1.5) before
+it's trusted at all, and is surfaced as a suggestion for the user to
+approve — never auto-promoted to persistent tracking, generalizing the
+existing "KuantoKusta as hint source, verify before trusting" principle
+(v2.8) to any discovered source, not just one aggregator.
+
+**Groundwork gap found while scoping this:** v1.1 ("Search-API + scraper
+abstraction") is marked ✅ Done, but `src/search/providers/` currently only
+has `null_provider.py` — no real SerpAPI/Google CSE implementation exists
+yet, despite the credential fields already being present in `Settings`. A
+real `SearchProvider` implementation is a prerequisite for this feature, not
+something it can assume already works.
+
+**Flow:** for a tracked product (on-demand or periodic), query a real search
+provider for the canonical name + region-relevant terms; filter results for
+retail-shaped pages (structured `Product`/`Offer` data present; not a forum,
+review, or aggregator page); run survivors through identity matching; score
+survivors via v2.16; present as suggestions, ranked by score.
 
 ## Retailer priority rationale (v2.7–v2.8)
 

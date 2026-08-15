@@ -45,7 +45,7 @@ confirmed match to the product you actually asked about.
 
 | ID | Item | Status | Roadmap doc |
 |---|---|---|---|
-| v1.1 | Search-API + scraper abstraction, SQLite persistence, `search` CLI | ✅ Done | — |
+| v1.1 | Search-API + scraper abstraction, SQLite persistence, `search` CLI | ✅ Done (abstraction only — see v2.17 caveat: no real `SearchProvider` implementation exists yet, only `null_provider.py`) | — |
 | v1.2 | Amazon.es + PcComponentes scrapers | ✅ Done | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
 | v1.3 | Price/text normalization | ✅ Done | — |
 | v1.4 | Dash dashboard (snapshot bar + trend line, product image, links) | 🚧 In progress | [dashboard_ux.md](roadmaps/dashboard_ux.md) |
@@ -76,7 +76,10 @@ price meaningful instead of just a number.
 | v2.11 | `condition` as a first-class field (new/used/refurb/enterprise-surplus); anomaly detection bucketed per condition | 📋 Planned | [product_matching.md](roadmaps/product_matching.md) |
 | v2.12 | EU-wide tier: German/EU high-cost-hardware retailers + secondhand/classifieds sources, native-language matching (alias lists + translation fallback) | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
 | v2.13 | Global tier: worldwide RAM/small-item retailers, landed-cost estimate (shipping + customs/VAT + delivery ETA) | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
-| v2.14 | Per-site refresh cadence (tick script, not a daemon) + statistical-rarity alert + percentile-rank dashboard badge | 📋 Planned | [alerting.md](roadmaps/alerting.md), [dashboard_ux.md](roadmaps/dashboard_ux.md) |
+| v2.14 | Per-site refresh cadence (tick script, not a daemon) + tiered/percentile historical-low alert modes + matching dashboard badge | 📋 Planned | [alerting.md](roadmaps/alerting.md), [dashboard_ux.md](roadmaps/dashboard_ux.md) |
+| v2.15 | Custom user-added sites: track a specific listing URL (Tier A), custom searchable site (Tier B, later) | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
+| v2.16 | Site value-proposition scoring: extreme-value + consistency/volatility + inferred proximity + reliability | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
+| v2.17 | Per-product source discovery (needs a real `SearchProvider` implementation first — currently only a stub exists) | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
 
 ### v3+ — Later
 
@@ -84,7 +87,7 @@ Valuable but not urgent, or genuinely needs v1/v2 trust to be worth building.
 
 | Item | Notes |
 |---|---|
-| Dumb basket / build-list totals | Sum of watched parts, no compatibility engine — PCPartPicker-lite. |
+| ~~Dumb basket / build-list totals~~ | **Superseded** by [pc_configurator.md](roadmaps/pc_configurator.md) — a separate, explicitly experimental side tool, decoupled from this tool's v1-v3 delivery sequence so it can't block or dilute the core watchlist product. |
 | ~~Extra Amazon TLDs (.fr/.de/.it)~~ | **Superseded** by the geographic-tier model above (v2.10-v2.12) — no longer a narrow optional-column idea, folded into the EU-wide/global tiers with real scraper coverage, not just Amazon TLD parameterization. |
 | Category price-trend view | "GPU street prices this month" — needs a bigger catalog to be meaningful. |
 | Price-per-GB / per-core | Derived column for storage/RAM listings only, not a platform feature. |
@@ -118,3 +121,4 @@ Explicitly out of scope — revisit only with a real, specific reason:
 - [Dashboard UX & aesthetics](roadmaps/dashboard_ux.md)
 - [Alerting](roadmaps/alerting.md)
 - [Settings & persistent config](roadmaps/settings_and_config.md)
+- [PC configuration comparator (experimental side tool)](roadmaps/pc_configurator.md)

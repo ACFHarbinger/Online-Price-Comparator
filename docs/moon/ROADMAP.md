@@ -6,12 +6,28 @@
 ## Product direction
 
 Online Price Comparator is a personal, solo-run watchlist tool: you track a small
-number of specific products (starting with PC hardware) across a handful of
-Iberian/EU retailers, it builds real price history over time, and it tells you
-three things on one screen — who's cheapest right now, whether that's actually a
-good price against history, and a direct link to buy. It deliberately does **not**
-try to be a broad shopping index (Idealo, KuantoKusta) or an Amazon-only deep-dive
-tool (Keepa, CamelCamelCamel) — see [Scope boundaries](#scope-boundaries).
+number of specific products (starting with PC hardware), it builds real price
+history over time, and it tells you three things on one screen — who's cheapest
+right now (accounting for total landed cost, not just sticker price), whether
+that's actually a good price against history, and a direct link to buy. It
+deliberately does **not** try to be a broad shopping index (Idealo, KuantoKusta)
+or an Amazon-only deep-dive tool (Keepa, CamelCamelCamel) — see [Scope
+boundaries](#scope-boundaries).
+
+**Geographic scope is per-category, not a single toggle** (revised 2026-08-15,
+motivated directly by the 2026 DRAM shortage and a real German-market
+enterprise-surplus GPU purchase — see [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md#geographic-tiers)):
+
+| Tier | Applies to | Geography |
+|---|---|---|
+| **Local** (original scope) | Default for any category without a wider tier | Portugal + Spain |
+| **EU-wide, secondhand-inclusive** | High-cost hardware (GPUs, CPUs, motherboards, and other expensive components) | EU + trade-deal countries, including native-language-only sites (e.g. German enterprise-surplus/classifieds markets) — no customs friction inside the EU, and this market segment (datacenter GPU refreshes, etc.) is where the real deals are for expensive parts. |
+| **Global** | Small, low-customs-friction categories (RAM, storage, and similar) | Worldwide — item value/size makes customs risk worth it, unlike large or high-value parts. |
+
+This reverses the original "EUR-native, no multi-currency" boundary below —
+see [settings_and_config.md](roadmaps/settings_and_config.md#currency-and-fx-normalization)
+for the normalized-storage design that makes cross-currency comparison honest
+rather than just displaying converted numbers.
 
 This direction, the feature shortlist, the aesthetic direction, and the algorithm
 designs below came out of a multi-agent brainstorm (grok researched competitors/UX,
@@ -51,11 +67,16 @@ price meaningful instead of just a number.
 | v2.2 | Scheduled/passive refresh (daily) | 📋 Planned | [settings_and_config.md](roadmaps/settings_and_config.md) |
 | v2.3 | Price-drop alerting: all-time-low, meaningful-drop, target-price rules | 📋 Planned | [alerting.md](roadmaps/alerting.md) |
 | v2.4 | Telegram bot + Discord webhook alert channels | 📋 Planned | [alerting.md](roadmaps/alerting.md) |
-| v2.5 | "30-day low" / ATL badges, delta-vs-average callouts in dashboard | 📋 Planned | [dashboard_ux.md](roadmaps/dashboard_ux.md) |
+| v2.5 | Delta-vs-average callouts in dashboard; badge design **superseded by v2.14's five-tier ladder** (30d/90d/180d/365d/ATL replaces the original two-tier 30-day/ATL badge) | 📋 Planned | [dashboard_ux.md](roadmaps/dashboard_ux.md) |
 | v2.6 | Stock / "not seen recently" honesty (stale-data banners) | 📋 Planned | [dashboard_ux.md](roadmaps/dashboard_ux.md) |
 | v2.7 | Retailer #3–#5: PCDIGA, Worten, Fnac.pt, then Chip7 | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
 | v2.8 | KuantoKusta as a candidate-URL hint source (verified against the real shop, not trusted directly) | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
 | v2.9 | ES/PT shipping-cost sanity (even a per-shop default estimate) | 📋 Planned | [settings_and_config.md](roadmaps/settings_and_config.md) |
+| v2.10 | Currency/FX normalization (store native + EUR-equivalent, rate+timestamp persisted) | 📋 Planned | [settings_and_config.md](roadmaps/settings_and_config.md) |
+| v2.11 | `condition` as a first-class field (new/used/refurb/enterprise-surplus); anomaly detection bucketed per condition | 📋 Planned | [product_matching.md](roadmaps/product_matching.md) |
+| v2.12 | EU-wide tier: German/EU high-cost-hardware retailers + secondhand/classifieds sources, native-language matching (alias lists + translation fallback) | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
+| v2.13 | Global tier: worldwide RAM/small-item retailers, landed-cost estimate (shipping + customs/VAT + delivery ETA) | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
+| v2.14 | Per-site refresh cadence (tick script, not a daemon) + statistical-rarity alert + percentile-rank dashboard badge | 📋 Planned | [alerting.md](roadmaps/alerting.md), [dashboard_ux.md](roadmaps/dashboard_ux.md) |
 
 ### v3+ — Later
 
@@ -64,7 +85,7 @@ Valuable but not urgent, or genuinely needs v1/v2 trust to be worth building.
 | Item | Notes |
 |---|---|
 | Dumb basket / build-list totals | Sum of watched parts, no compatibility engine — PCPartPicker-lite. |
-| Extra Amazon TLDs (.fr/.de/.it) | As optional columns with an import-duty/"not a local buy" tag, not default-on. |
+| ~~Extra Amazon TLDs (.fr/.de/.it)~~ | **Superseded** by the geographic-tier model above (v2.10-v2.12) — no longer a narrow optional-column idea, folded into the EU-wide/global tiers with real scraper coverage, not just Amazon TLD parameterization. |
 | Category price-trend view | "GPU street prices this month" — needs a bigger catalog to be meaningful. |
 | Price-per-GB / per-core | Derived column for storage/RAM listings only, not a platform feature. |
 
@@ -73,14 +94,18 @@ Valuable but not urgent, or genuinely needs v1/v2 trust to be worth building.
 | Item | Why parked | Notes |
 |---|---|---|
 | 🅿️ Browser extension / userscript | Real UX win, real maintenance cost | Revisit only if you're opening Amazon/PCC in-browser more than the dashboard. Personal userscript first, not a store listing. |
-| 🅿️ Simple buy-now-vs-wait guidance | Explicitly **not** ML/prediction — grok's warning against "prediction theater" stands | If revisited, keep it to descriptive stats ("price is at a 90-day low" is a fact; "price will drop next week" is not). |
+| 🅿️ Simple buy-now-vs-wait guidance | Explicitly **not** ML/prediction — grok's warning against "prediction theater" stands | Operationalized as descriptive stats via v2.14's tiered historical-low badge/alert ("price is at a 90-day low" is a fact). Kept parked here only for true forecasting (see next row), which is still out of scope. |
+| 🅿️ Price forecasting (ARIMA or similar time-series methods) | Genuinely different from v2.14's descriptive tiers — this would be an actual prediction, which the roadmap has twice now explicitly rejected for the shipped product ("prediction theater"). Noted 2026-08-15 as worth investigating **as a separate research track**, not a feature to build | If pursued, must stay clearly separated from the tiered-low alert/badge — never blended into the same UI surface or presented with the same confidence, so a forecast can't be mistaken for the descriptive fact it sits next to. |
 
 ### Scope boundaries
 
 Explicitly out of scope — revisit only with a real, specific reason:
 
 - 🚫 Coupons / affiliate-link interception (Honey-style) — trust-eroding anti-pattern.
-- 🚫 Multi-currency support — market is EUR; revisit only if a non-EUR retailer becomes a real buy path.
+- ~~🚫 Multi-currency support~~ — **reversed 2026-08-15**: the global/EU-wide
+  tiers make non-EUR retailers a real buy path (exactly the condition this
+  boundary said would trigger a revisit). See
+  [settings_and_config.md](roadmaps/settings_and_config.md#currency-and-fx-normalization).
 - 🚫 Full catalog indexing — this is a watchlist tool, not a shop index; that's Idealo/KuantoKusta's job.
 - 🚫 CAPTCHA-solving services, proxy rotation, IP-reputation evasion — not legitimate for a personal tool.
 - 🚫 Reviews, Q&A, "community" features.

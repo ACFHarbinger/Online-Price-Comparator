@@ -1,6 +1,6 @@
 # Scrapers & Retailer Coverage Roadmap
 
-**Status:** 🚧 In progress (2 of ~7 retailers live) · **Source:** codex research (reliability), grok research (retailer priority)
+**Status:** 🚧 In progress (2 of ~7 retailers live) · 📋 Planned (v2.12, v2.13) · **Source:** codex research (reliability), grok research (retailer priority); v2.12/v2.13 from the 2026-08-15 global-scope brainstorm
 
 ## Current state
 
@@ -70,6 +70,49 @@ When a source is blocked, the pipeline should return a clean partial result set
 from the other sources (already true today — `pipeline.discover` fans out and
 each adapter fails independently) and surface the blocked source's status
 honestly rather than silently showing stale data as current.
+
+## Geographic tiers (v2.12–v2.13)
+
+Added 2026-08-15, motivated by the DRAM shortage (RAM needs worldwide reach)
+and a real German enterprise-surplus GPU purchase (high-cost hardware needs
+EU-wide reach with secondhand sources) — see
+[ROADMAP.md](../ROADMAP.md#product-direction) for the tier table. This
+section is retailer/source detail; the per-product `search_scope_tier` field
+is in [settings_and_config.md](settings_and_config.md#search_scope_tier--per-tracked-product-geography-v21-extended).
+
+### EU-wide tier (v2.12) — high-cost hardware, secondhand-inclusive
+
+Candidate sources, in rough priority order — **not exhaustive, a starting
+set to validate the tier before expanding it**:
+
+| Source | Type | Notes |
+|---|---|---|
+| Mindfactory.de, Alternate.de | New retail | Germany's two largest PC-hardware retailers; frequently undercut Iberian prices on new stock alone, before even considering secondhand. |
+| eBay.de (Kleinanzeigen for local-only deals) | Secondhand marketplace | Where the enterprise-surplus/datacenter-refresh deals actually surface. Individual-seller listings, not a single "retailer" — needs per-listing condition/seller-signal extraction, not a fixed catalog scrape. |
+| Rebuy, refurbed.de (or equivalent EU refurb marketplaces) | Refurb retail | Structured "refurb" listings (graded condition, dealer warranty) are a lower-risk middle ground between new-retail and individual-seller secondhand — worth prioritizing over raw classifieds where available, since condition/warranty claims are more verifiable. |
+| Scan.co.uk, Overclockers UK | New retail | UK is outside the EU customs union post-Brexit but still worth including given it's a major hardware market — landed-cost estimation (below) applies to UK sources the same as non-EU global-tier ones, not treated as EU-frictionless. |
+
+All EU-wide-tier sources need the [multilingual matching](product_matching.md#multilingual-matching-v212)
+design for non-English listings, and the [condition field](product_matching.md#condition-as-a-first-class-field-v211)
+for the secondhand/refurb sources specifically.
+
+### Global tier (v2.13) — RAM and other small, low-customs-friction categories
+
+Candidate sources: Newegg (US), Amazon global TLDs (.com, .de already covered
+above, .co.uk, others as needed), B&H Photo/Micro Center (US, strong PC-parts
+inventory), plus whichever regional retailers turn out to have real RAM
+pricing advantages during the current shortage — this list should be driven
+by where the actual price data points during v2.13's rollout, not
+front-loaded speculatively.
+
+**Landed-cost estimation is required alongside any global-tier source**, not
+an optional nice-to-have — a raw foreign-currency price without shipping +
+customs/import-VAT + delivery-ETA context is actively misleading, not just
+incomplete, for exactly the reason [dashboard_ux.md](dashboard_ux.md#landed-cost-and-delivery-context-v213)
+covers. Precise customs/duty calculation is genuinely hard (depends on
+declared value, carrier, IOSS pre-collection) — ship an honest **estimate**
+labeled as such, not a false-precision number, and never claim a landed cost
+as final before actual checkout.
 
 ## Retailer priority rationale (v2.7–v2.8)
 

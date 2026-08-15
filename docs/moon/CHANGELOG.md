@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Global/EU-wide scope expansion roadmap (2026-08-15):** added v2.10-v2.14
+  across `ROADMAP.md`, `product_matching.md`, `scrapers_and_retailers.md`,
+  `settings_and_config.md`, and `dashboard_ux.md` — reverses the original
+  EUR-only/Iberia-only scope boundaries into a per-tracked-product geographic
+  tier model (local / EU-wide-secondhand-inclusive / global), motivated by
+  the 2026 DRAM shortage and a real German enterprise-surplus GPU purchase.
+  Key additions: `condition` as a first-class field so used/refurb listings
+  get their own anomaly-detection statistical bucket instead of being
+  auto-hidden against new-retail medians; native-currency-preserving storage
+  with an EUR-equivalent computed alongside (never replacing) the observed
+  price; multilingual matching via per-market alias lists with machine
+  translation as a fallback; landed-cost/delivery-time estimates for
+  cross-border listings; per-site refresh cadence via a tick script (not a
+  new daemon process); a statistical-rarity alert and matching percentile-
+  rank dashboard badge, both descriptive/retrospective only, no forecasting.
+  **Revised same day**: the rarity alert/badge became a tiered historical-low
+  ladder (30d/90d/180d/365d/all-time, fires at the strongest tier reached)
+  rather than a raw percentile score — generalizes and supersedes v2.5's
+  original two-tier 30-day/ATL badge design instead of sitting alongside it.
+  Price forecasting (ARIMA or similar) noted as a genuinely separate future
+  research track in the Parked table, explicitly not blended into the
+  descriptive tiered-low feature.
+
 - Created templates and placeholder documents for research and reports directories under `docs/research/` and `docs/reports/`.
 - Created a beautiful, interactive Vue documentation portal in `docs/website/` that parses and displays all repository documentation files dynamically with search, dark mode, alert styling, and navigation.
 - Created `website/javascript/` workspace similar to the typescript/ directory but for JavaScript, and added it to root workspace settings and `justfile` tasks.

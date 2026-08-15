@@ -1,6 +1,6 @@
 # Dashboard UX & Aesthetics Roadmap
 
-**Status:** 🚧 In progress (v1.4) · **Source:** agy research (aesthetics), grok research (borrowed UX patterns)
+**Status:** 🚧 In progress (v1.4) · 📋 Planned (v2.11, v2.13, v2.14) · **Source:** agy research (aesthetics), grok research (borrowed UX patterns); v2.11/v2.13/v2.14 from the 2026-08-15 global-scope brainstorm
 
 ## Aesthetic direction: "Financial Terminal" dark-slate
 
@@ -86,6 +86,44 @@ never silently included in "cheapest" or the charts.
 | Delta-vs-30-day-average pill | Financial apps (TradingView/Yahoo Finance) | Instant statistical context without forcing a chart read. |
 | Stale-data honesty banner ("PCC failed last run") | — | Never show a dead scraper's last-known price as if it were live; ties into the scraper circuit-breaker status from [scrapers_and_retailers.md](scrapers_and_retailers.md). |
 | Out-of-stock strikethrough/greyed display | Camel/Keepa | Prevents false "great price" reads on an item you can't actually buy. |
+
+## Tiered historical-low badge (v2.14, revised)
+
+Operationalizes the roadmap's parked "wait vs. buy" idea — the parked note
+already said descriptive stats would be acceptable ("price is at a 90-day
+low" is a fact; a forecast isn't). Generalizes the existing [30-day-low / ATL
+badge](#borrowed-ux-ideas-v25-v26) pattern (already planned for v2.5) into a
+full ladder: **30-day / 90-day / 180-day / 365-day / all-time low**, badge
+shows the strongest tier reached, same-condition-bucket only. Purely
+retrospective — no claim about future prices. Same tier calculation powers
+[alerting.md](alerting.md#alert-types-and-default-thresholds)'s tiered
+historical-low alert; implement once, surface in both places (this
+supersedes v2.5's badge as a separate, narrower item — v2.5's two-tier
+30-day/ATL badge is now v2.14's five-tier ladder, not an additional design).
+
+## Condition badge/filter (v2.11)
+
+Once [`condition`](product_matching.md#condition-as-a-first-class-field-v211)
+exists as a field, the snapshot bar and retailer table need a visible
+condition badge (new/used/refurb/enterprise-surplus) and a filter toggle.
+Showing a €700 used listing directly beside a €2200 new one with no label
+would be actively misleading, not just incomplete — this isn't optional
+polish, it's required alongside the condition field itself, not a later
+follow-up.
+
+## Landed cost and delivery context (v2.13)
+
+For global/EU-wide-tier listings, the retailer table's existing "shipping
+estimate" column isn't enough on its own — add an estimated **landed cost**
+(native price + shipping + estimated customs/import VAT where applicable) and
+a **delivery-time estimate**, both explicitly labeled as estimates, not final
+checkout numbers (see [scrapers_and_retailers.md](scrapers_and_retailers.md#global-tier-v213--ram-and-other-small-low-customs-friction-categories)
+for why precise duty calculation isn't attempted). This is the same
+"total value, not sticker price" principle the retailer table already
+applies via the shipping column — extended to make foreign-currency listings
+honestly comparable instead of just cheaper-looking. Native price displays as
+primary (what you'd actually be charged), EUR-equivalent as the comparison
+basis (see [settings_and_config.md](settings_and_config.md#currency-and-fx-normalization)).
 
 ## Explicitly not doing
 

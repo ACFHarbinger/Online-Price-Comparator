@@ -1,6 +1,6 @@
 # Roadmap
 
-**Last updated:** 2026-08-13
+**Last updated:** 2026-08-15
 **Status legend:** ✅ Done · 🚧 In progress · 📋 Planned · 🅿️ Parked (open question, not scheduled) · 🚫 Won't do
 
 ## Product direction
@@ -21,8 +21,8 @@ enterprise-surplus GPU purchase — see [scrapers_and_retailers.md](roadmaps/scr
 | Tier | Applies to | Geography |
 |---|---|---|
 | **Local** (original scope) | Default for any category without a wider tier | Portugal + Spain |
-| **EU-wide, secondhand-inclusive** | High-cost hardware (GPUs, CPUs, motherboards, and other expensive components) | EU + trade-deal countries, including native-language-only sites (e.g. German enterprise-surplus/classifieds markets) — no customs friction inside the EU, and this market segment (datacenter GPU refreshes, etc.) is where the real deals are for expensive parts. |
-| **Global** | Small, low-customs-friction categories (RAM, storage, and similar) | Worldwide — item value/size makes customs risk worth it, unlike large or high-value parts. |
+| **EU-wide, secondhand-inclusive** | High-cost hardware (GPUs, CPUs, motherboards, and other expensive components) | Search geography: EU + nearby hardware markets (DE/FR/NL/IT plus UK as a *search* target). **Search geography is not import law.** Intra-EU listings are `import_regime = eu_domestic` (no customs). UK listings found under this tier are `uk_import` and need the same landed-cost treatment as global-tier non-EU sources — never implied customs-free because they appeared in an EU-wide search. This market segment (datacenter GPU refreshes, DE surplus) is where the real deals are for expensive parts. |
+| **Global** | Small, low-customs-friction categories (RAM, storage, and similar) | Worldwide — item value/size makes customs risk worth it, unlike large or high-value parts. `import_regime` is `row` unless the seller is EU-domestic. |
 
 This reverses the original "EUR-native, no multi-currency" boundary below —
 see [settings_and_config.md](roadmaps/settings_and_config.md#currency-and-fx-normalization)
@@ -45,7 +45,7 @@ confirmed match to the product you actually asked about.
 
 | ID | Item | Status | Roadmap doc |
 |---|---|---|---|
-| v1.1 | Search-API + scraper abstraction, SQLite persistence, `search` CLI | ✅ Done (abstraction only — see v2.17 caveat: no real `SearchProvider` implementation exists yet, only `null_provider.py`) | — |
+| v1.1 | Search-API + scraper abstraction, SQLite persistence, `search` CLI | ✅ Done (abstraction only — the first real `SearchProvider` is v2.17a, not implied by this row) | — |
 | v1.2 | Amazon.es + PcComponentes scrapers | ✅ Done | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
 | v1.3 | Price/text normalization | ✅ Done | — |
 | v1.4 | Dash dashboard (snapshot bar + trend line, product image, links) | 🚧 In progress | [dashboard_ux.md](roadmaps/dashboard_ux.md) |
@@ -78,8 +78,9 @@ price meaningful instead of just a number.
 | v2.13 | Global tier: worldwide RAM/small-item retailers, landed-cost estimate (shipping + customs/VAT + delivery ETA) | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
 | v2.14 | Per-site refresh cadence (tick script, not a daemon) + tiered/percentile historical-low alert modes + matching dashboard badge | 📋 Planned | [alerting.md](roadmaps/alerting.md), [dashboard_ux.md](roadmaps/dashboard_ux.md) |
 | v2.15 | Custom user-added sites: track a specific listing URL (Tier A), custom searchable site (Tier B, later) | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
-| v2.16 | Site value-proposition scoring: extreme-value + consistency/volatility + inferred proximity + reliability | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
-| v2.17 | Per-product source discovery (needs a real `SearchProvider` implementation first — currently only a stub exists) | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
+| v2.16 | Site value-proposition scorecard: extreme-value, consistency/volatility, destination-specific fulfillment SLA, and reliability | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
+| v2.17a | Real `SearchProvider` (SerpAPI or Google CSE) behind the existing Settings keys — v1.1 delivered only the abstraction + `null_provider.py` | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
+| v2.17b | Manual, per-product source discovery UX (approve-before-persist; depends on v2.17a) | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
 
 ### v3+ — Later
 

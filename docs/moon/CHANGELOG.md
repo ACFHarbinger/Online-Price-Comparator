@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Grok roadmap review (2026-08-15):** after the global-scope expansion
+  and the Gemini/Chat passes, locked: alerts/ATL/percentile on persisted
+  item sticker (not landed-cost); `import_regime` (`eu_domestic` /
+  `uk_import` / `row`) distinct from `search_scope_tier`; `condition`
+  snapshotted on every `price_history` row; sparse-bucket review anchor
+  as a per-category editable fraction (GPU surplus 0.40, RAM used 0.50
+  starting values); v2.16 is a four-cell scorecard not a composite
+  score, price dimensions same-condition only; v2.17 split into 2.17a
+  real `SearchProvider` then 2.17b discover-and-approve; Kleinanzeigen
+  is a separate source from eBay.de; PC-configurator v0 totals labeled
+  as independent-component sums and blocked on v2.10.
+
 ### Added
 
 - **Global/EU-wide scope expansion roadmap (2026-08-15):** added v2.10-v2.14
@@ -51,6 +65,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   at v0, compatibility-aware automatic enumeration as a later explicit
   escalation, not assumed) — supersedes and replaces the original "dumb
   basket" v3+ item.
+
+- **Interactive Analytics, Landed-Cost Breakdown & 3D Configurator UI (2026-08-15):**
+  added UI/UX specifications across `dashboard_ux.md` and `pc_configurator.md`
+  incorporating brushing and linking across historical trend lines, snapshot
+  bars, and retailer tables; condition filter chips with dynamic IQR recalculation;
+  landed-cost breakdown waterfall popovers with delivery SLA tiers; statistical
+  anomaly inspection cards and scraper circuit-breaker status drawers; and
+  experimental `@react-three/fiber` 3D exploded-view schematic rigs, multi-build
+  value radar charts, and historical build-cost timeline scrubbers for the PC
+  configurator tool.
+
 
 - Created templates and placeholder documents for research and reports directories under `docs/research/` and `docs/reports/`.
 - Created a beautiful, interactive Vue documentation portal in `docs/website/` that parses and displays all repository documentation files dynamically with search, dark mode, alert styling, and navigation.

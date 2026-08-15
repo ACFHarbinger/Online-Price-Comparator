@@ -88,7 +88,8 @@ set to validate the tier before expanding it**:
 | Source | Type | Notes |
 |---|---|---|
 | Mindfactory.de, Alternate.de | New retail | Germany's two largest PC-hardware retailers; frequently undercut Iberian prices on new stock alone, before even considering secondhand. |
-| eBay.de (Kleinanzeigen for local-only deals) | Secondhand marketplace | Where the enterprise-surplus/datacenter-refresh deals actually surface. Individual-seller listings, not a single "retailer" — needs per-listing condition/seller-signal extraction, not a fixed catalog scrape. |
+| eBay.de | Auction / Buy-It-Now marketplace | Structured-ish listings, seller ratings, often ships EU-wide. Separate scraper from Kleinanzeigen. |
+| ebay-kleinanzeigen.de | Local classifieds | **A different site** from eBay.de (do not parameterize one scraper as the other). Where many surplus/datacenter-refresh cards actually surface. Individual-seller, local-pickup common — needs per-listing condition/seller-signal extraction and honest `import_regime` / shipping (often `eu_domestic` + pickup, not a shop SLA). |
 | Rebuy, refurbed.de (or equivalent EU refurb marketplaces) | Refurb retail | Structured "refurb" listings (graded condition, dealer warranty) are a lower-risk middle ground between new-retail and individual-seller secondhand — worth prioritizing over raw classifieds where available, since condition/warranty claims are more verifiable. |
 | Scan.co.uk, Overclockers UK | New retail | UK is outside the EU customs union post-Brexit but still worth including given it's a major hardware market — landed-cost estimation (below) applies to UK sources the same as non-EU global-tier ones, not treated as EU-frictionless. |
 
@@ -145,32 +146,34 @@ tier list will anticipate every such case.
 
 ## Site value-proposition scoring (v2.16)
 
-A composite, sample-size-gated score per site (or site × product-category),
-used to help decide whether a custom-added or discovered site is worth
-keeping tracked — a ranking/prioritization signal, never a hard gate.
+A **four-cell scorecard** per site (or site × product-category × exact
+condition), used to help decide whether a custom-added or discovered site
+is worth keeping tracked — a ranking/prioritization signal, never a hard
+gate, and **not a composite 0–100**. Do not implement a weighted average
+of the cells.
 
-**Two independent dimensions, shown as a pair, not collapsed into one
-number** (same principle as keeping v2.14's tiered and percentile alert
-modes separate rather than merged):
+**Four independent dimensions** (same principle as keeping v2.14's tiered
+and percentile alert modes separate rather than merged):
 
-- **Extreme-value potential**: reuses v2.14's percentile-rank calculation,
-  aggregated per-site — how low does this site's price get, at its best?
+- **Extreme-value potential**: reuses v2.14's percentile-rank calculation
+  on **item sticker** (`price_eur_equivalent`), aggregated per-site
+  **inside an exact condition bucket**. Mixed-condition aggregates are
+  forbidden (they crown classifieds sites for being surplus-cheap).
 - **Consistency**: `median_percentile_rank` (this site's *typical* position
-  in the cross-site price distribution, not its best-ever showing) paired
-  with `price_volatility` (coefficient of variation of this site's own price
-  over time). Low volatility + good median rank = a reliable fallback while
-  waiting to see if a more volatile, occasionally-spectacular site hits a
-  real low — directly supports the wait-vs-buy decision, not just a
-  reliability metric for its own sake.
-- **Inferred proximity/speed tier**, from declared shipping estimates,
-  bucketed (same/1-day ⇒ likely Iberia/SW-France, 2-3 day ⇒ likely wider EU,
-  etc.). Explicitly labeled as an **inference**, never presented as a
-  verified fact — a site can have fast shipping via a distributed warehouse
-  network without being physically nearby. Same "honest estimate, not false
-  precision" discipline as the landed-cost work (v2.13).
-- **Reliability**: the scraper circuit-breaker/uptime telemetry already
-  planned (v1.8, v2.6) surfaced as a user-facing trust signal instead of
-  staying internal-only plumbing.
+  in the same-condition cross-site sticker distribution) paired with
+  `price_volatility` (coefficient of variation of this site's own sticker
+  over time). Low volatility + good median rank = a reliable fallback
+  while waiting to see if a more volatile, occasionally-spectacular site
+  hits a real low.
+- **Destination-specific fulfillment SLA**, from declared or observed
+  delivery estimates, bucketed (for example express ≤2 days, standard
+  3–5 days, extended >5 days). This describes delivery latency, not
+  inferred warehouse geography or customs jurisdiction; record its
+  source/confidence and aggregate cautiously by site × destination.
+  First observation is not a sample — same min-n rule as alerts.
+- **Scraper reliability**: circuit-breaker/uptime telemetry (v1.8, v2.6)
+  as a fetch-health signal. **Not** seller trust. Kleinanzeigen seller
+  ratings are a different object if shown at all.
 - Any dimension with too few observations reports as low-confidence rather
   than silently scoring — same minimum-sample-size discipline used
   throughout this roadmap (meaningful-drop, all-time-low, rarity alerts all
@@ -191,15 +194,27 @@ existing "KuantoKusta as hint source, verify before trusting" principle
 **Groundwork gap found while scoping this:** v1.1 ("Search-API + scraper
 abstraction") is marked ✅ Done, but `src/search/providers/` currently only
 has `null_provider.py` — no real SerpAPI/Google CSE implementation exists
-yet, despite the credential fields already being present in `Settings`. A
-real `SearchProvider` implementation is a prerequisite for this feature, not
-something it can assume already works.
+yet, despite the credential fields already being present in `Settings`.
 
-**Flow:** for a tracked product (on-demand or periodic), query a real search
-provider for the canonical name + region-relevant terms; filter results for
-retail-shaped pages (structured `Product`/`Offer` data present; not a forum,
-review, or aggregator page); run survivors through identity matching; score
-survivors via v2.16; present as suggestions, ranked by score.
+**Split:** **v2.17a** implements one real `SearchProvider` (SerpAPI or
+Google CSE) behind those keys. **v2.17b** is the discover-and-approve UX
+and must not start until v2.17a returns real rows.
+
+**Flow (v2.17b):** initial discovery is strictly **manual and
+user-triggered** for one tracked product, never periodic. Query the real
+provider for the canonical name + region-relevant terms under a fixed
+per-run query/result/page budget **and** a documented **daily
+cross-product** API-credit budget (Discover-on-every-watchlist-row in a
+loop is a catalog crawl). Filter results for retail-shaped pages —
+schema.org `Product`/`Offer` alone is not enough (affiliate spam has it);
+require a host allowlist, a known shop family, or a user-confirmed new
+host. Run survivors through identity matching; tag each candidate with
+`import_regime` from seller destination (not from the product's
+`search_scope_tier`); score survivors via v2.16; present them as
+time-limited suggestions. The user must explicitly approve a candidate
+before it becomes a persistent source. Unapproved candidates expire. A
+recurring discovery cadence is a separate future decision after
+manual-use cost and noise are measured.
 
 ## Retailer priority rationale (v2.7–v2.8)
 

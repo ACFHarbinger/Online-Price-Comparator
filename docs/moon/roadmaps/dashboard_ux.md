@@ -108,8 +108,10 @@ alert should never disagree about which mode is active:
   useful specifically because it doesn't collapse to a fixed boundary the way
   the tiered badge does.
 
-Both purely retrospective — no claim about future prices. Same calculations
-power the alert; implement once, surface in both places.
+Both purely retrospective — no claim about future prices. Same **item
+sticker** calculations power the alert; implement once, surface in both
+places. Ranking / "cheapest now" uses credible landed cost (v2.10);
+badges and alerts do not.
 
 ## Condition badge/filter (v2.11)
 
@@ -135,6 +137,18 @@ honestly comparable instead of just cheaper-looking. Native price displays as
 primary (what you'd actually be charged), EUR-equivalent as the comparison
 basis (see [settings_and_config.md](settings_and_config.md#currency-and-fx-normalization)).
 
+If shipping, customs, or import-VAT cannot be estimated credibly
+(`import_regime` is `uk_import` or `row` and the estimate is missing), do
+**not** fold the listing into the ranked cheapest-price table. Show it in a
+distinct, highlighted **Needs landed-cost verification** group immediately
+alongside the credible comparison: retain its native and FX-normalized
+base price, identify the missing cost components, and allow comparison
+with other uncertain offers, but give it no ordinal rank or "best price"
+badge. The credible landed-cost winner remains the primary recommendation
+until the uncertainty is resolved. Historical-low badges on that row still
+refer to its sticker series, and must name condition so a surplus ATL
+cannot look like a new-stock ATL.
+
 ## Explicitly not doing
 
 - Coupon/affiliate-link interception UI (see [ROADMAP.md](../ROADMAP.md) scope
@@ -144,3 +158,31 @@ basis (see [settings_and_config.md](settings_and_config.md#currency-and-fx-norma
   [tracked-product watchlist](settings_and_config.md)) — the single-product view
   above is the v1 target; the multi-product home page comes once there's a
   persistent watchlist to show.
+
+## Interactive Data Visualization & Analytics Features (2026-08-15 Update)
+
+To maximize analytical utility and decision speed without visual clutter:
+
+### 1. Brushing, Linking & Cross-Filtering
+- **Linked Viewports**: Hovering over a date node on the primary price trend line dynamically highlights the corresponding store's bar in the Snapshot chart and the specific row in the Retailer Table.
+- **Condition Slicing**: Instant filter chips (`[All]`, `[New]`, `[Used]`,
+  `[Refurbished]`, `[Enterprise Surplus]`, `[Unknown]`) that dynamically
+  recalculate the visible price distribution and the selected exact-condition
+  IQR baseline in real time. `Unknown` stays visibly unverified and cannot
+  produce the default cheapest winner until the user confirms its condition.
+- **Landed Cost Breakdown Waterfall Popover**: Hovering over any total price pops up a structured micro-waterfall:
+  $$\text{Total Landed} = \text{Base Price (Converted)} + \text{Shipping Fee} + \text{Estimated Import VAT / Duty}$$
+  paired with a delivery SLA indicator (*Express $\le 2$d*, *Standard 3–5d*, *Extended $> 5$d*).
+
+### 2. Statistical Anomaly & Trust Telemetry Modals
+- **"Why was this flagged?" Anomaly Inspection Card**: Clicking an anomalous deal badge reveals an explainability card showing the sample size, current median, IQR fences, and seller rating signals.
+- **Scraper Circuit-Breaker Status Drawer**: A sleek drawer showing per-retailer telemetry (uptime, last scrape timestamp, response latency, and rate-limit backoff status).
+
+---
+
+## Temporary Changelog
+
+### 2026-08-15 (Gemini UI/UX Review Pass)
+- Added specifications for **Brushing, Linking & Cross-Filtering** between the historical trend line, snapshot bar, and retailer table.
+- Added **Landed Cost Breakdown Waterfall Popover** with fulfillment latency SLA indicators.
+- Added **Statistical Anomaly Inspection Card** and **Scraper Circuit-Breaker Status Drawer** for operational observability.

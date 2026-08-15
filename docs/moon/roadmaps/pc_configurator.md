@@ -33,14 +33,28 @@ without touching v1-v3.
 The user specifies the alternative configurations explicitly (e.g. "4×3080Ti"
 vs. "2×3090Ti" vs. "1×A6000" as three named candidate builds); the tool:
 
+- Depends on core **v2.10** landed-cost / `import_regime` semantics. Do not
+  start this tool on sticker-only totals.
 - Looks up each named component against the core watchlist tool's existing
   tracked-product/price-history data (reuses `tracked_products`,
   `price_history` — no new pricing infrastructure).
-- Sums cost per candidate build (current best price, and historically over
-  time — a build-cost trend line, not just a snapshot total).
+- Sums cost per candidate build using the core tool's current **best credible
+  landed cost**, and historically over time — a build-cost trend line, not just
+  a snapshot total. **Label the total as a sum of independently-cheapest
+  credible component observations that day, not a kit anyone sold.**
+  Quantity `4` against a single used-card listing is not four cards in
+  stock. Components without a credible landed-cost estimate remain
+  visible as explicitly uncertain inputs, never silently selected as the best.
+  Condition mix (e.g. 3 new + 1 surplus) is visible on the BOM, not
+  flattened into one "the price."
 - Displays alongside whatever spec data is manually entered per component at
   this stage (no automated spec database yet) — VRAM, RAM, TDP, etc. entered
   by the user, not scraped or inferred.
+- Persists each configuration as a dated, user-authored BOM: component identity,
+  quantity, manual specification values and their source, condition,
+  currency/landed-cost selection, and an **Assumptions & Notes** field. This
+  makes build-cost snapshots and trend lines auditable without pretending to
+  validate compatibility.
 - **No compatibility checking at v0** — the user is asserting these
   configurations are physically valid; the tool compares cost/value only.
   This is a deliberate, honest limitation, not a gap to silently paper over.
@@ -77,3 +91,34 @@ Only pursue if v0 proves genuinely useful in practice:
 - Real-time compatibility validation against a live parts database (that's
   PCPartPicker's actual job; duplicating it isn't this tool's purpose even
   in the experimental v1+ escalation).
+
+## Parked visual exploration — not v0 scope
+
+These ideas remain available for a later, explicit frontend/spec-data decision;
+they do not belong to the Dash-based manual v0 comparator. A 3D chassis model
+implicitly needs the form-factor, slot, and component-placement data that v0
+deliberately does not collect.
+
+### 1. Interactive 3D Exploded-View Rig (`@react-three/fiber` / WebGL, parked)
+- **Stylized Blueprint Schematic**: Renders a clean architectural wireframe or matte chassis model populated with the user's selected components.
+- **Exploded View Control**: An interactive slider expands components outward from the chassis (AIO cooler lifts up, GPUs slide out, RAM sticks elevate), with HUD callouts connecting 3D parts to their live landed prices.
+- **Interactive Component Highlighting**: Clicking any component in the cost table isolates and highlights that exact slot in the 3D rig.
+
+### 2. Multi-Build Value Radar & Historical Cost Scrubber (parked)
+- **Multi-Metric Spider/Radar Chart**: Visualizes multi-dimensional trade-offs between competing configurations (e.g. 4×3080 Ti vs. 2×3090 Ti vs. 1×A6000):
+  - Total Landed Cost (€)
+  - VRAM Capacity (GB)
+  - Aggregate Memory Bandwidth (GB/s)
+  - Estimated Total System TDP (Watts)
+  - Component Sourcing Volatility
+- **Historical Cost Timeline Scrubber**: A global timeline slider enabling users to scrub back across 1M, 3M, 6M, and 1Y to see what each total build configuration cost historically.
+
+---
+
+## Temporary Changelog
+
+### 2026-08-15 (Gemini UI/UX Review Pass)
+- Recorded the **Interactive 3D Exploded-View Rig** (`@react-three/fiber` /
+  WebGL) as a parked visual experiment, not v0 scope.
+- Added **Multi-Build Value Radar** and **Historical Cost Timeline Scrubber** specifications.
+- Added **User Assumptions & Notes** field requirement for v0 configurations.

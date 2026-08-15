@@ -74,8 +74,11 @@ improve recall, never become the final identity decision.
 
 ## Anomaly detection
 
-Anomalies are flags, not deletions, and only compare confirmed listings in the
-same currency.
+Anomalies are flags, not deletions, and only compare **confirmed** listings
+in the **same exact condition bucket**, using each observation's persisted
+`price_eur_equivalent` (v2.10 item price). Never mix native currencies.
+Never run IQR or historical-low fences on landed-cost estimates — shipping
+and VAT revisions must not move an anomaly fence or an ATL.
 
 **With ≥4 confirmed listings** (IQR method — robust to a single extreme listing,
 unlike mean/z-score):
@@ -119,16 +122,35 @@ profile:
   available (many EU secondhand/classifieds sources expose this explicitly),
   falling back to title/description keyword detection, falling back to
   `unknown` — never guessed silently into `new`.
-- Anomaly detection (IQR, semantic bundle-flag) runs **per condition bucket**,
-  not across the whole listing set. A `used` listing is only compared against
-  other `used` (+ `refurb`/`enterprise_surplus`, which are reasonable to pool
-  together as "not new") listings for its median/IQR fence. `unknown`-condition
-  listings are never pooled with `new` — treat as their own bucket (or require
-  ≥1 confirmed `new` listing to exist before showing a comparison at all,
-  since an unknown-condition item can't be honestly compared to anything).
+- Anomaly detection (IQR and semantic bundle-flag) runs **per exact condition
+  bucket**, not across the whole listing set. `used`, `refurb`, and
+  `enterprise_surplus` are distinct by default: warranty, seller type, return
+  rights, grade, and service life can make their distributions materially
+  different. A documented, low-confidence pooled fallback may be introduced
+  later only after measuring that it helps a specific sparse bucket.
+- Persist `condition` on **every `price_history` row** (observation-time
+  snapshot) as well as on the listing (current belief). Confirming
+  `unknown → enterprise_surplus` updates the listing and *future*
+  observations; it must not retcon ATL / percentile / IQR history.
+- Sparse buckets (`N < 4` in that exact condition, including sparse
+  **new**) never auto-hide and never auto-accept. They may raise an
+  "inspect seller/condition" review badge when `price_eur_equivalent` is
+  below a **per-category, user-editable** fraction of the `new` median
+  (or of that listing's own prior confirmed sticker if no new reference
+  exists). Documented starting values, not universal law: GPU surplus
+  `0.40`, RAM used `0.50`. Persist the fraction used, the reference
+  series, and the evidence. Do not ship a global 0.20/0.25/0.95 fence.
+- `unknown`-condition listings are never pooled with any verified
+  condition and never enter any IQR sample. Persist `condition_source`
+  (structured data, seller declaration, title heuristic, manual, or
+  `source_policy`) and `condition_confidence`; show them as unverified,
+  keep them visible, and exclude them from the default cross-condition
+  "cheapest" winner until the user confirms the condition.
 - `new` remains the default assumption **only** for retailers/categories
   where the existing scraper set already only lists new stock (i.e., the
-  current Amazon.es/PcComponentes/PT-retailer sources) — don't retroactively
+  current Amazon.es/PcComponentes/PT-retailer sources). Migrations must
+  record `condition_source = source_policy` for those rows — do not
+  silently backfill historic rows as verified `new`. Don't retroactively
   require condition detection on sources that structurally never carry
   anything else.
 - Dashboard implication (see [dashboard_ux.md](dashboard_ux.md)): the

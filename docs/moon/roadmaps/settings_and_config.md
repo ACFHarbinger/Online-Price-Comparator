@@ -69,10 +69,22 @@ original boundary named as its own trigger for revisiting.
   `fx_rate_date`. This makes every cross-currency comparison auditable —
   "why does this look cheap" is always answerable from stored data, not a
   live recalculation that could silently drift if rates are refreshed later.
-- **Anomaly detection and "best price" ranking run on
-  `price_eur_equivalent`**, never on mixed native currencies directly — this
-  is what makes the [condition-bucketed anomaly design](product_matching.md#condition-as-a-first-class-field-v211)
-  actually work correctly across markets.
+- **Anomaly detection, v2.14 alerts, and historical-low badges** run on the
+  observation's persisted **item sticker**: native amount plus the
+  `price_eur_equivalent` / `fx_rate_used` / `fx_rate_date` stored with that
+  row. They never run on landed-cost. A shipping-table or VAT-rule edit
+  must not fire an ATL or rewrite percentile history.
+- Persist `condition` on each `price_history` row (observation-time
+  snapshot). Listing `condition` is current belief only.
+- **"Best price" ranking runs on a credible EUR landed-cost estimate**, not
+  price alone: `price_eur_equivalent + shipping + estimated customs/VAT` with
+  a persisted basis and confidence. Store the component estimates and
+  `landed_cost_eur_estimate` alongside the FX fields. Eligibility depends
+  on **`import_regime`** (`eu_domestic` / `uk_import` / `row`), which is
+  distinct from `search_scope_tier` (where we *look*). A UK or row listing
+  without a credible shipping/customs estimate stays visible in the
+  dashboard's highlighted uncertain-cost group, but receives no definitive
+  rank and cannot displace a credible landed-cost winner.
 - **Dashboard shows both**: native price (what you'd actually be charged at
   that retailer) as primary, EUR-equivalent as the comparison basis — never
   only the converted number, since the native price is what matters at
@@ -87,14 +99,19 @@ original boundary named as its own trigger for revisiting.
 
 Extends the existing `tracked_products` design (below) with one more field:
 `search_scope_tier` enum — `local` (Portugal + Spain, original scope) /
-`eu_wide` (EU + trade-deal countries, secondhand-inclusive — high-cost
-hardware) / `global` (worldwide — small, low-customs-friction categories like
-RAM). Default `local`, set explicitly per tracked product; a category default
-(e.g. RAM → `global`) is a UX convenience at creation time, not a hardcoded
-rule — the field itself is always per-product and overridable, since scope
-is genuinely a judgment call per item (see [ROADMAP.md](../ROADMAP.md)'s
-tier table for the reasoning), not something the tool should decide
-unilaterally.
+`eu_wide` (search geography: EU hardware markets + UK as a *search* target,
+secondhand-inclusive — high-cost hardware) / `global` (worldwide — small,
+low-customs-friction categories like RAM). Default `local`, set explicitly
+per tracked product; a category default (e.g. RAM → `global`) is a UX
+convenience at creation time, not a hardcoded rule — the field itself is
+always per-product and overridable, since scope is genuinely a judgment
+call per item (see [ROADMAP.md](../ROADMAP.md)'s tier table for the
+reasoning), not something the tool should decide unilaterally.
+
+**`import_regime` is a separate listing-level field**, not a synonym of
+the search tier: `eu_domestic` (no customs) / `uk_import` / `row`. Derived
+from seller destination (and overridable). A `.co.uk` hit found while the
+product is `eu_wide` is still `uk_import` for landed-cost and ranking.
 
 ## Persisted tables (v2.1)
 
@@ -103,7 +120,8 @@ New tables alongside the existing `products` / `listings` / `price_history`
 
 - **`tracked_products`** — query text, canonical name, enabled flag,
   per-product refresh-interval override, target price + currency,
-  `search_scope_tier` (`local`/`eu_wide`/`global`, see above),
+  `search_scope_tier` (`local`/`eu_wide`/`global`, see above; not
+  import law — see `import_regime` on listings),
   `historical_low_alert_mode` (`tiered`/`percentile`/`both`) plus
   `rarity_percentile`/`rarity_window_days`/`rarity_min_observations` for the
   percentile mode (see
@@ -135,3 +153,9 @@ yet beyond documenting intent). v2.1 adds `tracked_products` and turns
 and a `cli track <keywords>` that persists a watchlist entry. v2.2 adds the
 actual scheduled-refresh runner (a simple loop/cron entry point, not a new
 service — this is a personal tool, not infrastructure).
+
+**v2.10 (native + FX + landed-cost + `import_regime`) lands before
+v2.11–v2.16 and before the PC configurator.** Condition buckets, site
+scorecards, and BOM totals are meaningless on mixed native currencies or
+sticker-as-landed. v2.17a (one real `SearchProvider`) is a prerequisite of
+v2.17b (discover-and-approve UX), not part of it.

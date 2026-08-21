@@ -116,6 +116,17 @@ button, input {{ font: inherit; }}
 .custom-url-table th {{ color: {MUTED_TEXT}; font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; }}
 .btn-remove-url {{ background: none; border: 1px solid rgba(248, 81, 73, 0.4); color: {NEGATIVE}; border-radius: 4px; padding: 2px 6px; font-size: .72rem; cursor: pointer; }}
 .btn-remove-url:hover {{ background: rgba(248, 81, 73, 0.2); }}
+.scorecard-panel {{ margin-top: 16px; }}
+.scorecard-table {{ width: 100%; border-collapse: collapse; margin-top: 8px; }}
+.scorecard-table th, .scorecard-table td {{ padding: 12px 10px; text-align: left; border-top: 1px solid {PANEL_BORDER}; font-size: .84rem; vertical-align: top; }}
+.scorecard-table th {{ color: {MUTED_TEXT}; font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; }}
+.scorecard-site-name {{ font-weight: 600; color: {PRIMARY_TEXT}; }}
+.badge-condition {{ display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: .70rem; font-family: {MONO_FONT}; font-weight: 600; background: rgba(139, 148, 158, 0.15); color: {MUTED_TEXT}; border: 1px solid {PANEL_BORDER}; text-transform: uppercase; }}
+.scorecard-cell {{ display: flex; flex-direction: column; gap: 3px; }}
+.scorecard-dim-ok {{ font-family: {MONO_FONT}; font-size: .82rem; font-weight: 600; color: {POSITIVE}; }}
+.scorecard-dim-low {{ font-family: {MONO_FONT}; font-size: .82rem; font-weight: 600; color: #F59E0B; }}
+.scorecard-dim-unavail {{ font-family: {MONO_FONT}; font-size: .82rem; font-weight: 500; color: {MUTED_TEXT}; font-style: italic; }}
+.scorecard-detail {{ font-size: .72rem; color: {MUTED_TEXT}; line-height: 1.3; }}
 .dash-dropdown .Select-control, .dash-dropdown .Select-menu-outer, .dash-dropdown .Select-menu {{ background-color: {PANEL_BACKGROUND}; border-color: {PANEL_BORDER}; color: {PRIMARY_TEXT}; }}
 .dash-dropdown .Select-value-label, .dash-dropdown .Select-placeholder {{ color: {MUTED_TEXT} !important; }}
 .dash-dropdown .VirtualizedSelectOption {{ background-color: {PANEL_BACKGROUND}; color: {PRIMARY_TEXT}; }}

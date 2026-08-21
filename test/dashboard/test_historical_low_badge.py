@@ -193,6 +193,7 @@ def test_product_view_tiered_low_integration(in_memory_engine: Engine) -> None:
         _table,
         _fcast_chart,
         _fcast_meta,
+        _scorecard_panel,
     ) = _product_view(
         prod_id,
         False,

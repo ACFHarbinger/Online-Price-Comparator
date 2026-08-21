@@ -166,6 +166,21 @@ def build_layout() -> html.Div:
                                 html.Div(
                                     "Choose a product to see retailer listings.",
                                     id="retailer-table",
+                                    className="retailer-table-container",
+                                ),
+                            ],
+                        ),
+                        html.Section(
+                            className="panel scorecard-panel",
+                            children=[
+                                html.H3(
+                                    "Site Value-Proposition Scorecards (v2.16)",
+                                    className="panel-heading",
+                                ),
+                                html.Div(
+                                    "Choose a product to view site scorecards "
+                                    "across conditions.",
+                                    id="scorecard-container",
                                 ),
                             ],
                         ),

@@ -30,6 +30,7 @@ from pipeline.custom_url import track_and_process_custom_url
 from pipeline.discover import run_discovery
 from pipeline.snapshot import persist_snapshot
 from pipeline.source_discovery import discover_sources_for_product
+from scoring import Dimension, SiteScorecard, scorecards_for_product
 from storage.candidates import CandidateListing, CandidateListingRepository
 from storage.custom_urls import CustomListingUrl, CustomListingUrlRepository
 from storage.repository import (
@@ -324,6 +325,119 @@ def _retailer_table(
     if banners:
         return html.Div([*banners, table])
     return table
+
+
+def _format_scorecard_cell(dim: Dimension) -> html.Div:
+    """Format an individual scorecard dimension cell with confidence styling (v2.16)."""
+    if dim.confidence == "unavailable":
+        return html.Div(
+            children=[
+                html.Span("Unavailable", className="scorecard-dim-unavail"),
+                html.Div(dim.detail, className="scorecard-detail"),
+            ],
+            className="scorecard-cell",
+        )
+
+    if dim.confidence == "low":
+        val_str = f"{dim.value:.0f}th pct" if dim.value is not None else "—"
+        return html.Div(
+            children=[
+                html.Span(f"{val_str} (Low conf)", className="scorecard-dim-low"),
+                html.Div(dim.detail, className="scorecard-detail"),
+            ],
+            className="scorecard-cell",
+        )
+
+    # confidence == "ok"
+    if dim.name == "extreme_value":
+        val_str = f"{dim.value:.0f}th percentile" if dim.value is not None else "—"
+    elif dim.name == "consistency":
+        val_str = f"{dim.value:.0f}th pct median" if dim.value is not None else "—"
+    elif dim.name == "reliability":
+        if dim.value == 0.0:
+            val_str = "Healthy (0 failures)"
+        elif "open" in dim.detail.lower():
+            val_str = "Paused (Breaker open)"
+        else:
+            val_str = f"Warning ({int(dim.value or 0)} fail)"
+    else:
+        val_str = f"{dim.value:.1f}" if dim.value is not None else "—"
+
+    return html.Div(
+        children=[
+            html.Span(val_str, className="scorecard-dim-ok"),
+            html.Div(dim.detail, className="scorecard-detail"),
+        ],
+        className="scorecard-cell",
+    )
+
+
+def _build_scorecard_table(scorecards: list[SiteScorecard]) -> html.Table:
+    """Render site scorecards into an independent 4-cell table (never composite)."""
+    rows = []
+    for card in scorecards:
+        rows.append(
+            html.Tr(
+                children=[
+                    html.Td(
+                        html.Span(
+                            card.site_display_name,
+                            className="scorecard-site-name",
+                        )
+                    ),
+                    html.Td(html.Span(card.condition, className="badge-condition")),
+                    html.Td(_format_scorecard_cell(card.extreme_value)),
+                    html.Td(_format_scorecard_cell(card.consistency)),
+                    html.Td(_format_scorecard_cell(card.fulfillment_sla)),
+                    html.Td(_format_scorecard_cell(card.reliability)),
+                ]
+            )
+        )
+
+    return html.Table(
+        className="scorecard-table",
+        children=[
+            html.Thead(
+                html.Tr(
+                    [
+                        html.Th("Retailer"),
+                        html.Th("Condition"),
+                        html.Th("Extreme Value (Price Rank)"),
+                        html.Th("Consistency (Median / CV)"),
+                        html.Th("Fulfillment SLA"),
+                        html.Th("Reliability (Circuit Health)"),
+                    ]
+                )
+            ),
+            html.Tbody(rows),
+        ],
+    )
+
+
+def _scorecard_panel_view(
+    product_id: int | None,
+    engine: Engine,
+) -> html.Div | html.Table:
+    """Compute and render all same-condition site scorecards for a product (v2.16)."""
+    if product_id is None:
+        return html.Div(
+            "Choose a product to view site scorecards across conditions.",
+            className="empty-message",
+        )
+
+    conditions = ["new", "used", "refurb", "enterprise_surplus"]
+    all_cards: list[SiteScorecard] = []
+    for cond in conditions:
+        cards = scorecards_for_product(engine, product_id, condition=cond)
+        all_cards.extend(cards)
+
+    if not all_cards:
+        return html.Div(
+            "No same-condition price histories available for scoring yet.",
+            className="empty-message",
+        )
+
+    return _build_scorecard_table(all_cards)
 
 
 def _candidate_sources_panel(
@@ -640,6 +754,7 @@ def _product_view(
     html.Div | html.Table,
     Any,
     str,
+    html.Div | html.Table,
 ]:
     if product_id is None:
         return (
@@ -650,10 +765,15 @@ def _product_view(
             build_bar_chart([]),
             build_line_chart([]),
             html.Div(
-                "Choose a product to see retailer listings.", className="empty-message"
+                "Choose a product to see retailer listings.",
+                className="empty-message",
             ),
             build_forecast_chart(forecast_prices([])),
             "Forecast unavailable: choose a product first",
+            html.Div(
+                "Choose a product to view site scorecards across conditions.",
+                className="empty-message",
+            ),
         )
 
     product = product_repository.get(product_id)
@@ -728,6 +848,8 @@ def _product_view(
         percentile_low=percentile_low,
     )
 
+    scorecard_panel = _scorecard_panel_view(product_id, product_repository.engine)
+
     return (
         product.canonical_name or product.query_text,
         image_url,
@@ -738,6 +860,7 @@ def _product_view(
         _retailer_table(listings, stats.avg_30d, listing_histories=histories),
         build_forecast_chart(forecast),
         _forecast_metadata(forecast),
+        scorecard_panel,
     )
 
 
@@ -808,6 +931,7 @@ def register_callbacks(app: Dash, engine: Engine) -> None:
         Output("retailer-table", "children"),
         Output("price-forecast-chart", "figure"),
         Output("forecast-metadata", "children"),
+        Output("scorecard-container", "children"),
         Input("selected-product-id", "data"),
         Input("reveal-anomalies-checkbox", "value"),
     )
@@ -825,6 +949,7 @@ def register_callbacks(app: Dash, engine: Engine) -> None:
         html.Div | html.Table,
         Any,
         str,
+        html.Div | html.Table,
     ]:
         """Load every dashboard panel for the selected tracked product."""
         include_anomalous = bool(reveal_anomalies and "reveal" in reveal_anomalies)
@@ -838,6 +963,7 @@ def register_callbacks(app: Dash, engine: Engine) -> None:
             table,
             forecast_chart,
             forecast_metadata,
+            scorecard_panel,
         ) = _product_view(
             product_id,
             include_anomalous,
@@ -859,6 +985,7 @@ def register_callbacks(app: Dash, engine: Engine) -> None:
             table,
             forecast_chart,
             forecast_metadata,
+            scorecard_panel,
         )
 
     candidates_repository = CandidateListingRepository(engine)

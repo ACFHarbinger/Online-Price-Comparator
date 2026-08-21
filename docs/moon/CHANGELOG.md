@@ -61,6 +61,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.16 dashboard scorecard integration (2026-08-21):** wired the four-cell site
+  value-proposition scorecard (`scorecards_for_product` from `src/scoring/`) into
+  a dedicated dashboard panel (`#scorecard-container`) and table. Renders
+  Extreme Value (price rank), Consistency (median rank / CV), Fulfillment SLA
+  (unavailable until v2.13), and Reliability (circuit breaker / fetch health)
+  independently across same-condition EUR series. Confidence levels (`ok`, `low`,
+  `unavailable`) are styled with dark-terminal financial tokens; unscored / low
+  confidence values render without averaging into composite scores. Unit and
+  component tests in `test/dashboard/test_scorecard_view.py`. [#33](https://github.com/ACFHarbinger/Online-Price-Comparator/issues/33).
+
 - **v2.16 site value-proposition scorecard (2026-08-21):** new compute-on-read
   `src/scoring/` module with four independent cells per site × exact
   `condition` — not a composite score. Extreme-value is the latest sticker's
@@ -99,6 +109,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fallback fixtures. They are new-retail / `eu_domestic` sources under the
   existing known-site condition policy. Secondhand/classifieds, UK sources,
   and multilingual matching remain separate v2.12 follow-ups.
+
+- **v2.12 UK new-retail continuation (2026-08-21, in progress):** added
+  Scan.co.uk and Overclockers UK with the shared polite JSON-LD-first/CSS-
+  fallback adapter and parser fixtures. Both emit explicit `uk_import`
+  metadata alongside their GBP native prices, so later landed-cost work cannot
+  mistake them for frictionless EU purchases. UK landed-cost estimation and
+  display, classifieds, and multilingual matching remain separate work.
 
 - **Market-scan reports translated into roadmap findings (2026-08-21):**
   read `docs/moon/reports/{ddr5_128gb,rtx_3090ti}_market_scan_report.md`

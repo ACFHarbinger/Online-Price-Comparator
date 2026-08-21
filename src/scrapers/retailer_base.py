@@ -45,6 +45,7 @@ class RetailerParserConfig:
     price_selector: str
     link_selector: str
     accept_language: str = "pt-PT,pt;q=0.9,en;q=0.7"
+    import_regime: str | None = None
 
 
 class IberianRetailerScraper:
@@ -158,6 +159,12 @@ class IberianRetailerScraper:
     def _listing_from_structured(
         self, product: StructuredProduct, fetched_at: datetime
     ) -> RawListing:
+        extra: dict[str, str | None] = {
+            "parser": "json_ld",
+            "item_condition": product.item_condition,
+        }
+        if self._config.import_regime is not None:
+            extra["import_regime"] = self._config.import_regime
         return RawListing(
             source=self.site_key,
             source_kind="scraper",
@@ -172,10 +179,7 @@ class IberianRetailerScraper:
             ),
             site_display_name=self._config.display_name,
             fetched_at=fetched_at,
-            extra={
-                "parser": "json_ld",
-                "item_condition": product.item_condition,
-            },
+            extra=extra,
         )
 
     def _parse_card(self, card: Tag, fetched_at: datetime) -> RawListing | None:
@@ -200,6 +204,9 @@ class IberianRetailerScraper:
 
         image = card.select_one("img")
         image_path = _attribute(image, "src") or _attribute(image, "data-src")
+        extra: dict[str, str] = {"parser": "css"}
+        if self._config.import_regime is not None:
+            extra["import_regime"] = self._config.import_regime
         return RawListing(
             source=self.site_key,
             source_kind="scraper",
@@ -212,7 +219,7 @@ class IberianRetailerScraper:
             else None,
             site_display_name=self._config.display_name,
             fetched_at=fetched_at,
-            extra={"parser": "css"},
+            extra=extra,
         )
 
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 from sqlalchemy import (
     Boolean,
     Column,
+    Date,
     DateTime,
     Float,
     ForeignKey,
@@ -64,6 +65,15 @@ price_history = Table(
     Column("is_anomalous", Boolean, nullable=False, default=False),
     Column("anomaly_reason", String, nullable=True),
     Column("anomaly_basis", String, nullable=True),
+    # v2.10: native sticker stored alongside a scrape-time EUR equivalent.
+    # `price_amount`/`currency` remain the native values (backward compatible).
+    # `fx_rate_used` is ECB units of native currency per 1 EUR (1.0 for EUR).
+    # Nullable so pre-v2.10 rows stay valid; application code fills them on insert.
+    Column("price_native", Float, nullable=True),
+    Column("currency_native", String, nullable=True),
+    Column("price_eur_equivalent", Float, nullable=True),
+    Column("fx_rate_used", Float, nullable=True),
+    Column("fx_rate_date", Date, nullable=True),
 )
 
 # v2.1 watchlist + per-site enablement. Ad-hoc `products` rows from `search`

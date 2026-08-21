@@ -110,7 +110,7 @@ price meaningful instead of just a number.
 | v2.4 | Telegram bot + Discord webhook alert channels | 📋 Planned | [alerting.md](roadmaps/alerting.md) |
 | v2.5 | Delta-vs-average callouts in dashboard; badge design **superseded by v2.14's tiered ladder + percentile modes** (30d/90d/180d/365d/ATL and a configurable rarity percentile replace the original two-tier 30-day/ATL badge) | 📋 Planned | [dashboard_ux.md](roadmaps/dashboard_ux.md) |
 | v2.6 | Stock / "not seen recently" honesty (stale-data banners) | 📋 Planned | [dashboard_ux.md](roadmaps/dashboard_ux.md) |
-| v2.7 | Retailer #3–#5: PCDIGA, Worten, Fnac.pt, then Chip7 | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
+| v2.7 | Retailer #3–#5: PCDIGA, Worten, Fnac.pt, then Chip7 | 🚧 In progress (PCDIGA, Worten, and Fnac.pt shipped with JSON-LD-first/CSS-fallback adapters and parser fixtures; Chip7 remains) | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
 | v2.8 | KuantoKusta as a candidate-URL hint source (verified against the real shop, not trusted directly) | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
 | v2.9 | ES/PT shipping-cost sanity (even a per-shop default estimate) | 📋 Planned | [settings_and_config.md](roadmaps/settings_and_config.md) |
 | v2.10 | Currency/FX normalization (store native + EUR-equivalent, rate+timestamp persisted) | 📋 Planned | [settings_and_config.md](roadmaps/settings_and_config.md) |

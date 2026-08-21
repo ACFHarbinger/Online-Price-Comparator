@@ -1,6 +1,6 @@
 # Scrapers & Retailer Coverage Roadmap
 
-**Status:** ✅ v1.8 reliability hardening complete (including structured-data-first parsing for both live scrapers — verified 2026-08-21) · ✅ v2.17a SerpAPI SearchProvider (2026-08-21) · 🚧 In progress (2 of ~7 retailers live) · 📋 Planned (v2.12, v2.13, v2.15, v2.17b) · **Source:** codex research (reliability), grok research (retailer priority); v2.12/v2.13/v2.15-v2.17 from the 2026-08-15 global-scope brainstorm
+**Status:** ✅ v1.8 reliability hardening complete (including structured-data-first parsing for both original live scrapers — verified 2026-08-21) · ✅ v2.17a SerpAPI SearchProvider (2026-08-21) · 🚧 In progress (5 of ~7 retailers live; Chip7 remains in v2.7) · 📋 Planned (v2.12, v2.13, v2.15, v2.17b) · **Source:** codex research (reliability), grok research (retailer priority); v2.12/v2.13/v2.15-v2.17 from the 2026-08-15 global-scope brainstorm
 
 ## Current state
 
@@ -8,9 +8,9 @@
 |---|---|---|
 | Amazon.es | ✅ Scraper live (`src/scrapers/amazon.py`) | Real prices confirmed via `.a-offscreen` spans; parameterized by domain for future `.fr`/`.de`/`.it`. Intermittent Akamai bot-challenge blocking observed even with realistic headers + rate limiting — see [reliability](#reliability-hardening-v18) below. |
 | PcComponentes | ✅ Scraper live (`src/scrapers/pccomponentes.py`) | Consistently blocked by a Cloudflare Turnstile challenge with plain `httpx` — needs the Playwright fallback path (site-allowlisted, see below) before it will return real data. |
-| PCDIGA | 📋 Planned (v2.7, next priority) | PT-based hardware specialist. |
-| Worten | 📋 Planned (v2.7) | PT major electronics retailer. |
-| Fnac.pt | 📋 Planned (v2.7) | |
+| PCDIGA | ✅ Scraper live (`src/scrapers/pcdiga.py`) | PT hardware specialist; JSON-LD first with CSS fallback and polite fail-closed fetch safeguards. |
+| Worten | ✅ Scraper live (`src/scrapers/worten.py`) | PT major electronics retailer; JSON-LD first with CSS fallback and polite fail-closed fetch safeguards. |
+| Fnac.pt | ✅ Scraper live (`src/scrapers/fnac.py`) | JSON-LD first with CSS fallback and polite fail-closed fetch safeguards. |
 | Chip7 | 📋 Planned (v2.7, after PCDIGA/Worten/Fnac) | |
 | KuantoKusta | 📋 Planned (v2.8) | Use as a **candidate-URL hint source** only — verify against the real shop before trusting a price, don't persist KuantoKusta's own price as authoritative. |
 | Amazon.fr / .de / .it | 🗓️ v3+ | Optional columns with an import-duty/"not a local buy" tag, not default-on. |

@@ -9,7 +9,10 @@ from __future__ import annotations
 from config.settings import Settings
 from scrapers.amazon import AmazonScraper
 from scrapers.base import ScraperAdapter
+from scrapers.fnac import FnacScraper
 from scrapers.pccomponentes import PcComponentesScraper
+from scrapers.pcdiga import PcdigaScraper
+from scrapers.worten import WortenScraper
 
 
 def _build_all_scrapers(settings: Settings) -> list[ScraperAdapter]:
@@ -17,6 +20,9 @@ def _build_all_scrapers(settings: Settings) -> list[ScraperAdapter]:
     return [
         PcComponentesScraper(),
         AmazonScraper(domain="amazon.es"),
+        PcdigaScraper(),
+        WortenScraper(),
+        FnacScraper(),
     ]
 
 

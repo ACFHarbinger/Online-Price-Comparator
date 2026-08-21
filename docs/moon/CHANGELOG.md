@@ -29,6 +29,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.7 Portugal retailer coverage (2026-08-21, in progress):** added
+  PCDIGA, Worten, and Fnac.pt scraper adapters and registered them alongside
+  Amazon.es and PcComponentes. Each checks robots.txt, shares a 12-second
+  per-host rate limit, uses the existing retry/cache/circuit-breaker safeguards,
+  fails closed on fetch or block-page failures, and prefers complete schema.org
+  Product/Offer JSON-LD before a retailer-specific CSS fallback. Sanitized
+  fixture tests cover JSON-LD precedence and CSS fallback for all three sites.
+  Chip7 remains the final planned v2.7 retailer.
+
 - **v2.2 scheduled and passive refresh (2026-08-21):** added `src/pipeline/refresh.py`
   orchestrating watchlist re-checks (`is_due_for_refresh`, `refresh_tracked_product`,
   `refresh_watchlist`, `run_monitoring_loop`). Checks whether enabled watchlist items

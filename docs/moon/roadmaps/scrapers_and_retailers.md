@@ -1,6 +1,6 @@
 # Scrapers & Retailer Coverage Roadmap
 
-**Status:** ✅ v1.8 reliability hardening complete (including structured-data-first parsing for both original live scrapers — verified 2026-08-21) · ✅ v2.17a SerpAPI SearchProvider (2026-08-21) · 🚧 In progress (5 of ~7 retailers live; Chip7 remains in v2.7) · 📋 Planned (v2.12, v2.13, v2.15, v2.17b) · **Source:** codex research (reliability), grok research (retailer priority); v2.12/v2.13/v2.15-v2.17 from the 2026-08-15 global-scope brainstorm
+**Status:** ✅ v1.8 reliability hardening complete (including structured-data-first parsing for both original live scrapers — verified 2026-08-21) · ✅ v2.7 Portugal retailer coverage (2026-08-21) · 🚧 v2.8 KuantoKusta external-URL hints (real-shop verification consumer remains) · ✅ v2.17a SerpAPI SearchProvider (2026-08-21) · 📋 Planned (v2.12, v2.13, v2.15, v2.17b) · **Source:** codex research (reliability), grok research (retailer priority); v2.12/v2.13/v2.15-v2.17 from the 2026-08-15 global-scope brainstorm
 
 ## Current state
 
@@ -11,8 +11,8 @@
 | PCDIGA | ✅ Scraper live (`src/scrapers/pcdiga.py`) | PT hardware specialist; JSON-LD first with CSS fallback and polite fail-closed fetch safeguards. |
 | Worten | ✅ Scraper live (`src/scrapers/worten.py`) | PT major electronics retailer; JSON-LD first with CSS fallback and polite fail-closed fetch safeguards. |
 | Fnac.pt | ✅ Scraper live (`src/scrapers/fnac.py`) | JSON-LD first with CSS fallback and polite fail-closed fetch safeguards. |
-| Chip7 | 📋 Planned (v2.7, after PCDIGA/Worten/Fnac) | |
-| KuantoKusta | 📋 Planned (v2.8) | Use as a **candidate-URL hint source** only — verify against the real shop before trusting a price, don't persist KuantoKusta's own price as authoritative. |
+| Chip7 | ✅ Scraper live (`src/scrapers/chip7.py`) | JSON-LD first with CSS fallback and the same polite, fail-closed fetch safeguards as the other PT retailers. |
+| KuantoKusta | 🚧 External URL hints live (`src/scrapers/kuantokusta.py`) | Emits typed external retailer URLs only, never an aggregator price listing. A consumer must fetch and match the real shop before persistence. |
 | Amazon.fr / .de / .it | 🗓️ v3+ | Optional columns with an import-duty/"not a local buy" tag, not default-on. |
 
 ## Reliability hardening (v1.8)

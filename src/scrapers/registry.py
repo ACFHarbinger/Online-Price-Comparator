@@ -9,7 +9,9 @@ from __future__ import annotations
 from config.settings import Settings
 from scrapers.amazon import AmazonScraper
 from scrapers.base import ScraperAdapter
+from scrapers.chip7 import Chip7Scraper
 from scrapers.fnac import FnacScraper
+from scrapers.kuantokusta import KuantoKustaHintSource
 from scrapers.pccomponentes import PcComponentesScraper
 from scrapers.pcdiga import PcdigaScraper
 from scrapers.worten import WortenScraper
@@ -23,7 +25,13 @@ def _build_all_scrapers(settings: Settings) -> list[ScraperAdapter]:
         PcdigaScraper(),
         WortenScraper(),
         FnacScraper(),
+        Chip7Scraper(),
     ]
+
+
+def _build_all_hint_sources() -> list[KuantoKustaHintSource]:
+    """Aggregator sources kept outside the price-listing persistence path."""
+    return [KuantoKustaHintSource()]
 
 
 def registered_site_keys(settings: Settings) -> list[str]:
@@ -38,3 +46,12 @@ def enabled_scrapers(settings: Settings) -> list[ScraperAdapter]:
     if allowlist is None:
         return all_scrapers
     return [s for s in all_scrapers if s.site_key in allowlist]
+
+
+def enabled_hint_sources(settings: Settings) -> list[KuantoKustaHintSource]:
+    """Hint sources allowed by ``ENABLED_SCRAPERS``, never price scrapers."""
+    allowlist = settings.enabled_scraper_keys()
+    sources = _build_all_hint_sources()
+    if allowlist is None:
+        return sources
+    return [source for source in sources if source.site_key in allowlist]

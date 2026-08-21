@@ -29,6 +29,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.7 retailer coverage complete / v2.8 groundwork (2026-08-21):** added
+  the CHIP7 adapter, completing the planned Portugal retailer set. Like the
+  other retailer adapters it uses robots checks, rate limiting, cache/retry and
+  circuit-breaker safeguards, and prefers complete Product/Offer JSON-LD over
+  its CSS fallback. Added the separate `KuantoKustaHintSource`, which yields
+  typed external retailer URL hints only — it is deliberately not a
+  `ScraperAdapter`, has no price field, and is excluded from `run_discovery`,
+  making it impossible to persist KuantoKusta's displayed comparison price.
+  A later hint consumer must fetch and match the real retailer URL before any
+  observation can enter price history.
+
 - **v2.10 currency/FX normalization (2026-08-21):** `price_history` now stores
   the native sticker (`price_native`/`currency_native`) alongside a scrape-time
   EUR equivalent (`price_eur_equivalent`, `fx_rate_used`, `fx_rate_date`).

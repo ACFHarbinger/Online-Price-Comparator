@@ -45,8 +45,9 @@ order:
 1. **Different ways to visualize price data** — historical prices, cross-site/
    cross-distributor comparison, historical-vs-historical, **and statistical
    attributes (variance, current trend/gradient)**. Top priority. Maps to
-   v1.4 (✅ done) plus the new [Statistical price attributes](roadmaps/dashboard_ux.md#3-statistical-price-attributes-volatility-trendgradient--2026-08-21-priority-1-of-5)
-   section added today — that's the un-speced part of this ask.
+   v1.4 (✅ done) plus the new **v2.19** [Statistical price attributes](roadmaps/dashboard_ux.md#3-statistical-price-attributes-volatility-trendgradient--2026-08-21-priority-1-of-5)
+   section added today — that's the un-speced, not-yet-implemented part of
+   this ask.
 2. **Persistent settings/config**: customize the app, add other websites to
    the comparator, enable/disable websites per comparison. Maps to v1.7
    (✅ done — runtime fields only, see that row's note), v2.1 (watchlist
@@ -120,6 +121,7 @@ price meaningful instead of just a number.
 | v2.17a | Real `SearchProvider` (SerpAPI or Google CSE) behind the existing Settings keys — v1.1 delivered only the abstraction + `null_provider.py` | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
 | v2.17b | Manual, per-product source discovery UX (approve-before-persist; depends on v2.17a) | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
 | v2.18 | Price forecasting: confidence-banded, separate-surface future-price projection, never blended with descriptive tiered-low/anomaly features | 📋 Planned (un-parked 2026-08-21, see [Current priorities](#current-priorities-2026-08-21) and the Parked table's note below) | [price_forecasting.md](roadmaps/price_forecasting.md) |
+| v2.19 | Statistical price attributes: volatility/variance indicator + descriptive trend/gradient indicator | 📋 Planned (added 2026-08-21, priority 1 of the current priorities) | [dashboard_ux.md](roadmaps/dashboard_ux.md#3-statistical-price-attributes-volatility-trendgradient--2026-08-21-priority-1-of-5) |
 
 ### v3+ — Later
 

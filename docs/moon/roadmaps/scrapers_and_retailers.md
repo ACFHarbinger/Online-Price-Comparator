@@ -1,6 +1,6 @@
 # Scrapers & Retailer Coverage Roadmap
 
-**Status:** ✅ v1.8 reliability hardening complete (including structured-data-first parsing for both original live scrapers — verified 2026-08-21) · ✅ v2.7 Portugal retailer coverage (2026-08-21) · 🚧 v2.8 KuantoKusta external-URL hints (real-shop verification consumer remains) · ✅ v2.17a SerpAPI SearchProvider (2026-08-21) · 📋 Planned (v2.12, v2.13, v2.15, v2.17b) · **Source:** codex research (reliability), grok research (retailer priority); v2.12/v2.13/v2.15-v2.17 from the 2026-08-15 global-scope brainstorm
+**Status:** ✅ v1.8 reliability hardening complete (including structured-data-first parsing for both original live scrapers — verified 2026-08-21) · ✅ v2.7 Portugal retailer coverage (2026-08-21) · 🚧 v2.8 KuantoKusta external-URL hints (real-shop verification consumer remains) · ✅ v2.17a SerpAPI SearchProvider (2026-08-21) · ✅ v2.17b discover-and-approve UX (2026-08-21) · 📋 Planned (v2.12, v2.13, v2.15) · **Source:** codex research (reliability), grok research (retailer priority); v2.12/v2.13/v2.15-v2.17 from the 2026-08-15 global-scope brainstorm
 
 ## Current state
 

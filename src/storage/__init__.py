@@ -1,5 +1,6 @@
 """SQLite persistence for Online Price Comparator."""
 
+from .candidates import CandidateListing, CandidateListingRepository
 from .db import create_db_engine
 from .repository import (
     ListingRepository,
@@ -16,6 +17,8 @@ from .watchlist import (
 )
 
 __all__ = [
+    "CandidateListing",
+    "CandidateListingRepository",
     "ListingRepository",
     "ListingSummary",
     "PriceHistoryRepository",

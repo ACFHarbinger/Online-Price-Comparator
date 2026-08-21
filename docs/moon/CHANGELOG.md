@@ -29,6 +29,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.11 listing condition field (2026-08-21):** additive `condition` /
+  `condition_source` / `condition_confidence` on `listings` (current belief)
+  and `price_history` (observation-time snapshot). `extract_condition` reads
+  structured-data `itemCondition`, then title keywords (ES/PT/EN/DE used /
+  refurb / surplus / explicit new), then `unknown` — never a silent `new`.
+  Known new-stock retailers may apply recorded `source_policy`. IQR anomaly
+  detection is **not** bucketed by condition this slice. Historic rows stay
+  NULL (no backfill).
+
+- **v2.17b manual per-product source discovery UX (2026-08-21):** implemented
+  manual, user-triggered source discovery for watchlist items. Created
+  additive `candidate_listings` table, daily credit budget limiter (50
+  credits/day) and per-run limits (10 items), discovery runner in
+  `src/pipeline/source_discovery.py`, and `CandidateListingRepository` in
+  `src/storage/candidates.py`. Discovered sources pass through identity
+  matching and are presented as time-limited (7-day) pending candidates in a
+  dashboard review panel. Explicit user approval promotes candidate to persistent
+  `listings`, creates initial `price_history`, and ensures `tracked_product_site_overrides`
+  enablement; rejection/expiry drops candidates cleanly. Full test coverage in
+  `test/storage/test_candidates.py`, `test/pipeline/test_source_discovery.py`,
+  and `test/dashboard/test_candidates_view.py`.
+
 - **v2.7 retailer coverage complete / v2.8 groundwork (2026-08-21):** added
   the CHIP7 adapter, completing the planned Portugal retailer set. Like the
   other retailer adapters it uses robots checks, rate limiting, cache/retry and

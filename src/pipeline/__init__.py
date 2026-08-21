@@ -8,8 +8,10 @@ from .refresh import (
     run_monitoring_loop,
 )
 from .snapshot import persist_snapshot
+from .source_discovery import discover_sources_for_product
 
 __all__ = [
+    "discover_sources_for_product",
     "is_due_for_refresh",
     "persist_snapshot",
     "refresh_tracked_product",

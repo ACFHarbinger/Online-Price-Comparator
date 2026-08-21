@@ -46,6 +46,12 @@ listings = Table(
     Column("match_status", String, nullable=False),
     Column("match_score", Float, nullable=True),
     Column("match_reason", String, nullable=True),
+    # v2.11: current-belief condition. Observation-time copies live on
+    # price_history so later corrections do not retcon ATL/IQR history.
+    # NULL on pre-v2.11 rows; never silently backfilled as verified `new`.
+    Column("condition", String, nullable=True),
+    Column("condition_source", String, nullable=True),
+    Column("condition_confidence", Float, nullable=True),
     UniqueConstraint("product_id", "site_key", "url", name="uq_listing_identity"),
 )
 
@@ -74,6 +80,10 @@ price_history = Table(
     Column("price_eur_equivalent", Float, nullable=True),
     Column("fx_rate_used", Float, nullable=True),
     Column("fx_rate_date", Date, nullable=True),
+    # v2.11 observation-time condition snapshot (not current listing belief).
+    Column("condition", String, nullable=True),
+    Column("condition_source", String, nullable=True),
+    Column("condition_confidence", Float, nullable=True),
 )
 
 # v2.1 watchlist + per-site enablement. Ad-hoc `products` rows from `search`
@@ -166,4 +176,39 @@ alert_deliveries = Table(
     Column("target_price", Float, nullable=True),
     Column("site_key", String, nullable=True),
     Column("created_at", DateTime, nullable=False),
+)
+
+# v2.17b per-product candidate listings from manual source discovery.
+# Survives initial identity matching and is surfaced for user approval
+# before being promoted to persistent tracked sources.
+candidate_listings = Table(
+    "candidate_listings",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column(
+        "tracked_product_id",
+        Integer,
+        ForeignKey("tracked_products.id"),
+        nullable=False,
+    ),
+    Column("site_key", String, nullable=False),
+    Column("site_display_name", String, nullable=False),
+    Column("url", String, nullable=False),
+    Column("title", String, nullable=False),
+    Column("price_amount", Float, nullable=True),
+    Column("currency", String, nullable=False, default="EUR"),
+    Column("image_url", String, nullable=True),
+    Column("match_status", String, nullable=False),
+    Column("match_score", Float, nullable=True),
+    Column(
+        "status", String, nullable=False, default="pending"
+    ),  # pending, approved, rejected, expired
+    Column("discovered_at", DateTime, nullable=False),
+    Column("expires_at", DateTime, nullable=False),
+    Column("decided_at", DateTime, nullable=True),
+    UniqueConstraint(
+        "tracked_product_id",
+        "url",
+        name="uq_candidate_listing",
+    ),
 )

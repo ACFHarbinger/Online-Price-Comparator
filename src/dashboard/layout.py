@@ -169,6 +169,31 @@ def build_layout() -> html.Div:
                                 ),
                             ],
                         ),
+                        html.Section(
+                            className="panel candidate-panel",
+                            children=[
+                                html.Div(
+                                    className="panel-header-row",
+                                    children=[
+                                        html.H3(
+                                            "Discovered Source Candidates",
+                                            className="panel-heading",
+                                            style={"margin": "0"},
+                                        ),
+                                        html.Button(
+                                            "Discover More Sources",
+                                            id="discover-sources-button",
+                                            className="discover-button",
+                                        ),
+                                    ],
+                                ),
+                                html.Div(
+                                    "Choose a tracked product to discover "
+                                    "and review candidate sources.",
+                                    id="candidate-sources-container",
+                                ),
+                            ],
+                        ),
                     ],
                 ),
             ),

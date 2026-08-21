@@ -90,6 +90,17 @@ button, input {{ font: inherit; }}
 .retailer-table th, .retailer-table td {{ padding: 12px 8px; text-align: left; border-top: 1px solid {PANEL_BORDER}; }}
 .retailer-table th {{ color: {MUTED_TEXT}; font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; }}
 .retailer-table a {{ color: #58A6FF; }}
+.panel-header-row {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }}
+.discover-button {{ background-color: rgba(88, 166, 255, 0.15); border: 1px solid rgba(88, 166, 255, 0.4); color: #58A6FF; border-radius: 6px; padding: 6px 12px; font-size: .80rem; font-weight: 600; cursor: pointer; }}
+.discover-button:hover {{ background-color: rgba(88, 166, 255, 0.25); }}
+.candidate-table {{ width: 100%; border-collapse: collapse; margin-top: 8px; }}
+.candidate-table th, .candidate-table td {{ padding: 10px 8px; text-align: left; border-top: 1px solid {PANEL_BORDER}; font-size: .84rem; }}
+.candidate-table th {{ color: {MUTED_TEXT}; font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; }}
+.btn-approve {{ background-color: rgba(63, 185, 80, 0.2); border: 1px solid rgba(63, 185, 80, 0.5); color: {POSITIVE}; border-radius: 4px; padding: 4px 8px; font-size: .75rem; font-weight: 600; cursor: pointer; margin-right: 6px; }}
+.btn-approve:hover {{ background-color: rgba(63, 185, 80, 0.35); }}
+.btn-reject {{ background-color: rgba(248, 81, 73, 0.15); border: 1px solid rgba(248, 81, 73, 0.4); color: {NEGATIVE}; border-radius: 4px; padding: 4px 8px; font-size: .75rem; font-weight: 600; cursor: pointer; }}
+.btn-reject:hover {{ background-color: rgba(248, 81, 73, 0.3); }}
+.badge-score {{ display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: .72rem; font-family: {MONO_FONT}; background: rgba(56, 189, 248, 0.15); color: #38BDF8; }}
 .dash-dropdown .Select-control, .dash-dropdown .Select-menu-outer, .dash-dropdown .Select-menu {{ background-color: {PANEL_BACKGROUND}; border-color: {PANEL_BORDER}; color: {PRIMARY_TEXT}; }}
 .dash-dropdown .Select-value-label, .dash-dropdown .Select-placeholder {{ color: {MUTED_TEXT} !important; }}
 .dash-dropdown .VirtualizedSelectOption {{ background-color: {PANEL_BACKGROUND}; color: {PRIMARY_TEXT}; }}

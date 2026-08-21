@@ -6,7 +6,7 @@ import contextlib
 from datetime import datetime, timedelta
 from typing import Any
 
-from dash import Dash, Input, Output, State, ctx, html, no_update
+from dash import ALL, Dash, Input, Output, State, ctx, html, no_update
 from dash.exceptions import PreventUpdate
 from sqlalchemy import Engine
 
@@ -22,6 +22,8 @@ from fetch.circuit_breaker import CircuitBreaker
 from forecasting.holt import ForecastResult, forecast_prices
 from pipeline.discover import run_discovery
 from pipeline.snapshot import persist_snapshot
+from pipeline.source_discovery import discover_sources_for_product
+from storage.candidates import CandidateListing, CandidateListingRepository
 from storage.repository import (
     ListingRepository,
     ListingSummary,
@@ -265,6 +267,93 @@ def _retailer_table(
     if banners:
         return html.Div([*banners, table])
     return table
+
+
+def _candidate_sources_panel(
+    candidates: list[CandidateListing],
+    *,
+    as_of: datetime | None = None,
+) -> html.Div | html.Table:
+    """Render the pending candidate sources list with approve/reject actions."""
+    if not candidates:
+        return html.Div(
+            "No pending candidate sources for this product. "
+            "Click 'Discover More Sources' to search.",
+            className="empty-message",
+        )
+
+    ref_time = as_of or datetime.now()
+    rows = []
+    for cand in candidates:
+        time_left = cand.expires_at - ref_time
+        days_left = max(0, int(time_left.total_seconds() / 86400))
+        expiry_str = f"{days_left}d left" if days_left > 0 else "Expiring today"
+
+        score_badge = (
+            html.Span(
+                f"{int(cand.match_score * 100)}%",
+                className="badge-score",
+            )
+            if cand.match_score is not None
+            else html.Span("—", className="price-value")
+        )
+
+        rows.append(
+            html.Tr(
+                [
+                    html.Td(cand.site_display_name),
+                    html.Td(cand.title),
+                    html.Td(
+                        _format_price(cand.price_amount, cand.currency),
+                        className="price-value",
+                    ),
+                    html.Td(score_badge),
+                    html.Td(expiry_str, className="price-value"),
+                    html.Td(
+                        html.A(
+                            "View listing ↗",
+                            href=cand.url,
+                            target="_blank",
+                            rel="noreferrer",
+                        )
+                    ),
+                    html.Td(
+                        [
+                            html.Button(
+                                "Approve",
+                                id={"type": "candidate-approve-btn", "index": cand.id},
+                                className="btn-approve",
+                            ),
+                            html.Button(
+                                "Reject",
+                                id={"type": "candidate-reject-btn", "index": cand.id},
+                                className="btn-reject",
+                            ),
+                        ]
+                    ),
+                ]
+            )
+        )
+
+    return html.Table(
+        className="candidate-table",
+        children=[
+            html.Thead(
+                html.Tr(
+                    [
+                        html.Th("Store"),
+                        html.Th("Discovered Product Title"),
+                        html.Th("Price"),
+                        html.Th("Match Score"),
+                        html.Th("Time Limit"),
+                        html.Th("Link"),
+                        html.Th("Actions"),
+                    ]
+                )
+            ),
+            html.Tbody(rows),
+        ],
+    )
 
 
 def _build_trend_indicator(price_stats: PriceSeriesStats) -> html.Span:
@@ -564,3 +653,54 @@ def register_callbacks(app: Dash, engine: Engine) -> None:
             forecast_chart,
             forecast_metadata,
         )
+
+    candidates_repository = CandidateListingRepository(engine)
+
+    @app.callback(
+        Output("candidate-sources-container", "children"),
+        Input("selected-product-id", "data"),
+        Input("discover-sources-button", "n_clicks"),
+        Input({"type": "candidate-approve-btn", "index": ALL}, "n_clicks"),
+        Input({"type": "candidate-reject-btn", "index": ALL}, "n_clicks"),
+        prevent_initial_call=False,
+    )
+    def manage_candidates(
+        product_id: int | None,
+        _discover_clicks: int | None,
+        _approve_clicks: list[int | None] | None,
+        _reject_clicks: list[int | None] | None,
+    ) -> html.Div | html.Table:
+        """Handle candidate source discovery, approval, rejection, and listing."""
+        if product_id is None:
+            return html.Div(
+                "Choose a tracked product to discover and review candidate sources.",
+                className="empty-message",
+            )
+
+        # Lookup tracked product associated with this product_id
+        tracked = None
+        for tp in tracked_repository.list_all():
+            if tp.product_id == product_id:
+                tracked = tp
+                break
+
+        if tracked is None:
+            return html.Div(
+                "This product is not in your tracked watchlist. "
+                "Track it first to discover sources.",
+                className="empty-message",
+            )
+
+        triggered = ctx.triggered_id
+        if isinstance(triggered, dict):
+            btn_type = triggered.get("type")
+            cand_id = triggered.get("index")
+            if btn_type == "candidate-approve-btn" and isinstance(cand_id, int):
+                candidates_repository.approve(cand_id)
+            elif btn_type == "candidate-reject-btn" and isinstance(cand_id, int):
+                candidates_repository.reject(cand_id)
+        elif triggered == "discover-sources-button":
+            discover_sources_for_product(tracked.id, engine, get_settings())
+
+        pending = candidates_repository.list_pending(tracked.id)
+        return _candidate_sources_panel(pending)

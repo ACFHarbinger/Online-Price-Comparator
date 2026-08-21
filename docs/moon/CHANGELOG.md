@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **v2.3 close-out: all-time-low + meaningful-drop alerts, refresh wiring
+  (2026-08-21):** `src/alerting/rules.py` gains `should_fire_all_time_low`
+  and `should_fire_meaningful_drop`, both operating on
+  `price_eur_equivalent` per `alerting.md`'s exact thresholds (ATL: the
+  *larger* of 2% or EUR 5 below the prior sticker ATL; meaningful-drop:
+  *both* 10% and EUR 10 below the 7-day rolling median, gated on >=3
+  observations in that window). New `src/alerting/{messages,observations}.py`
+  support the richer message content and the EUR-equivalent history lookup
+  the two rules need. `AlertingService` is now invoked from
+  `pipeline.refresh.refresh_tracked_product` after each snapshot persists,
+  wrapped so an alerting failure logs and never breaks the refresh. Not yet
+  done: condition-bucketing (all conditions pooled into one comparison,
+  same known gap `anomaly.py` still has).
+
 ### Changed (2026-08-21 priority list)
 
 - **2026-08-21 priority list from Harbinger, documented before implementation:**

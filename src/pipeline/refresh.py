@@ -14,6 +14,7 @@ from typing import Any
 
 from sqlalchemy import Engine
 
+from alerting.service import AlertingService
 from config.settings import Settings, get_settings
 from pipeline.discover import run_discovery
 from pipeline.snapshot import persist_snapshot
@@ -48,10 +49,14 @@ def refresh_tracked_product(
     *,
     limit: int = 20,
 ) -> int:
-    """Run discovery and snapshot persistence for a single tracked product.
+    """Run discovery, snapshot persistence, and alert evaluation for one product.
 
     Honors global site settings and per-product site overrides. Touches
-    `last_checked_at` on completion. Returns the count of raw listings found.
+    `last_checked_at` on completion. After persisting the new price snapshot it
+    runs the alert service (`alerting.AlertingService`) so a target-price
+    crossing / all-time-low / meaningful-drop actually dispatches. Alerts are
+    disabled when `alerts_enabled` is False. Returns the count of raw listings
+    found.
     """
     raw_listings = run_discovery(
         tracked.query_text,
@@ -62,6 +67,16 @@ def refresh_tracked_product(
     )
     persist_snapshot(tracked.query_text, raw_listings, engine)
     TrackedProductRepository(engine).touch_last_checked(tracked.id)
+
+    if settings.alerts_enabled:
+        try:
+            AlertingService(engine, settings).evaluate_tracked_product(tracked.id)
+        except Exception:  # pragma: no cover - alerting must not break refresh
+            logger.exception(
+                "Alert evaluation failed for tracked product %d (%r); continuing",
+                tracked.id,
+                tracked.query_text,
+            )
     return len(raw_listings)
 
 

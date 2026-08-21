@@ -61,6 +61,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.14 per-site refresh cadence (2026-08-21):** the scheduled/passive
+  refresh tick now honours each site's own `site_settings.min_refresh_interval_hours`
+  (a v2.1 field nothing previously read). `pipeline.refresh` computes the site
+  keys whose floor has not elapsed (per this product's most recent
+  `listings.last_seen_at`) and passes them to `run_discovery` via a new
+  `skip_site_keys` arg, so a due product still skips re-querying a site that was
+  checked more recently than its own interval - independent of the product-level
+  cadence. A site with no floor is never gated; manual dashboard searches are
+  unaffected. Still a tick script driven by `cli refresh`, not a daemon.
+
 - **v2.14 dashboard historical-low badges (2026-08-21):** surfaced descriptive
   tiered-low (`30-Day Low`, `90-Day Low`, `180-Day Low`, `365-Day Low`, `All-Time Low`)
   and percentile-rarity (`Top 5% Low`) badges in the Dash dashboard. Connected

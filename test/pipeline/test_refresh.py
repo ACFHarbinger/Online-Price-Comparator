@@ -15,8 +15,10 @@ from pipeline.refresh import (
     refresh_tracked_product,
     refresh_watchlist,
     run_monitoring_loop,
+    sites_within_min_interval,
 )
 from storage.repository import ListingRepository
+from storage.schema import site_settings
 from storage.watchlist import TrackedProduct, TrackedProductRepository
 
 
@@ -106,9 +108,7 @@ def test_refresh_tracked_product(
 
     monkeypatch.setattr(
         "pipeline.refresh.run_discovery",
-        lambda query, settings, limit=20, engine=None, tracked_product_id=None: [
-            fake_listing
-        ],
+        lambda *args, **kwargs: [fake_listing],
     )
 
     settings = Settings(enabled_scrapers="amazon.es")
@@ -155,9 +155,7 @@ def test_refresh_watchlist_filters_due_and_disabled(
 
     monkeypatch.setattr(
         "pipeline.refresh.run_discovery",
-        lambda query, settings, limit=20, engine=None, tracked_product_id=None: [
-            fake_listing
-        ],
+        lambda *args, **kwargs: [fake_listing],
     )
 
     settings = Settings(refresh_interval_hours=12)
@@ -205,3 +203,137 @@ def test_run_monitoring_loop(
         in_memory_engine, settings, check_interval_seconds=10.0, stop_event=stop_event
     )
     assert iterations_stopped == 0
+
+
+# -- v2.14 per-site refresh cadence (min_refresh_interval_hours) -------------
+
+
+def _seed_site_floor(engine: Engine, site_key: str, hours: float) -> None:
+    with engine.begin() as conn:
+        conn.execute(
+            site_settings.insert().values(
+                site_key=site_key,
+                enabled=True,
+                result_limit=None,
+                min_request_interval_seconds=None,
+                cache_ttl_seconds=None,
+                browser_rendering_allowed=False,
+                min_refresh_interval_hours=hours,
+            )
+        )
+
+
+def _seed_last_seen_listing(
+    engine: Engine, product_id: int, site_key: str, seen_at: datetime
+) -> None:
+    ListingRepository(engine).upsert(
+        product_id=product_id,
+        site_key=site_key,
+        site_display_name=site_key.title(),
+        url=f"https://{site_key}/item/1",
+        image_url=None,
+        seen_at=seen_at,
+        match_status="confirmed",
+        match_score=95.0,
+        match_reason="model token match",
+    )
+
+
+def test_sites_within_min_interval_no_floor_is_empty(in_memory_engine: Engine) -> None:
+    tracked = TrackedProductRepository(in_memory_engine).get_or_create(
+        "AMD Ryzen 9 9950X3D"
+    )
+    assert (
+        sites_within_min_interval(in_memory_engine, tracked.product_id) == frozenset()
+    )
+
+
+def test_sites_within_min_interval_recently_seen_is_skipped(
+    in_memory_engine: Engine,
+) -> None:
+    base = datetime(2026, 8, 21, 12, 0, 0)
+    tracked = TrackedProductRepository(in_memory_engine).get_or_create(
+        "AMD Ryzen 9 9950X3D"
+    )
+    _seed_site_floor(in_memory_engine, "amazon.es", 100.0)
+    # Seen 5h ago, floor is 100h -> still fresh -> skip this site.
+    _seed_last_seen_listing(
+        in_memory_engine, tracked.product_id, "amazon.es", base - timedelta(hours=5)
+    )
+
+    assert sites_within_min_interval(
+        in_memory_engine, tracked.product_id, as_of=base
+    ) == frozenset({"amazon.es"})
+
+
+def test_sites_within_min_interval_stale_seen_not_skipped(
+    in_memory_engine: Engine,
+) -> None:
+    base = datetime(2026, 8, 21, 12, 0, 0)
+    tracked = TrackedProductRepository(in_memory_engine).get_or_create(
+        "AMD Ryzen 9 9950X3D"
+    )
+    _seed_site_floor(in_memory_engine, "amazon.es", 100.0)
+    # Seen 200h ago, floor is 100h -> elapsed -> do NOT skip.
+    _seed_last_seen_listing(
+        in_memory_engine, tracked.product_id, "amazon.es", base - timedelta(hours=200)
+    )
+
+    assert (
+        sites_within_min_interval(in_memory_engine, tracked.product_id, as_of=base)
+        == frozenset()
+    )
+
+
+def test_sites_within_min_interval_unseen_site_not_skipped(
+    in_memory_engine: Engine,
+) -> None:
+    base = datetime(2026, 8, 21, 12, 0, 0)
+    tracked = TrackedProductRepository(in_memory_engine).get_or_create(
+        "AMD Ryzen 9 9950X3D"
+    )
+    _seed_site_floor(in_memory_engine, "pccomponentes", 100.0)
+    # Floor exists but no listing of this product seen there -> not gated.
+    assert (
+        sites_within_min_interval(in_memory_engine, tracked.product_id, as_of=base)
+        == frozenset()
+    )
+
+
+def test_refresh_tracked_product_skips_site_within_floor(
+    in_memory_engine: Engine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    base = datetime(2026, 8, 21, 12, 0, 0)
+    tracked = TrackedProductRepository(in_memory_engine).get_or_create(
+        "AMD Ryzen 9 9950X3D"
+    )
+    _seed_site_floor(in_memory_engine, "amazon.es", 100.0)
+    _seed_last_seen_listing(
+        in_memory_engine, tracked.product_id, "amazon.es", base - timedelta(hours=5)
+    )
+
+    captured: dict[str, frozenset[str] | None] = {}
+
+    def fake_discovery(
+        query: object,
+        settings: object,
+        *,
+        limit: int = 20,
+        engine: Engine | None = None,
+        tracked_product_id: int | None = None,
+        skip_site_keys: frozenset[str] | None = None,
+    ) -> list[object]:
+        captured["skip"] = skip_site_keys
+        return []
+
+    monkeypatch.setattr("pipeline.refresh.run_discovery", fake_discovery)
+    settings = Settings(
+        _env_file=None, enabled_scrapers="__never__", alerts_enabled=False
+    )  # type: ignore[call-arg]
+
+    refresh_tracked_product(tracked, settings, in_memory_engine, as_of=base)
+
+    assert captured["skip"] is not None
+    assert "amazon.es" in captured["skip"]
+    assert captured["skip"] == frozenset({"amazon.es"})

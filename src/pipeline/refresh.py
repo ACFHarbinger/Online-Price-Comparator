@@ -12,13 +12,19 @@ import time
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import Engine
+from sqlalchemy import Engine, func, select
 
 from alerting.service import AlertingService
 from config.settings import Settings, get_settings
 from pipeline.discover import run_discovery
 from pipeline.snapshot import persist_snapshot
-from storage.watchlist import TrackedProduct, TrackedProductRepository
+from storage.repository import MATCHED_STATUSES
+from storage.schema import listings
+from storage.watchlist import (
+    SiteSettingsRepository,
+    TrackedProduct,
+    TrackedProductRepository,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -42,28 +48,89 @@ def is_due_for_refresh(
     return ref_time - tracked.last_checked_at >= timedelta(hours=interval_hours)
 
 
+def _site_floor_hours(engine: Engine) -> dict[str, float]:
+    """site_key -> min_refresh_interval_hours for sites that set a floor."""
+    return {
+        site.site_key: site.min_refresh_interval_hours
+        for site in SiteSettingsRepository(engine).list_all()
+        if site.min_refresh_interval_hours is not None
+    }
+
+
+def _last_seen_per_site(engine: Engine, product_id: int) -> dict[str, datetime]:
+    """Most recent ``last_seen_at`` per site for this product's matched listings."""
+    stmt = (
+        select(
+            listings.c.site_key,
+            func.max(listings.c.last_seen_at).label("last_seen"),
+        )
+        .where(
+            listings.c.product_id == product_id,
+            listings.c.match_status.in_(MATCHED_STATUSES),
+        )
+        .group_by(listings.c.site_key)
+    )
+    with engine.connect() as conn:
+        rows = conn.execute(stmt).all()
+    return {
+        str(row.site_key): row.last_seen for row in rows if row.last_seen is not None
+    }
+
+
+def sites_within_min_interval(
+    engine: Engine,
+    product_id: int,
+    *,
+    as_of: datetime | None = None,
+) -> frozenset[str]:
+    """Site keys whose own ``min_refresh_interval_hours`` has not yet elapsed.
+
+    Independent of the per-product cadence: a tracked product can be due for
+    refresh, but a specific site whose ``min_refresh_interval_hours`` floor is
+    still fresh (per ``listings.last_seen_at`` for this product) is skipped for
+    this pass. Sites that never set a floor are never gated here.
+    """
+    reference = as_of or datetime.now()
+    floors = _site_floor_hours(engine)
+    if not floors:
+        return frozenset()
+    last_seen = _last_seen_per_site(engine, product_id)
+    skipped: set[str] = set()
+    for site_key, floor_hours in floors.items():
+        last = last_seen.get(site_key)
+        if last is not None and reference - last < timedelta(hours=floor_hours):
+            skipped.add(site_key)
+    return frozenset(skipped)
+
+
 def refresh_tracked_product(
     tracked: TrackedProduct,
     settings: Settings,
     engine: Engine,
     *,
     limit: int = 20,
+    as_of: datetime | None = None,
 ) -> int:
     """Run discovery, snapshot persistence, and alert evaluation for one product.
 
-    Honors global site settings and per-product site overrides. Touches
+    Honors global site settings and per-product site overrides. Also applies the
+    v2.14 per-site cadence floor: a site whose own ``min_refresh_interval_hours``
+    has not elapsed since this product was last seen there is skipped for this
+    pass (still a tick script driven by ``cli refresh``, not a daemon). Touches
     `last_checked_at` on completion. After persisting the new price snapshot it
     runs the alert service (`alerting.AlertingService`) so a target-price
     crossing / all-time-low / meaningful-drop actually dispatches. Alerts are
     disabled when `alerts_enabled` is False. Returns the count of raw listings
     found.
     """
+    skip_sites = sites_within_min_interval(engine, tracked.product_id, as_of=as_of)
     raw_listings = run_discovery(
         tracked.query_text,
         settings,
         limit=limit,
         engine=engine,
         tracked_product_id=tracked.id,
+        skip_site_keys=skip_sites or None,
     )
     persist_snapshot(tracked.query_text, raw_listings, engine)
     try:

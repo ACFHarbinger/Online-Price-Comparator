@@ -1,6 +1,13 @@
 # Alerting Roadmap
 
-**Status:** 📋 Planned (v2.3, v2.4, v2.14) · **Source:** grok research (channels), codex research (thresholds); v2.14 from the 2026-08-15 global-scope brainstorm
+**Status:** 🚧 In progress: v2.4 channels done, v2.3 **target-price rule** done 2026-08-21 (`src/alerting/`, `alert_deliveries`) · all-time-low + meaningful-drop unimplemented (now unblocked by v2.10's `price_eur_equivalent`) · v2.14 tiered/percentile 📋 Planned · **Source:** grok research (channels), codex research (thresholds); v2.14 from the 2026-08-15 global-scope brainstorm
+
+The v2.3/v2.4 slice that shipped 2026-08-21 deliberately implemented only the
+**target-price** rule + the Telegram/Discord dispatch protocol + the
+`alert_deliveries` delivery log. The all-time-low, meaningful-drop, and v2.14
+tiered/percentile rules key on `price_eur_equivalent` — until v2.10 landed
+they could not be built, and even now they are intentionally left as a
+follow-up rather than bundled in. See `ROADMAP.md` v2.3.
 
 ## Channels: Telegram bot + Discord webhook
 

@@ -143,3 +143,27 @@ tracked_product_site_overrides = Table(
         name="uq_tracked_product_site_override",
     ),
 )
+
+# v2.3/v2.4 alerting delivery log (see src/alerting/). One row per successful
+# channel dispatch. Used both for audit and for the per-product + alert-type
+# cooldown, so a crossing below a target notifies once rather than on every
+# refresh. This table is additive only (alerting slice) - it does not touch
+# `price_history` or the v2.1 watchlist tables.
+alert_deliveries = Table(
+    "alert_deliveries",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column(
+        "tracked_product_id",
+        Integer,
+        ForeignKey("tracked_products.id"),
+        nullable=False,
+    ),
+    Column("alert_type", String, nullable=False),
+    Column("channel", String, nullable=False),
+    Column("message", String, nullable=False),
+    Column("related_price", Float, nullable=True),
+    Column("target_price", Float, nullable=True),
+    Column("site_key", String, nullable=True),
+    Column("created_at", DateTime, nullable=False),
+)

@@ -49,6 +49,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `STALE (Xd ago)` badges and `.stock-stale` indicators. Full test coverage in
   `test/fetch/test_circuit_breaker.py` and `test/dashboard/test_charts_and_views.py`.
 
+- **v2.3/v2.4 alerting, target-price slice (2026-08-21, scoped down):** new
+  `src/alerting/` package plus an additive `alert_deliveries` table. Only the
+  **target-price crossing** rule ships (`current_price <= user_target_price`,
+  notify once on a fresh crossing below - never on re-refresh while below -
+  honoring `alert_cooldown_hours`). One internal `AlertDispatcher` protocol
+  with a raw Telegram `sendMessage` and a plain Discord webhook `POST`,
+  selected via `alert_channel`; both fail-closed (log + `False`, never raise)
+  and record a delivery only on success so failures retry. `alert_deliveries`
+  drives the per-(product, alert-type) cooldown and audit. **Out of scope this
+  pass:** all-time-low, meaningful-drop, and the v2.14 tiered/percentile rules -
+  all three key on `price_eur_equivalent`, which lands with v2.10 in the same
+  round. Target-price does not depend on it, hence it is the one rule shipped.
+  Coverage in `test/alerting/`.
+
 - **v2.7 Portugal retailer coverage (2026-08-21, in progress):** added
   PCDIGA, Worten, and Fnac.pt scraper adapters and registered them alongside
   Amazon.es and PcComponentes. Each checks robots.txt, shares a 12-second

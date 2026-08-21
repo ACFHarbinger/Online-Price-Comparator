@@ -7,11 +7,13 @@ line to `_build_all_scrapers()` below.
 from __future__ import annotations
 
 from config.settings import Settings
+from scrapers.alternate import AlternateScraper
 from scrapers.amazon import AmazonScraper
 from scrapers.base import ScraperAdapter
 from scrapers.chip7 import Chip7Scraper
 from scrapers.fnac import FnacScraper
 from scrapers.kuantokusta import KuantoKustaHintSource
+from scrapers.mindfactory import MindfactoryScraper
 from scrapers.pccomponentes import PcComponentesScraper
 from scrapers.pcdiga import PcdigaScraper
 from scrapers.worten import WortenScraper
@@ -26,6 +28,8 @@ def _build_all_scrapers(settings: Settings) -> list[ScraperAdapter]:
         WortenScraper(),
         FnacScraper(),
         Chip7Scraper(),
+        MindfactoryScraper(),
+        AlternateScraper(),
     ]
 
 

@@ -61,6 +61,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.12 EU-wide new-retail start (2026-08-21, in progress):** added
+  Mindfactory.de and Alternate.de as the first EU-wide sources. Both reuse the
+  polite structured-data-first retailer adapter with German `Accept-Language`,
+  robots checks, response cache, retry/circuit-breaker safeguards, and CSS
+  fallback fixtures. They are new-retail / `eu_domestic` sources under the
+  existing known-site condition policy. Secondhand/classifieds, UK sources,
+  and multilingual matching remain separate v2.12 follow-ups.
+
 - **Market-scan reports translated into roadmap findings (2026-08-21):**
   read `docs/moon/reports/{ddr5_128gb,rtx_3090ti}_market_scan_report.md`
   (real crawler field-testing from the same day) and verified the new

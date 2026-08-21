@@ -1,4 +1,4 @@
-"""Shared polite search-page scraper behaviour for Iberian retailers."""
+"""Shared polite search-page scraper behaviour for fixed retailer adapters."""
 
 from __future__ import annotations
 
@@ -44,6 +44,7 @@ class RetailerParserConfig:
     title_selector: str
     price_selector: str
     link_selector: str
+    accept_language: str = "pt-PT,pt;q=0.9,en;q=0.7"
 
 
 class IberianRetailerScraper:
@@ -98,7 +99,7 @@ class IberianRetailerScraper:
                 response = get_with_retry(
                     client,
                     search_url,
-                    headers={"Accept-Language": "pt-PT,pt;q=0.9,en;q=0.7"},
+                    headers={"Accept-Language": self._config.accept_language},
                     max_attempts=settings.retry_max_attempts,
                     initial_backoff_seconds=settings.retry_initial_backoff_seconds,
                     max_backoff_seconds=settings.retry_max_backoff_seconds,

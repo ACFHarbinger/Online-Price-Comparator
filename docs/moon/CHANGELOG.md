@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Closed a real policy-enforcement gap on Leboncoin (2026-08-22):** while
+  reviewing today's landed v2.20 extension work, found that v2.15 Tier A's
+  server-side custom-URL fetcher had **no code-level check** preventing a
+  Leboncoin.fr URL from being registered and fetched server-side, despite
+  the explicit 2026-08-21 policy decision (#37) that Leboncoin gets
+  client-extension-only collection. The gap was real, not theoretical:
+  Leboncoin's `robots.txt` has no generic `User-agent: *` block (only
+  named bots like `GPTBot`/`ClaudeBot` are covered), so a plain httpx
+  request with an unnamed User-Agent is technically unrestricted by
+  `robots.txt` alone, even though the site's plain-text terms forbid
+  automated methods universally. Added `SERVER_SIDE_BLOCKED_DOMAINS`
+  (`src/scrapers/custom_url.py`, currently `{"leboncoin.fr"}`) checked at
+  both the fetch boundary (`fetch_and_parse_custom_url`, before the
+  robots.txt check) and the pipeline registration boundary
+  (`track_and_process_custom_url`, before the URL is ever added to
+  `custom_listing_urls`) — a Leboncoin URL is now rejected immediately
+  with a clear message, never silently registered or fetched. Two new
+  tests confirm no HTTP request is made. Full suite **245 passed**.
+
 ### Added
 
 - **3rd market-scan report translated into roadmap findings (2026-08-21):**

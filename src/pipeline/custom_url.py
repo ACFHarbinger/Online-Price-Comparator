@@ -15,7 +15,7 @@ from matching.condition import extract_condition
 from matching.matcher import MatchStatus, match_listing
 from matching.profile import build_profile_from_query
 from normalize.price import parse_price
-from scrapers.custom_url import fetch_and_parse_custom_url
+from scrapers.custom_url import SERVER_SIDE_BLOCKED_DOMAINS, fetch_and_parse_custom_url
 from storage.custom_urls import (
     CustomListingUrl,
     CustomListingUrlRepository,
@@ -56,6 +56,16 @@ def track_and_process_custom_url(
     clean_url = url.strip()
     if not is_valid_http_url(clean_url):
         return False, "Invalid URL. Please enter a full http:// or https:// URL."
+
+    blocked_hostname = urlparse(clean_url).hostname or ""
+    if blocked_hostname.startswith("www."):
+        blocked_hostname = blocked_hostname[4:]
+    if blocked_hostname.lower() in SERVER_SIDE_BLOCKED_DOMAINS:
+        return (
+            False,
+            f"{blocked_hostname} does not allow server-side tracking (see #37) - "
+            "not registered. Use the client-side monitor extension (v2.20) instead.",
+        )
 
     now = as_of or datetime.now(UTC)
     cfg = settings or get_settings()

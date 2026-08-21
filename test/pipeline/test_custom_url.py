@@ -142,6 +142,28 @@ def test_track_and_process_custom_url_invalid_url(in_memory_engine: Engine) -> N
 
 
 @respx.mock
+def test_track_and_process_custom_url_refuses_leboncoin(
+    in_memory_engine: Engine,
+) -> None:
+    """Leboncoin is server-side-blocked (#37) - never registered, never fetched."""
+    route = respx.get(url__regex=r"leboncoin\.fr.*")
+    tp_repo = TrackedProductRepository(in_memory_engine)
+    tracked = tp_repo.get_or_create("AMD Ryzen 7 7800X3D")
+
+    success, msg = track_and_process_custom_url(
+        tracked.id,
+        "https://www.leboncoin.fr/ad/informatique/12345",
+        in_memory_engine,
+    )
+
+    assert success is False
+    assert "does not allow server-side tracking" in msg
+    assert not route.called
+    custom_repo = CustomListingUrlRepository(in_memory_engine)
+    assert custom_repo.list_for_product(tracked.id) == []
+
+
+@respx.mock
 def test_refresh_custom_urls_for_product(in_memory_engine: Engine) -> None:
     now = datetime(2026, 8, 21, 12, 0, 0, tzinfo=UTC)
     tp_repo = TrackedProductRepository(in_memory_engine)

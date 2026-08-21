@@ -23,6 +23,25 @@ LOGGER = logging.getLogger(__name__)
 # (conservative 3.0s between requests to same host)
 _CUSTOM_RATE_LIMITER = HostRateLimiter(min_interval_seconds=3.0)
 
+# Domains this tool has decided never to fetch server-side, regardless of
+# what their own robots.txt technically permits for an unnamed User-Agent -
+# see docs/moon/roadmaps/client_side_monitor.md and GitHub issue #37.
+# Leboncoin.fr's robots.txt has no generic "User-agent: *" block (only named
+# bots are covered), so a plain httpx fetch is not blocked by robots.txt
+# alone even though the site's own terms state automated methods are
+# forbidden - this blocklist is the actual enforcement of that decision,
+# not robots.txt. Collection for these domains is client-extension-only
+# (v2.20) until/unless a future decision changes this.
+SERVER_SIDE_BLOCKED_DOMAINS: frozenset[str] = frozenset({"leboncoin.fr"})
+
+
+def _is_server_side_blocked(url: str) -> bool:
+    """True if `url`'s host is in `SERVER_SIDE_BLOCKED_DOMAINS` (with/without www.)."""
+    hostname = (urlparse(url).hostname or "").lower()
+    if hostname.startswith("www."):
+        hostname = hostname[4:]
+    return hostname in SERVER_SIDE_BLOCKED_DOMAINS
+
 
 def _extract_meta_tag(soup: BeautifulSoup, *properties: str) -> str | None:
     """Extract content of the first matching meta property or name."""
@@ -108,6 +127,16 @@ def fetch_and_parse_custom_url(
     """
     now = as_of or datetime.now(UTC)
     site_key, site_display_name = extract_site_info_from_url(url)
+
+    # 0. Policy blocklist - takes priority over robots.txt, see
+    # SERVER_SIDE_BLOCKED_DOMAINS above.
+    if _is_server_side_blocked(url):
+        LOGGER.warning(
+            "Refusing server-side fetch of policy-blocked domain: %s "
+            "(client-extension collection only, see #37/#38)",
+            url,
+        )
+        return None
 
     # 1. Robots.txt check
     try:

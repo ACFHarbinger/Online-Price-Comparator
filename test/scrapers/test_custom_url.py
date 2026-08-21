@@ -102,3 +102,14 @@ def test_fetch_and_parse_custom_url_http_error() -> None:
 
     raw = fetch_and_parse_custom_url(url)
     assert raw is None
+
+
+@respx.mock
+def test_fetch_and_parse_custom_url_refuses_policy_blocked_domain() -> None:
+    """Leboncoin is server-side-blocked (see #37) - no HTTP request is even made."""
+    route = respx.get("https://www.leboncoin.fr/ad/informatique/12345")
+
+    raw = fetch_and_parse_custom_url("https://www.leboncoin.fr/ad/informatique/12345")
+
+    assert raw is None
+    assert not route.called

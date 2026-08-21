@@ -54,6 +54,10 @@ button, input {{ font: inherit; }}
 .hero-metrics {{ display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }}
 .hero-badge {{ display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 6px; font-size: .82rem; font-weight: 600; font-family: {MONO_FONT}; font-variant-numeric: tabular-nums; }}
 .badge-atl {{ background: rgba(63, 185, 80, 0.15); color: {POSITIVE}; border: 1px solid rgba(63, 185, 80, 0.4); }}
+.badge-tiered-low {{ background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.45); }}
+.badge-percentile-low {{ background: rgba(168, 85, 247, 0.15); color: #C084FC; border: 1px solid rgba(168, 85, 247, 0.45); }}
+.badge-tiered-row {{ display: inline-flex; align-items: center; margin-left: 6px; padding: 2px 6px; border-radius: 4px; font-size: .70rem; font-weight: 700; font-family: {MONO_FONT}; background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.35); }}
+.badge-percentile-row {{ display: inline-flex; align-items: center; margin-left: 6px; padding: 2px 6px; border-radius: 4px; font-size: .70rem; font-weight: 700; font-family: {MONO_FONT}; background: rgba(168, 85, 247, 0.15); color: #C084FC; border: 1px solid rgba(168, 85, 247, 0.35); }}
 .pill-delta-pos {{ background: rgba(63, 185, 80, 0.15); color: {POSITIVE}; border: 1px solid rgba(63, 185, 80, 0.4); }}
 .pill-delta-neg {{ background: rgba(248, 81, 73, 0.15); color: {NEGATIVE}; border: 1px solid rgba(248, 81, 73, 0.4); }}
 .pill-delta-neutral {{ background: rgba(139, 148, 158, 0.15); color: {MUTED_TEXT}; border: 1px solid {PANEL_BORDER}; }}

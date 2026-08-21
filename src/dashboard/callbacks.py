@@ -10,6 +10,12 @@ from dash import ALL, Dash, Input, Output, State, ctx, html, no_update
 from dash.exceptions import PreventUpdate
 from sqlalchemy import Engine
 
+from alerting.observations import (
+    ListingHistory,
+    listing_histories_for_product,
+    product_eur_timeline,
+)
+from alerting.rules import percentile_low_reached, strongest_tiered_low
 from config.settings import get_settings, override_settings
 from dashboard.charts import build_bar_chart, build_forecast_chart, build_line_chart
 from dashboard.stats import (
@@ -124,6 +130,7 @@ def _retailer_table(
     *,
     circuit_breaker: CircuitBreaker | None = None,
     as_of: datetime | None = None,
+    listing_histories: list[ListingHistory] | None = None,
 ) -> html.Div | html.Table:
     if not listings:
         return html.Div(
@@ -179,6 +186,54 @@ def _retailer_table(
             store_children.append(
                 html.Span(f"STALE ({time_ago})", className="badge-stale")
             )
+
+        # Check historical low for this listing's own history
+        if listing_histories and not is_out_of_stock:
+            hist = next(
+                (
+                    h
+                    for h in listing_histories
+                    if h.site_key == listing.site_key and h.url == listing.url
+                ),
+                None,
+            )
+            if hist and hist.observations:
+                current_obs = hist.observations[-1]
+                if current_obs.condition not in (None, "", "unknown"):
+                    bucket = [
+                        (obs.observed_at, obs.eur_amount)
+                        for obs in hist.observations
+                        if obs.condition == current_obs.condition
+                    ]
+                    if len(bucket) >= 2:
+                        tier = strongest_tiered_low(
+                            current_eur=current_obs.eur_amount,
+                            observations=bucket,
+                            reference=ref_time,
+                            min_observations=2,
+                        )
+                        if tier is not None:
+                            tier_label = {
+                                "all-time": "ATL",
+                                "365d": "365d low",
+                                "180d": "180d low",
+                                "90d": "90d low",
+                                "30d": "30d low",
+                            }.get(tier, f"{tier} low")
+                            store_children.append(
+                                html.Span(tier_label, className="badge-tiered-row")
+                            )
+                        elif percentile_low_reached(
+                            current_eur=current_obs.eur_amount,
+                            observations=bucket,
+                            reference=ref_time,
+                            window_days=180,
+                            percentile=5.0,
+                            min_observations=20,
+                        ):
+                            store_children.append(
+                                html.Span("Top 5%", className="badge-percentile-row")
+                            )
 
         # Price cell
         if is_out_of_stock:
@@ -503,18 +558,43 @@ def _forecast_metadata(forecast: ForecastResult) -> str:
     )
 
 
+def _build_tiered_low_badge(tier_label: str) -> html.Span:
+    """Format a descriptive tiered-low badge (v2.14)."""
+    labels = {
+        "all-time": "All-Time Low",
+        "365d": "365-Day Low",
+        "180d": "180-Day Low",
+        "90d": "90-Day Low",
+        "30d": "30-Day Low",
+    }
+    title = labels.get(tier_label, f"{tier_label.capitalize()} Low")
+    return html.Span(title, className="hero-badge badge-tiered-low")
+
+
+def _build_percentile_badge(percentile: float = 5.0) -> html.Span:
+    """Format a descriptive percentile rarity badge (v2.14)."""
+    return html.Span(
+        f"Top {int(percentile)}% Low", className="hero-badge badge-percentile-low"
+    )
+
+
 def _build_hero_metrics(
     stats: ProductPriceStats,
     current_lowest: float | None,
     volatility: PriceSeriesStats | None = None,
     trend: PriceSeriesStats | None = None,
+    tiered_low: str | None = None,
+    percentile_low: bool = False,
+    rarity_percentile: float = 5.0,
 ) -> list[html.Span]:
     badges: list[html.Span] = []
     if volatility is not None:
         badges.append(_build_volatility_badge(volatility))
     if trend is not None:
         badges.append(_build_trend_indicator(trend))
-    if stats.all_time_low is not None:
+    if tiered_low is not None:
+        badges.append(_build_tiered_low_badge(tiered_low))
+    elif stats.all_time_low is not None:
         curr = stats.all_time_low_currency or "EUR"
         badges.append(
             html.Span(
@@ -522,6 +602,8 @@ def _build_hero_metrics(
                 className="hero-badge badge-atl",
             )
         )
+    if percentile_low:
+        badges.append(_build_percentile_badge(rarity_percentile))
     if stats.avg_30d is not None and current_lowest is not None and stats.avg_30d > 0:
         diff = current_lowest - stats.avg_30d
         pct = (diff / stats.avg_30d) * 100
@@ -602,6 +684,31 @@ def _product_view(
     trend = compute_price_stats(history, window_days=DEFAULT_TREND_WINDOW_DAYS)
     forecast = forecast_prices(history)
 
+    histories = listing_histories_for_product(
+        product_repository.engine, product_id, include_anomalous=include_anomalous
+    )
+    timeline = product_eur_timeline(histories)
+    ref_time = datetime.now()
+
+    tiered_low = None
+    percentile_low = False
+    if timeline:
+        current_lowest_eur = timeline[-1][1]
+        tiered_low = strongest_tiered_low(
+            current_eur=current_lowest_eur,
+            observations=timeline,
+            reference=ref_time,
+            min_observations=2,
+        )
+        percentile_low = percentile_low_reached(
+            current_eur=current_lowest_eur,
+            observations=timeline,
+            reference=ref_time,
+            window_days=180,
+            percentile=5.0,
+            min_observations=20,
+        )
+
     image_url = next(
         (listing.image_url for listing in listings if listing.image_url), None
     )
@@ -612,7 +719,14 @@ def _product_view(
         formatted_price = _format_price(lowest.price_amount, lowest.currency)
         lowest_text = f"{formatted_price} ({lowest.site_display_name})"
 
-    hero_metrics = _build_hero_metrics(stats, lowest_amount, volatility, trend)
+    hero_metrics = _build_hero_metrics(
+        stats,
+        lowest_amount,
+        volatility,
+        trend,
+        tiered_low=tiered_low,
+        percentile_low=percentile_low,
+    )
 
     return (
         product.canonical_name or product.query_text,
@@ -621,7 +735,7 @@ def _product_view(
         hero_metrics,
         build_bar_chart(latest_prices),
         build_line_chart(history, all_time_low=stats.all_time_low),
-        _retailer_table(listings, stats.avg_30d),
+        _retailer_table(listings, stats.avg_30d, listing_histories=histories),
         build_forecast_chart(forecast),
         _forecast_metadata(forecast),
     )

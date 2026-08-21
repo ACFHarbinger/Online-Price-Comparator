@@ -61,6 +61,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.14 dashboard historical-low badges (2026-08-21):** surfaced descriptive
+  tiered-low (`30-Day Low`, `90-Day Low`, `180-Day Low`, `365-Day Low`, `All-Time Low`)
+  and percentile-rarity (`Top 5% Low`) badges in the Dash dashboard. Connected
+  `alerting.rules`'s `strongest_tiered_low` and `percentile_low_reached` directly
+  into `_build_hero_metrics` and `_retailer_table` without reimplementing the
+  tier-walk logic. Fences observations per exact condition bucket on EUR sticker
+  values. Added dark-terminal badge styles in `src/dashboard/theme.py` and unit tests
+  in `test/dashboard/test_historical_low_badge.py`.
+
 - **v2.12 EU-wide new-retail start (2026-08-21, in progress):** added
   Mindfactory.de and Alternate.de as the first EU-wide sources. Both reuse the
   polite structured-data-first retailer adapter with German `Accept-Language`,

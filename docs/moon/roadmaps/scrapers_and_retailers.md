@@ -1,6 +1,6 @@
 # Scrapers & Retailer Coverage Roadmap
 
-**Status:** ✅ v1.8 reliability hardening complete (including structured-data-first parsing for both live scrapers — verified 2026-08-21) · 🚧 In progress (2 of ~7 retailers live) · 📋 Planned (v2.12, v2.13, v2.15-v2.17) · **Source:** codex research (reliability), grok research (retailer priority); v2.12/v2.13/v2.15-v2.17 from the 2026-08-15 global-scope brainstorm
+**Status:** ✅ v1.8 reliability hardening complete (including structured-data-first parsing for both live scrapers — verified 2026-08-21) · ✅ v2.17a SerpAPI SearchProvider (2026-08-21) · 🚧 In progress (2 of ~7 retailers live) · 📋 Planned (v2.12, v2.13, v2.15, v2.17b) · **Source:** codex research (reliability), grok research (retailer priority); v2.12/v2.13/v2.15-v2.17 from the 2026-08-15 global-scope brainstorm
 
 ## Current state
 
@@ -200,6 +200,15 @@ yet, despite the credential fields already being present in `Settings`.
 **Split:** **v2.17a** implements one real `SearchProvider` (SerpAPI or
 Google CSE) behind those keys. **v2.17b** is the discover-and-approve UX
 and must not start until v2.17a returns real rows.
+
+**v2.17a shipped 2026-08-21:** `SerpApiProvider` (`src/search/providers/serpapi.py`)
+queries Google Shopping (`engine=google_shopping`, `gl=es`/`hl=es`) when
+`SERPAPI_KEY` is set, maps `shopping_results` to `RawListing` (`source_kind=
+search_api`), and fail-closes to `[]` on transport/HTTP/API/parse errors.
+Unconfigured keys are skipped by `enabled_providers()`. Google CSE is still
+a commented registry stub. v2.17b (approve-before-persist, host allowlist,
+credit budget) is not this slice — `run_discovery` will currently persist
+SerpAPI rows through the existing matcher when a key is configured.
 
 **Flow (v2.17b):** initial discovery is strictly **manual and
 user-triggered** for one tracked product, never periodic. Query the real

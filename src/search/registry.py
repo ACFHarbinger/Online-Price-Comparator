@@ -11,6 +11,7 @@ import logging
 from config.settings import Settings
 from search.base import SearchProvider
 from search.providers.null_provider import NullProvider
+from search.providers.serpapi import SerpApiProvider
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +20,8 @@ def _build_all_providers(settings: Settings) -> list[SearchProvider]:
     """Every known provider, configured or not. Extend this list to add a provider."""
     return [
         NullProvider(),
-        # SerpApiProvider(api_key=settings.serpapi_key),
-        # GoogleCseProvider(
-        #     api_key=settings.google_cse_api_key, cx=settings.google_cse_cx
-        # ),
+        SerpApiProvider(api_key=settings.serpapi_key or ""),
+        # GoogleCseProvider stays unwired (needs api_key + cx).
     ]
 
 

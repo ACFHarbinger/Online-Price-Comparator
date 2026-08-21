@@ -58,8 +58,8 @@ order:
    `site_settings.enabled`). Dashboard settings UI and v2.15 "add a site"
    are still later.
 3. **Search feature**: browse the web for more sites carrying a tracked
-   product. Maps to existing v2.17a (real `SearchProvider`) + v2.17b
-   (discover-and-approve UX) — no new spec needed, just sequencing priority.
+   product. Maps to existing v2.17a (✅ real `SearchProvider` — SerpAPI Google
+   Shopping, 2026-08-21) + v2.17b (discover-and-approve UX, still planned).
 4. **Visual aesthetics + other relevant roadmap items**. Maps to the
    existing "Financial Terminal" aesthetic direction in
    [dashboard_ux.md](roadmaps/dashboard_ux.md) (already shipped in v1.4) and
@@ -120,7 +120,7 @@ price meaningful instead of just a number.
 | v2.14 | Per-site refresh cadence (tick script, not a daemon) + tiered/percentile historical-low alert modes + matching dashboard badge | 📋 Planned | [alerting.md](roadmaps/alerting.md), [dashboard_ux.md](roadmaps/dashboard_ux.md) |
 | v2.15 | Custom user-added sites: track a specific listing URL (Tier A), custom searchable site (Tier B, later) | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
 | v2.16 | Site value-proposition scorecard: extreme-value, consistency/volatility, destination-specific fulfillment SLA, and reliability | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
-| v2.17a | Real `SearchProvider` (SerpAPI or Google CSE) behind the existing Settings keys — v1.1 delivered only the abstraction + `null_provider.py` | 📋 Planned ([#26](https://github.com/ACFHarbinger/Online-Price-Comparator/issues/26)) | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
+| v2.17a | Real `SearchProvider` (SerpAPI or Google CSE) behind the existing Settings keys — v1.1 delivered only the abstraction + `null_provider.py` | ✅ Done (SerpAPI Google Shopping behind `SERPAPI_KEY`, fail-closed, mocked HTTP tests — 2026-08-21, [#26](https://github.com/ACFHarbinger/Online-Price-Comparator/issues/26). Google CSE still unwired.) | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
 | v2.17b | Manual, per-product source discovery UX (approve-before-persist; depends on v2.17a) | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
 | v2.18 | Price forecasting: confidence-banded, separate-surface future-price projection, never blended with descriptive tiered-low/anomaly features | 📋 Planned (un-parked 2026-08-21, [#27](https://github.com/ACFHarbinger/Online-Price-Comparator/issues/27), see [Current priorities](#current-priorities-2026-08-21) and the Parked table's note below) | [price_forecasting.md](roadmaps/price_forecasting.md) |
 | v2.19 | Statistical price attributes: volatility/variance indicator + descriptive trend/gradient indicator | ✅ Done (single `src/dashboard/stats.py` module: CV/IQR volatility + rolling linear-regression trend, sparse-history guards, hero-metrics integration, currency-grouped so native currencies never mix; repository stays a thin query layer. Redundant repository-side stats models consolidated away during reconciliation — verified 2026-08-21, [#25](https://github.com/ACFHarbinger/Online-Price-Comparator/issues/25)) | [dashboard_ux.md](roadmaps/dashboard_ux.md#3-statistical-price-attributes-volatility-trendgradient--2026-08-21-priority-1-of-5) |

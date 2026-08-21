@@ -29,6 +29,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.17a SerpAPI SearchProvider (2026-08-21):** `SerpApiProvider` implements
+  the existing `SearchProvider` Protocol against Google Shopping
+  (`engine=google_shopping`, `gl=es`) behind `SERPAPI_KEY`. Unconfigured or
+  failed requests log and return `[]` (never raise). Registered in
+  `search.registry`; Google CSE stays unwired. Mocked HTTP coverage in
+  `test/search/` (configured results, zero results, API error, HTTP/transport
+  failure, unset key). v2.17b approve-before-persist is not this slice.
+
 - **v2.1 watchlist + per-comparison site enable/disable (2026-08-21):** new
   SQLite tables `tracked_products`, `site_settings`, and
   `tracked_product_site_overrides` (schema + `src/storage/watchlist.py`, not

@@ -5,7 +5,8 @@ from __future__ import annotations
 from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import Any
+from decimal import Decimal
+from typing import Any, Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -60,6 +61,32 @@ class Settings(BaseSettings):
     browser_fallback_headless: bool = True
     browser_fallback_headless_wait_seconds: float = 5.0
     browser_fallback_manual_wait_seconds: float = 45.0
+
+    # v1.7 (docs/moon/roadmaps/settings_and_config.md#runtime-settings---
+    # planned-additions-v17) - runtime config only, no behavior reads these
+    # yet. They document intent for v2.x work (watchlist scheduling, FX
+    # normalization, alerting) that lands on top of this field set.
+    display_currency: str = "EUR"
+    fx_rate_provider: str = "ecb"
+    fx_rate_cache_ttl_hours: int = 24
+    default_results_per_source: int = 10
+    max_results_per_source: int = 20
+    monitoring_enabled: bool = False
+    refresh_interval_hours: int = 12
+    request_timeout_seconds: float = 15.0
+    connect_timeout_seconds: float = 5.0
+    default_min_request_interval_seconds: float = 5.0
+    alerts_enabled: bool = True
+    alert_drop_percent: float = 10.0
+    alert_drop_min_amount: Decimal = Decimal("10.00")
+    alert_rolling_window_days: int = 7
+    alert_all_time_low_percent: float = 2.0
+    alert_all_time_low_min_amount: Decimal = Decimal("5.00")
+    alert_cooldown_hours: int = 72
+    alert_channel: Literal["none", "telegram", "discord", "both"] = "none"
+    telegram_bot_token: str | None = None
+    telegram_chat_id: str | None = None
+    discord_webhook_url: str | None = None
 
     def enabled_scraper_keys(self) -> set[str] | None:
         """Return the configured scraper allowlist, or None to mean "all"."""

@@ -10,13 +10,14 @@ from dash.exceptions import PreventUpdate
 from sqlalchemy import Engine
 
 from config.settings import get_settings, override_settings
-from dashboard.charts import build_bar_chart, build_line_chart
+from dashboard.charts import build_bar_chart, build_forecast_chart, build_line_chart
 from dashboard.stats import (
     DEFAULT_TREND_WINDOW_DAYS,
     DEFAULT_VOLATILITY_WINDOW_DAYS,
     PriceSeriesStats,
     compute_price_stats,
 )
+from forecasting.holt import ForecastResult, forecast_prices
 from pipeline.discover import run_discovery
 from pipeline.snapshot import persist_snapshot
 from storage.repository import (
@@ -203,6 +204,18 @@ def _build_volatility_badge(price_stats: PriceSeriesStats) -> html.Span:
     )
 
 
+def _forecast_metadata(forecast: ForecastResult) -> str:
+    """State forecast honesty metadata without presenting a point estimate."""
+    if not forecast.is_available:
+        return f"Forecast unavailable: {forecast.unavailable_reason}"
+    assert forecast.trained_at is not None
+    return (
+        f"80% confidence band · Holt linear trend · {forecast.observation_count} "
+        "compatible observations · last retrained from data through "
+        f"{forecast.trained_at:%Y-%m-%d}"
+    )
+
+
 def _build_hero_metrics(
     stats: ProductPriceStats,
     current_lowest: float | None,
@@ -256,6 +269,8 @@ def _product_view(
     Any,
     Any,
     html.Div | html.Table,
+    Any,
+    str,
 ]:
     if product_id is None:
         return (
@@ -268,6 +283,8 @@ def _product_view(
             html.Div(
                 "Choose a product to see retailer listings.", className="empty-message"
             ),
+            build_forecast_chart(forecast_prices([])),
+            "Forecast unavailable: choose a product first",
         )
 
     product = product_repository.get(product_id)
@@ -296,6 +313,7 @@ def _product_view(
         history, window_days=DEFAULT_VOLATILITY_WINDOW_DAYS
     )
     trend = compute_price_stats(history, window_days=DEFAULT_TREND_WINDOW_DAYS)
+    forecast = forecast_prices(history)
 
     image_url = next(
         (listing.image_url for listing in listings if listing.image_url), None
@@ -317,6 +335,8 @@ def _product_view(
         build_bar_chart(latest_prices),
         build_line_chart(history, all_time_low=stats.all_time_low),
         _retailer_table(listings, stats.avg_30d),
+        build_forecast_chart(forecast),
+        _forecast_metadata(forecast),
     )
 
 
@@ -385,6 +405,8 @@ def register_callbacks(app: Dash, engine: Engine) -> None:
         Output("current-prices-chart", "figure"),
         Output("price-history-chart", "figure"),
         Output("retailer-table", "children"),
+        Output("price-forecast-chart", "figure"),
+        Output("forecast-metadata", "children"),
         Input("selected-product-id", "data"),
         Input("reveal-anomalies-checkbox", "value"),
     )
@@ -400,6 +422,8 @@ def register_callbacks(app: Dash, engine: Engine) -> None:
         Any,
         Any,
         html.Div | html.Table,
+        Any,
+        str,
     ]:
         """Load every dashboard panel for the selected tracked product."""
         include_anomalous = bool(reveal_anomalies and "reveal" in reveal_anomalies)
@@ -411,6 +435,8 @@ def register_callbacks(app: Dash, engine: Engine) -> None:
             bar_chart,
             line_chart,
             table,
+            forecast_chart,
+            forecast_metadata,
         ) = _product_view(
             product_id,
             include_anomalous,
@@ -430,4 +456,6 @@ def register_callbacks(app: Dash, engine: Engine) -> None:
             bar_chart,
             line_chart,
             table,
+            forecast_chart,
+            forecast_metadata,
         )

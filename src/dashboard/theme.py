@@ -74,6 +74,8 @@ button, input {{ font: inherit; }}
 .chart-grid {{ display: grid; grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr); gap: 16px; margin-bottom: 16px; }}
 .panel {{ padding: 18px; }}
 .panel-heading {{ margin: 0 0 12px; font-size: .84rem; color: {MUTED_TEXT}; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }}
+.forecast-panel {{ margin-bottom: 16px; border-color: rgba(88, 166, 255, 0.4); }}
+.forecast-metadata {{ margin: -2px 0 10px; color: {MUTED_TEXT}; font-family: {MONO_FONT}; font-size: .76rem; }}
 .empty-message {{ color: {MUTED_TEXT}; padding: 24px 0; }}
 .retailer-table {{ width: 100%; border-collapse: collapse; }}
 .retailer-table th, .retailer-table td {{ padding: 12px 8px; text-align: left; border-top: 1px solid {PANEL_BORDER}; }}

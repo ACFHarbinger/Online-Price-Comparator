@@ -17,6 +17,7 @@ from dashboard.theme import (
     RETAILER_COLORS,
     UI_FONT,
 )
+from forecasting.holt import ForecastResult
 from storage.repository import SitePricePoint
 
 
@@ -134,4 +135,56 @@ def build_line_chart(
             "font": {"family": UI_FONT, "color": PRIMARY_TEXT, "size": 11},
         },
     )
+    return figure
+
+
+def build_forecast_chart(forecast: ForecastResult) -> go.Figure:
+    """Build a separate confidence-band chart for projected prices only."""
+    if not forecast.is_available:
+        reason = forecast.unavailable_reason or "not enough history yet"
+        return _empty_figure(f"Forecast unavailable: {reason}")
+
+    figure = _base_figure()
+    dates = [point.forecast_for for point in forecast.points]
+    lower = [point.lower_bound for point in forecast.points]
+    upper = [point.upper_bound for point in forecast.points]
+    figure.add_scatter(
+        x=dates,
+        y=lower,
+        mode="lines",
+        line={"width": 0},
+        hoverinfo="skip",
+        showlegend=False,
+    )
+    figure.add_scatter(
+        x=dates,
+        y=upper,
+        mode="lines",
+        line={"color": "#58A6FF", "width": 1.5, "dash": "dash"},
+        fill="tonexty",
+        fillcolor="rgba(88, 166, 255, 0.18)",
+        name=f"{forecast.confidence_level:.0%} projected range",
+        customdata=[[low] for low in lower],
+        hovertemplate=(
+            "%{x|%Y-%m-%d}<br>"
+            f"{forecast.currency or 'EUR'} %{{customdata[0]:,.2f}} to "
+            f"{forecast.currency or 'EUR'} %{{y:,.2f}}"
+            "<extra>Projected — not a guarantee</extra>"
+        ),
+    )
+    figure.update_layout(
+        annotations=[
+            {
+                "text": "PROJECTED — NOT A GUARANTEE",
+                "showarrow": False,
+                "x": 0.01,
+                "xref": "paper",
+                "y": 1.08,
+                "yref": "paper",
+                "font": {"family": MONO_FONT, "size": 11, "color": MUTED_TEXT},
+            }
+        ]
+    )
+    figure.update_yaxes(tickprefix=f"{forecast.currency or 'EUR'} ")
+    figure.update_xaxes(type="date", tickfont={"color": MUTED_TEXT})
     return figure

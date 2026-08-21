@@ -29,6 +29,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.18 forecasting first slice (2026-08-21, in progress):** added the
+  dependency-free Holt linear-trend model in `forecasting.holt`. It aggregates
+  daily same-currency medians, refuses histories with fewer than eight
+  observations or 21 days of span, and produces a widening 80% confidence band
+  for a 14-day horizon. The dashboard renders that band only in a separate
+  **Projected — not a guarantee** panel with its history gate and training-data
+  timestamp; forecasts remain isolated from observed charts, price ranking,
+  historical-low badges, and anomaly detection. Persisted refresh-cadence
+  retraining awaits v2.2.
+
 - **v2.17a SerpAPI SearchProvider (2026-08-21):** `SerpApiProvider` implements
   the existing `SearchProvider` Protocol against Google Shopping
   (`engine=google_shopping`, `gl=es`) behind `SERPAPI_KEY`. Unconfigured or

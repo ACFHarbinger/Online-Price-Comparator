@@ -9,11 +9,13 @@ from dashboard.callbacks import (
     _build_hero_metrics,
     _build_trend_indicator,
     _build_volatility_badge,
+    _forecast_metadata,
     _format_delta_vs_avg,
     _retailer_table,
 )
-from dashboard.charts import build_bar_chart, build_line_chart
+from dashboard.charts import build_bar_chart, build_forecast_chart, build_line_chart
 from dashboard.stats import PriceSeriesStats
+from forecasting.holt import forecast_prices
 from storage.repository import ListingSummary, ProductPriceStats, SitePricePoint
 
 
@@ -89,6 +91,40 @@ def test_build_bar_chart() -> None:
     # PcComponentes (429.0) should be first (cheapest first)
     assert fig.data[0].x[0] == "PcComponentes"
     assert fig.data[0].y[0] == 429.0
+
+
+def test_build_forecast_chart_has_only_a_projected_confidence_band() -> None:
+    now = datetime(2026, 8, 21, 12, 0, 0)
+    points = [
+        SitePricePoint(
+            site_key="amazon.es",
+            site_display_name="Amazon.es",
+            price_amount=500.0 - (index * 5),
+            currency="EUR",
+            observed_at=now.replace(day=index + 1),
+        )
+        for index in range(8)
+    ]
+    # Spread the series over the required 21-day minimum.
+    points[-1] = SitePricePoint(
+        site_key="amazon.es",
+        site_display_name="Amazon.es",
+        price_amount=465.0,
+        currency="EUR",
+        observed_at=now.replace(day=28),
+    )
+    forecast = forecast_prices(points)
+
+    figure = build_forecast_chart(forecast)
+
+    assert forecast.is_available is True
+    assert len(figure.data) == 2
+    assert figure.data[1].fill == "tonexty"
+    assert figure.data[1].line.dash == "dash"
+    assert "PROJECTED — NOT A GUARANTEE" in figure.layout.annotations[0].text
+    metadata = _forecast_metadata(forecast)
+    assert "80% confidence band" in metadata
+    assert "last retrained" in metadata
 
 
 def test_build_hero_metrics() -> None:

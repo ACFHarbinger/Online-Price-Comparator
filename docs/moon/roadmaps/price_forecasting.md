@@ -1,6 +1,6 @@
 # Price Forecasting Roadmap
 
-**Status:** 📋 Planned (v2.18) · **Source:** direct user request, 2026-08-21 —
+**Status:** 🚧 In progress (v2.18, 2026-08-21) · **Source:** direct user request, 2026-08-21 —
 un-parks the "Price forecasting" row that `ROADMAP.md`'s Parked table had
 twice explicitly rejected as a blended feature (see [Relationship to the
 tiered-low badge](#relationship-to-the-tiered-low-badge-and-prior-rejection)
@@ -33,6 +33,17 @@ stepping stone toward v1's actual forecasting model below, not because it's
 itself a forecast.
 
 ## v1 design: a real forecasting model
+
+**Implemented first slice (2026-08-21):** `forecasting.holt.forecast_prices`
+uses Holt's linear trend over daily medians from the dominant same-currency
+population. It requires at least eight compatible observations spanning 21
+days, projects 14 days, and renders only a widening 80% confidence band in a
+dedicated dashboard panel labelled **Projected — not a guarantee**. The panel
+shows the training-data timestamp and its minimum-history failure reason.
+Until v2.10's EUR-equivalent data and v2.11's condition field exist, it cannot
+filter by those absent fields; it explicitly avoids mixing native currencies.
+Persisting/retraining forecasts on v2.2's refresh cadence remains pending, so
+the in-memory model is recomputed only when this product view is refreshed.
 
 - **Model**: start simple — a seasonal-naive or lightweight exponential-
   smoothing model (e.g. Holt's linear trend) over each tracked product's

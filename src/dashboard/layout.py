@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dash import dcc, html
 
-from dashboard.charts import build_bar_chart, build_line_chart
+from dashboard.charts import build_bar_chart, build_forecast_chart, build_line_chart
+from forecasting.holt import forecast_prices
 
 
 def build_layout() -> html.Div:
@@ -134,6 +135,27 @@ def build_layout() -> html.Div:
                                             config={"displayModeBar": False},
                                         ),
                                     ],
+                                ),
+                            ],
+                        ),
+                        html.Section(
+                            className="panel forecast-panel",
+                            children=[
+                                html.H3(
+                                    "Projected Price Range — Not a Guarantee",
+                                    className="panel-heading",
+                                ),
+                                html.Div(
+                                    "Uses an 80% confidence band from a Holt "
+                                    "linear-trend model. This is separate from "
+                                    "observed price history.",
+                                    id="forecast-metadata",
+                                    className="forecast-metadata",
+                                ),
+                                dcc.Graph(
+                                    id="price-forecast-chart",
+                                    figure=build_forecast_chart(forecast_prices([])),
+                                    config={"displayModeBar": False},
                                 ),
                             ],
                         ),

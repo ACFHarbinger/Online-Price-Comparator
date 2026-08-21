@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+from datetime import datetime, timedelta
 from typing import Any
 
 from dash import Dash, Input, Output, State, ctx, html, no_update
@@ -17,6 +18,7 @@ from dashboard.stats import (
     PriceSeriesStats,
     compute_price_stats,
 )
+from fetch.circuit_breaker import CircuitBreaker
 from forecasting.holt import ForecastResult, forecast_prices
 from pipeline.discover import run_discovery
 from pipeline.snapshot import persist_snapshot
@@ -28,6 +30,23 @@ from storage.repository import (
     ProductRepository,
 )
 from storage.watchlist import TrackedProductRepository
+
+STALE_THRESHOLD_HOURS = 24
+
+
+def _format_time_ago(observed_at: datetime | None, as_of: datetime) -> str:
+    if observed_at is None:
+        return "unknown"
+    diff = as_of - observed_at
+    total_seconds = max(0.0, diff.total_seconds())
+    hours = int(total_seconds / 3600)
+    if hours < 1:
+        minutes = max(1, int(total_seconds / 60))
+        return f"{minutes}m ago"
+    if hours < 24:
+        return f"{hours}h ago"
+    days = hours // 24
+    return f"{days}d ago"
 
 
 def _visible_browser_override(
@@ -43,12 +62,17 @@ def _visible_browser_override(
     """
     if not show_browser or "visible" not in show_browser:
         return contextlib.nullcontext()
-    base = get_settings()
-    sites = base.browser_fallback_site_keys() | {"pccomponentes"}
+    settings = get_settings()
+    existing = {
+        site.strip()
+        for site in settings.browser_fallback_sites.split(",")
+        if site.strip()
+    }
+    existing.add("pccomponentes")
     return override_settings(
         browser_fallback_enabled=True,
         browser_fallback_headless=False,
-        browser_fallback_sites=",".join(sorted(sites)),
+        browser_fallback_sites=",".join(sorted(existing)),
     )
 
 
@@ -91,13 +115,135 @@ def _format_delta_vs_avg(
 
 
 def _retailer_table(
-    listings: list[ListingSummary], avg_30d: float | None
+    listings: list[ListingSummary],
+    avg_30d: float | None,
+    *,
+    circuit_breaker: CircuitBreaker | None = None,
+    as_of: datetime | None = None,
 ) -> html.Div | html.Table:
     if not listings:
         return html.Div(
             "No retailer listings have been recorded yet.", className="empty-message"
         )
-    return html.Table(
+
+    cb = circuit_breaker or CircuitBreaker()
+    ref_time = as_of or datetime.now()
+    open_breakers = cb.open_sites()
+
+    banners: list[html.Div] = []
+    affected_sites: dict[str, str] = {}
+    for listing in listings:
+        if listing.site_key in open_breakers:
+            affected_sites[listing.site_key] = listing.site_display_name
+
+    for site_key, site_display_name in affected_sites.items():
+        banners.append(
+            html.Div(
+                [
+                    html.Span("⚠", className="stale-banner-icon"),
+                    html.Span("Scraper Paused:", className="stale-banner-title"),
+                    (
+                        f"Scraper for {site_display_name} ({site_key}) is "
+                        "temporarily paused due to repeated failures. "
+                        "Prices shown below may be outdated."
+                    ),
+                ],
+                className="stale-banner",
+            )
+        )
+
+    table_rows = []
+    for listing in listings:
+        is_blocked = listing.site_key in open_breakers
+        is_out_of_stock = listing.price_amount is None
+        is_stale = listing.observed_at is not None and (
+            ref_time - listing.observed_at
+        ) >= timedelta(hours=STALE_THRESHOLD_HOURS)
+
+        row_classes: list[str] = []
+        if is_blocked:
+            row_classes.append("row-blocked")
+        if is_out_of_stock:
+            row_classes.append("row-out-of-stock")
+
+        # Store cell
+        store_children: list[Any] = [listing.site_display_name]
+        if is_blocked:
+            store_children.append(html.Span("PAUSED", className="badge-blocked"))
+        elif is_stale and listing.observed_at is not None:
+            time_ago = _format_time_ago(listing.observed_at, ref_time)
+            store_children.append(
+                html.Span(f"STALE ({time_ago})", className="badge-stale")
+            )
+
+        # Price cell
+        if is_out_of_stock:
+            price_elem: Any = html.Span(
+                "Out of stock", className="price-value price-strikethrough"
+            )
+        else:
+            price_elem = html.Span(
+                _format_price(listing.price_amount, listing.currency),
+                className="price-value",
+            )
+
+        # Stock cell
+        if is_blocked:
+            stock_elem = html.Span(
+                [
+                    html.Span(className="stock-dot stock-stale"),
+                    "Scraper Paused",
+                ]
+            )
+        elif is_out_of_stock:
+            stock_elem = html.Span(
+                [
+                    html.Span(className="stock-dot stock-out"),
+                    "Out of Stock",
+                ]
+            )
+        elif is_stale:
+            time_ago = _format_time_ago(listing.observed_at, ref_time)
+            stock_elem = html.Span(
+                [
+                    html.Span(className="stock-dot stock-stale"),
+                    f"Seen {time_ago}",
+                ]
+            )
+        else:
+            stock_elem = html.Span(
+                [
+                    html.Span(className="stock-dot stock-in"),
+                    "In Stock",
+                ]
+            )
+
+        table_rows.append(
+            html.Tr(
+                className=" ".join(row_classes) if row_classes else None,
+                children=[
+                    html.Td(html.Span(store_children)),
+                    html.Td(price_elem),
+                    html.Td(stock_elem),
+                    html.Td("—", className="price-value"),
+                    html.Td(
+                        _format_delta_vs_avg(
+                            listing.price_amount, avg_30d, listing.currency
+                        )
+                    ),
+                    html.Td(
+                        html.A(
+                            "Visit retailer ↗",
+                            href=listing.url,
+                            target="_blank",
+                            rel="noreferrer",
+                        )
+                    ),
+                ],
+            )
+        )
+
+    table = html.Table(
         className="retailer-table",
         children=[
             html.Thead(
@@ -112,54 +258,13 @@ def _retailer_table(
                     ]
                 )
             ),
-            html.Tbody(
-                [
-                    html.Tr(
-                        [
-                            html.Td(listing.site_display_name),
-                            html.Td(
-                                _format_price(listing.price_amount, listing.currency),
-                                className="price-value",
-                            ),
-                            html.Td(
-                                html.Span(
-                                    [
-                                        html.Span(
-                                            className=(
-                                                "stock-dot stock-in"
-                                                if listing.price_amount is not None
-                                                else "stock-dot stock-unknown"
-                                            )
-                                        ),
-                                        (
-                                            "In Stock"
-                                            if listing.price_amount is not None
-                                            else "Unknown"
-                                        ),
-                                    ]
-                                )
-                            ),
-                            html.Td("—", className="price-value"),
-                            html.Td(
-                                _format_delta_vs_avg(
-                                    listing.price_amount, avg_30d, listing.currency
-                                )
-                            ),
-                            html.Td(
-                                html.A(
-                                    "Visit retailer ↗",
-                                    href=listing.url,
-                                    target="_blank",
-                                    rel="noreferrer",
-                                )
-                            ),
-                        ]
-                    )
-                    for listing in listings
-                ]
-            ),
+            html.Tbody(table_rows),
         ],
     )
+
+    if banners:
+        return html.Div([*banners, table])
+    return table
 
 
 def _build_trend_indicator(price_stats: PriceSeriesStats) -> html.Span:

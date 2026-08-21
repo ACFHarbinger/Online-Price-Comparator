@@ -62,3 +62,28 @@ class CircuitBreaker:
         with _lock:
             _failure_counts[site_key] = 0
             _open_until_mono.pop(site_key, None)
+
+    def open_sites(self) -> dict[str, datetime]:
+        """Mapping of site_key -> open_until UTC instant for all open breakers."""
+        result: dict[str, datetime] = {}
+        now_mono = time.monotonic()
+        now_utc = datetime.now(UTC)
+        with _lock:
+            for site_key, until in list(_open_until_mono.items()):
+                remaining = until - now_mono
+                if remaining > 0:
+                    result[site_key] = now_utc + timedelta(seconds=remaining)
+                else:
+                    _open_until_mono.pop(site_key, None)
+        return result
+
+    def failure_count(self, site_key: str) -> int:
+        """Current consecutive failure count for `site_key`."""
+        with _lock:
+            return _failure_counts.get(site_key, 0)
+
+    def reset(self) -> None:
+        """Reset all circuit breaker counters and timers."""
+        with _lock:
+            _failure_counts.clear()
+            _open_until_mono.clear()

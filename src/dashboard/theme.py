@@ -64,7 +64,16 @@ button, input {{ font: inherit; }}
 .stock-dot {{ display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }}
 .stock-in {{ background-color: {POSITIVE}; }}
 .stock-out {{ background-color: {NEGATIVE}; }}
+.stock-stale {{ background-color: #F59E0B; }}
 .stock-unknown {{ background-color: {MUTED_TEXT}; }}
+.stale-banner {{ display: flex; align-items: center; gap: 10px; padding: 12px 16px; margin-bottom: 16px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 6px; color: #FBBF24; font-size: .84rem; }}
+.stale-banner-icon {{ font-size: 1.1rem; flex-shrink: 0; }}
+.stale-banner-title {{ font-weight: 700; margin-right: 4px; }}
+.badge-blocked {{ display: inline-flex; align-items: center; margin-left: 8px; padding: 2px 6px; border-radius: 4px; font-size: .70rem; font-weight: 700; font-family: {MONO_FONT}; background: rgba(248, 81, 73, 0.2); color: {NEGATIVE}; border: 1px solid rgba(248, 81, 73, 0.45); }}
+.badge-stale {{ display: inline-flex; align-items: center; margin-left: 6px; padding: 2px 6px; border-radius: 4px; font-size: .70rem; font-weight: 600; font-family: {MONO_FONT}; background: rgba(245, 158, 11, 0.15); color: #FBBF24; border: 1px solid rgba(245, 158, 11, 0.35); }}
+.price-strikethrough {{ text-decoration: line-through; opacity: 0.55; }}
+.row-out-of-stock {{ opacity: 0.75; }}
+.row-blocked {{ opacity: 0.7; }}
 .reveal-anomalies-checkbox {{ margin: 0 0 16px; font-size: .82rem; }}
 .reveal-anomalies-checkbox label, .reveal-anomalies-checkbox label:hover,
 .reveal-anomalies-checkbox label span, .reveal-anomalies-checkbox label:hover span {{

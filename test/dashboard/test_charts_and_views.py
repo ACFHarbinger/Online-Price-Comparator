@@ -203,10 +203,110 @@ def test_retailer_table_columns() -> None:
             observed_at=None,
         ),
     ]
-    table = _retailer_table(listings, avg_30d=500.0)
+    table = _retailer_table(listings, avg_30d=500.0, as_of=now)
     assert table is not None
     table_any = cast(Any, table)
     # Check headers
     thead = table_any.children[0]
     headers = [th.children for th in thead.children.children]
     assert headers == ["Store", "Price", "Stock", "Shipping", "Price vs Avg", "Link"]
+
+
+def test_retailer_table_blocked_scraper_banner_and_badge() -> None:
+    from datetime import timedelta
+
+    from fetch.circuit_breaker import CircuitBreaker
+
+    cb = CircuitBreaker()
+    cb.reset()
+    cb.record_failure("pccomponentes")
+    cb.record_failure("pccomponentes")
+    assert cb.is_open("pccomponentes") is True
+
+    now = datetime(2026, 8, 21, 12, 0, 0)
+    listings = [
+        ListingSummary(
+            site_key="pccomponentes",
+            site_display_name="PcComponentes",
+            url="https://pccomponentes.com/item",
+            image_url=None,
+            price_amount=420.0,
+            currency="EUR",
+            observed_at=now - timedelta(hours=3),
+        ),
+    ]
+    rendered = _retailer_table(listings, avg_30d=500.0, circuit_breaker=cb, as_of=now)
+    assert rendered is not None
+    rendered_any = cast(Any, rendered)
+
+    # Check top stale banner
+    assert len(rendered_any.children) == 2
+    banner = rendered_any.children[0]
+    assert "stale-banner" in str(banner.className)
+    assert "Scraper Paused:" in [
+        c.children for c in banner.children if hasattr(c, "children")
+    ] or any("Scraper Paused" in str(c) for c in banner.children)
+
+    # Check table row
+    table = rendered_any.children[1]
+    row = table.children[1].children[0]
+    assert "row-blocked" in str(row.className)
+
+    # Store cell has PAUSED badge
+    store_cell = row.children[0]
+    assert any("PAUSED" in str(c) for c in store_cell.children.children)
+
+    # Stock cell has Scraper Paused
+    stock_cell = row.children[2]
+    assert "Scraper Paused" in str(stock_cell.children)
+
+    cb.reset()
+
+
+def test_retailer_table_out_of_stock_and_stale() -> None:
+    from datetime import timedelta
+
+    now = datetime(2026, 8, 21, 12, 0, 0)
+    listings = [
+        # Out-of-stock listing
+        ListingSummary(
+            site_key="amazon.es",
+            site_display_name="Amazon.es",
+            url="https://amazon.es/dp/B123",
+            image_url=None,
+            price_amount=None,
+            currency=None,
+            observed_at=now,
+        ),
+        # Stale listing (2 days old)
+        ListingSummary(
+            site_key="pccomponentes",
+            site_display_name="PcComponentes",
+            url="https://pccomponentes.com/item",
+            image_url=None,
+            price_amount=450.0,
+            currency="EUR",
+            observed_at=now - timedelta(days=2),
+        ),
+    ]
+
+    rendered = _retailer_table(listings, avg_30d=500.0, as_of=now)
+    assert rendered is not None
+    table_any = cast(Any, rendered)
+    rows = table_any.children[1].children
+
+    # Row 0: Out of stock
+    row_oos = rows[0]
+    assert "row-out-of-stock" in str(row_oos.className)
+    price_span = row_oos.children[1].children
+    assert "Out of stock" in str(price_span.children)
+    assert "price-strikethrough" in str(price_span.className)
+    stock_cell = row_oos.children[2]
+    assert "Out of Stock" in str(stock_cell.children)
+
+    # Row 1: Stale
+    row_stale = rows[1]
+    store_cell = row_stale.children[0]
+    assert any("STALE (2d ago)" in str(c) for c in store_cell.children.children)
+    stock_cell_stale = row_stale.children[2]
+    assert "Seen 2d ago" in str(stock_cell_stale.children)

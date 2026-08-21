@@ -7,7 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Test/verification scaffolding (2026-08-21, opencode):** added a reusable
+  `in_memory_engine` pytest fixture in `test/conftest.py` (shared in-memory
+  SQLite engine via `StaticPool`, schema bootstrapped with
+  `metadata.create_all`) so storage/repository tests can reuse one helper
+  instead of recreating temp-DB logic per package; created
+  `test/{matching,dashboard,scrapers}/` as empty packages and a `test/__init__.py`
+  so pytest's `prepend` import mode inserts the repo root (not `test/`) on
+  `sys.path`, preventing `test/scrapers` etc. from shadowing the same-named
+  `src/` packages.
+
 ### Changed
+
+- **v1.4 dashboard remainder close-out (2026-08-21):** extended the single-product
+  Dash dashboard with an All-Time-Low (ATL) badge and 30-day delta vs. average pill
+  in the hero header, historical trend chart range selectors (1W, 1M, 3M, 1Y, ALL)
+  with a dashed ATL reference line, expanded retailer table columns (stock status
+  dot indicator, shipping estimate placeholder, delta vs. average), and an
+  anomalous-listings reveal toggle backed by read-side repository filtering. Added
+  `ProductPriceStats` and `product_price_stats` query to `PriceHistoryRepository`.
+  Added tests under `test/dashboard/`.
+
+- **v1.8 scraper reliability close-out (2026-08-21):** Amazon.es and
+
+  PcComponentes now parse complete schema.org `Product`/`Offer` JSON-LD before
+  trying their existing CSS selectors. Malformed or incomplete structured data
+  is ignored safely and falls through to CSS parsing. Added fixture-backed
+  coverage for JSON-LD precedence and CSS fallback on both retailers.
+
+- **Roadmap status reconciliation + multi-agent BUS kickoff (2026-08-21):**
+  verified `docs/moon/ROADMAP.md`'s status column against real code instead
+  of trusting the table: v1.9 (`AGENTS.md` rewrite) was already done
+  (`c6e615b`) but marked Planned; v1.5/v1.6 (`src/matching/`) and v1.8
+  (`src/fetch/` hardening) had real, substantial implementations already
+  landed but marked Planned; v1.7 (persistent settings schema) is confirmed
+  genuinely not started. Updated `ROADMAP.md` and the `product_matching.md`/
+  `scrapers_and_retailers.md` status headers accordingly. Resolved the
+  CPU-cooler test-execution caution in `AGENTS.md` §7 (confirmed by the user)
+  and removed the two now-stale `.agent/cache/HANDOFF_*` files whose content
+  (cooler crisis, 2026-08-15 roadmap review) is either resolved or already
+  folded into the roadmap docs themselves. Started `.agent/bus/` (see
+  `.agent/bus/AGENT_BUS.md`) as the coordination log for delegating
+  remaining v1.4/v1.5/v1.6/v1.7/v1.8 work across opencode/grok/codex/agy,
+  mirroring the Image-Toolkit repo's bus convention.
 
 - **Grok roadmap review (2026-08-15):** after the global-scope expansion
   and the Gemini/Chat passes, locked: alerts/ATL/percentile on persisted

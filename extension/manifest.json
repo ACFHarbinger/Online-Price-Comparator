@@ -1,10 +1,14 @@
 {
   "manifest_version": 3,
   "name": "OPC Client-Side Monitor (Leboncoin)",
-  "version": "0.1.0",
-  "description": "Reads the price/title JSON-LD from a Leboncoin ad page the user has open. v0: detects + snapshots only - no diffing, no OPC integration yet.",
-  "permissions": ["storage"],
+  "version": "0.2.0",
+  "description": "Reads the price/title JSON-LD from a Leboncoin ad page the user has open, records detected changes locally, and exports them for OPC's cli refresh --import-extension-file.",
+  "permissions": ["storage", "downloads"],
   "host_permissions": ["https://www.leboncoin.fr/ad/*"],
+  "action": {
+    "default_title": "OPC Leboncoin monitor",
+    "default_popup": "popup.html"
+  },
   "content_scripts": [
     {
       "matches": ["https://www.leboncoin.fr/ad/*"],

@@ -1,6 +1,6 @@
 # Client-Side Monitor (Browser Extension) Roadmap
 
-**Status:** 📋 Planned (v2.20) · **Source:** direct user request, 2026-08-21 —
+**Status:** 🚧 In progress (v2.20) — v0 detection + local-file handoff shipped 2026-08-21 (Leboncoin.fr MV3 extension + `cli refresh --import-extension-file` → `persist_snapshot`); v1 localhost HTTP callback + per-site `collection_method` flagging still pending · **Source:** direct user request, 2026-08-21 —
 un-parks `ROADMAP.md`'s "Browser extension / userscript" Parked row under a
 new, much more specific motivation than the original entry's "real UX win."
 

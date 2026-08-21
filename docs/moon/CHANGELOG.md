@@ -69,13 +69,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   excluded-bundle terms added to the CPU list. Model/SKU tokens stay
   verbatim. Machine-translation fallback is **not** this slice.
 
-- **v2.20 client-side monitor: extension skeleton (2026-08-21, first slice):**
+- **v2.20 client-side monitor: detection + local-file handoff (2026-08-21):**
   new top-level `extension/` directory — a Manifest V3 content script for
-  Leboncoin.fr that reads the JSON-LD `Product`/`Offer` block from the page DOM
-  and stores a timestamped snapshot in `chrome.storage.local`. **No OPC
-  integration yet**: no diffing, no JSON-lines handoff, no `cli refresh` import
-  flag (those are the rest of v2.20's v0 scope). Host permission scoped to
-  `https://www.leboncoin.fr/ad/*` only.
+  Leboncoin.fr (host permission scoped to `https://www.leboncoin.fr/ad/*` only)
+  that reads the JSON-LD `Product`/`Offer` block from the page DOM, keeps a
+  per-URL last snapshot, records **only when the price/title changed**, and
+  exposes a popup that exports the accumulated changes as a JSON-lines file
+  (`chrome.downloads`). OPC consumes that file via a new
+  `cli refresh --import-extension-file <path>` flag, which pushes each record
+  through `src/pipeline/extension_import.py` (identity-matching → condition →
+  FX → `persist_snapshot`) — an extension observation is not a trust shortcut.
+  Untracked/unattributed URLs are skipped. **Not yet**: the v1 localhost HTTP
+  callback for near-real-time dashboard updates.
 
 - **RAM `module_type` + storage `interface` hard-gates (2026-08-21):**
   `ProductIdentityProfile` now carries category-specific compatibility

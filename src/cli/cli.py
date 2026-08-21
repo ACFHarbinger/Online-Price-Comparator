@@ -207,10 +207,32 @@ def _run_site_override(
     return 0
 
 
-def _run_refresh(force: bool, limit: int, watch: bool, interval_seconds: float) -> int:
-    """Refresh prices for due (or all, if force) watchlist products."""
+def _run_refresh(
+    force: bool,
+    limit: int,
+    watch: bool,
+    interval_seconds: float,
+    import_extension_file: str | None,
+) -> int:
+    """Refresh prices for due (or all, if force) watchlist products.
+
+    When ``import_extension_file`` is set, the detected changes exported by the
+    v2.20 client-side monitor extension are first imported through the normal
+    identity-matching -> condition -> FX -> persist_snapshot pipeline.
+    """
     settings = get_settings()
     engine = create_db_engine(settings.database_path)
+
+    if import_extension_file:
+        from pipeline.extension_import import import_extension_file as _import
+
+        result = _import(import_extension_file, engine)
+        print(
+            f"Imported {result.records_imported} extension record(s) "
+            f"for {len(result.products_handled)} product(s)."
+        )
+        for reason in result.skipped:
+            print(f"  skipped: {reason}")
 
     if watch:
         print(
@@ -338,6 +360,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=60.0,
         help="Seconds between monitoring passes in watch mode",
     )
+    refresh_parser.add_argument(
+        "--import-extension-file",
+        type=str,
+        default=None,
+        help=(
+            "Import detected changes exported by the v2.20 client-side monitor "
+            "extension (a JSON-lines file) before refreshing"
+        ),
+    )
 
     untrack_parser = subparsers.add_parser(
         "untrack", help="Disable a watchlist entry (price history is kept)"
@@ -389,7 +420,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_track(args.keywords, args.limit, args.scope, args.no_refresh)
 
     if args.command == "refresh":
-        return _run_refresh(args.force, args.limit, args.watch, args.interval_seconds)
+        return _run_refresh(
+            args.force,
+            args.limit,
+            args.watch,
+            args.interval_seconds,
+            args.import_extension_file,
+        )
 
     if args.command == "untrack":
         return _run_untrack(args.keywords)

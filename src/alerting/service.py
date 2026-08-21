@@ -24,13 +24,20 @@ from alerting.dispatch import build_dispatchers
 from alerting.messages import (
     build_all_time_low_message,
     build_meaningful_drop_message,
+    build_percentile_message,
     build_target_message,
+    build_tiered_low_message,
 )
 from alerting.models import (
     ALL_TIME_LOW,
     DEFAULT_MINIMUM_TRACKING_AGE_DAYS,
+    DEFAULT_RARITY_PERCENTILE,
+    DEFAULT_RARITY_WINDOW_DAYS,
+    DEFAULT_TIERED_MIN_OBSERVATIONS,
     MEANINGFUL_DROP,
+    PERCENTILE_RARITY,
     TARGET_PRICE,
+    TIERED_HISTORICAL_LOW,
     AlertDelivery,
 )
 from alerting.observations import (
@@ -40,9 +47,12 @@ from alerting.observations import (
 )
 from alerting.repository import AlertDeliveryRepository
 from alerting.rules import (
+    TIERED_HISTORICAL_LOW_WINDOWS,
+    percentile_low_reached,
     should_fire_all_time_low,
     should_fire_meaningful_drop,
     should_fire_target_alert,
+    strongest_tiered_low,
 )
 from config.settings import Settings, get_settings
 from storage.watchlist import TrackedProduct, TrackedProductRepository
@@ -126,6 +136,11 @@ class AlertingService:
         if delivered:
             results[TARGET_PRICE] = delivered
         for alert_type, channels in self._evaluate_listing_rules(
+            tracked, histories, as_of=as_of
+        ).items():
+            if channels:
+                results[alert_type] = channels
+        for alert_type, channels in self._evaluate_historical_low_rules(
             tracked, histories, as_of=as_of
         ).items():
             if channels:
@@ -252,6 +267,134 @@ class AlertingService:
         return reference - tracked.created_at >= timedelta(
             days=DEFAULT_MINIMUM_TRACKING_AGE_DAYS
         )
+
+    def _evaluate_historical_low_rules(
+        self,
+        tracked: TrackedProduct,
+        histories: list[ListingHistory],
+        *,
+        as_of: datetime | None,
+    ) -> dict[str, list[str]]:
+        """Evaluate the v2.14 tiered / percentile historical-low modes.
+
+        Both read ``price_eur_equivalent`` within the listing's own
+        same-condition bucket (the ``condition`` snapshotted on each
+        ``price_history`` row, per the v2.11 landing) and never mix
+        populations across conditions. ``unknown``/missing condition never
+        forms a bucket. Which modes run is governed by
+        ``tracked.historical_low_alert_mode`` (``tiered`` / ``percentile`` /
+        ``both``).
+        """
+        mode = getattr(tracked, "historical_low_alert_mode", "tiered")
+        wants_tiered = mode in ("tiered", "both")
+        wants_percentile = mode in ("percentile", "both")
+        if not wants_tiered and not wants_percentile:
+            return {}
+
+        reference = as_of or datetime.now()
+        results: dict[str, list[str]] = {}
+        for history in histories:
+            if not history.observations:
+                continue
+            current = history.observations[-1]
+            if current.condition in (None, "", "unknown"):
+                continue
+            bucket = [
+                obs
+                for obs in history.observations
+                if obs.condition == current.condition
+            ]
+            if len(bucket) < 2:
+                continue
+            bucket_points = [(obs.observed_at, obs.eur_amount) for obs in bucket]
+
+            if wants_tiered:
+                tier = strongest_tiered_low(
+                    current_eur=current.eur_amount,
+                    observations=bucket_points,
+                    reference=reference,
+                    min_observations=DEFAULT_TIERED_MIN_OBSERVATIONS,
+                )
+                if tier is not None:
+                    window_min = self._tier_window_min(bucket_points, tier, reference)
+                    delivered = self._dispatch(
+                        tracked_product_id=tracked.id,
+                        alert_type=TIERED_HISTORICAL_LOW,
+                        message=build_tiered_low_message(
+                            tracked.query_text,
+                            history.site_display_name,
+                            history.url,
+                            new_price=current.eur_amount,
+                            tier_label=tier,
+                            window_min=window_min,
+                            currency="EUR",
+                        ),
+                        related_price=current.eur_amount,
+                        site_key=history.site_key,
+                        as_of=as_of,
+                    )
+                    if delivered:
+                        results[TIERED_HISTORICAL_LOW] = (
+                            results.get(TIERED_HISTORICAL_LOW, []) + delivered
+                        )
+
+            if wants_percentile:
+                rarity_window = tracked.rarity_window_days or DEFAULT_RARITY_WINDOW_DAYS
+                rarity_pct = tracked.rarity_percentile or DEFAULT_RARITY_PERCENTILE
+                min_obs = self._rarity_min_observations(tracked, rarity_window)
+                if percentile_low_reached(
+                    current_eur=current.eur_amount,
+                    observations=bucket_points,
+                    reference=reference,
+                    window_days=rarity_window,
+                    percentile=rarity_pct,
+                    min_observations=min_obs,
+                ):
+                    delivered = self._dispatch(
+                        tracked_product_id=tracked.id,
+                        alert_type=PERCENTILE_RARITY,
+                        message=build_percentile_message(
+                            tracked.query_text,
+                            history.site_display_name,
+                            history.url,
+                            new_price=current.eur_amount,
+                            rarity_percentile=rarity_pct,
+                            window_days=rarity_window,
+                            currency="EUR",
+                        ),
+                        related_price=current.eur_amount,
+                        site_key=history.site_key,
+                        as_of=as_of,
+                    )
+                    if delivered:
+                        results[PERCENTILE_RARITY] = (
+                            results.get(PERCENTILE_RARITY, []) + delivered
+                        )
+        return results
+
+    def _tier_window_min(
+        self,
+        bucket_points: list[tuple[datetime, float]],
+        tier_label: str,
+        reference: datetime,
+    ) -> float:
+        """The bucket minimum for the fired tier's window (for the message)."""
+        days = dict(
+            (label, window) for label, window in TIERED_HISTORICAL_LOW_WINDOWS
+        ).get(tier_label)
+        if days is None:
+            return min(value for _, value in bucket_points)
+        cutoff = reference - timedelta(days=days)
+        in_window = [value for when, value in bucket_points if when >= cutoff]
+        return min(in_window)
+
+    def _rarity_min_observations(
+        self, tracked: TrackedProduct, window_days: int
+    ) -> int:
+        """Percentile min sample, scaled to the window (~1 obs per 9 days)."""
+        if tracked.rarity_min_observations is not None:
+            return int(tracked.rarity_min_observations)
+        return max(2, round(window_days / 9))
 
     # -- internal dispatch ---------------------------------------------------
 

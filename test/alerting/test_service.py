@@ -165,6 +165,7 @@ def _seed_listing_history(
     site_key: str,
     url: str,
     observations: list[tuple[datetime, float]],
+    condition: str | None = None,
 ) -> None:
     """One confirmed listing with EUR-equivalent observations (oldest -> newest)."""
     now = datetime(2026, 8, 21, 12, 0, 0)
@@ -191,6 +192,7 @@ def _seed_listing_history(
             price_eur_equivalent=eur,
             price_native=eur,
             currency_native="EUR",
+            condition=condition,
         )
 
 
@@ -311,3 +313,103 @@ def test_evaluate_tracked_product_target_price(in_memory_engine: Engine) -> None
     delivered = service.evaluate_tracked_product(tracked_id, as_of=base)
 
     assert delivered.get("target_price") == ["telegram"]
+
+
+# -- v2.14 tiered + percentile historical-low alerts -------------------------
+
+from alerting.models import PERCENTILE_RARITY, TIERED_HISTORICAL_LOW  # noqa: E402
+
+
+@respx.mock
+def test_evaluate_tracked_product_tiered_low(in_memory_engine: Engine) -> None:
+    url = TELEGRAM_SEND_URL.format(token="tok")
+    respx.post(url).mock(return_value=httpx.Response(200, json={"ok": True}))
+    tracked_id = _seed_tracked(in_memory_engine, "AMD Ryzen 9 9950X3D")
+    pid = _product_id(in_memory_engine, tracked_id)
+    base = datetime(2026, 8, 21, 12, 0, 0)
+    # mode defaults to "tiered"; all observations are same-condition "new".
+    _seed_listing_history(
+        in_memory_engine,
+        pid,
+        site_key="amazon.es",
+        url="https://amazon.es/dp/1",
+        observations=[
+            (base - timedelta(days=120), 600.0),
+            (base - timedelta(days=50), 500.0),
+            (base, 400.0),
+        ],
+        condition="new",
+    )
+    service = AlertingService(in_memory_engine, _settings())
+
+    delivered = service.evaluate_tracked_product(tracked_id, as_of=base)
+
+    assert delivered.get(TIERED_HISTORICAL_LOW) == ["telegram"]
+
+
+@respx.mock
+def test_evaluate_tracked_product_percentile_mode(in_memory_engine: Engine) -> None:
+    url = TELEGRAM_SEND_URL.format(token="tok")
+    respx.post(url).mock(return_value=httpx.Response(200, json={"ok": True}))
+    tracked_id = _seed_tracked(in_memory_engine, "AMD Ryzen 9 9950X3D")
+    pid = _product_id(in_memory_engine, tracked_id)
+    # Switch to percentile-only mode with a small window/sample.
+    with in_memory_engine.begin() as conn:
+        conn.execute(
+            tracked_products.update()
+            .where(tracked_products.c.id == tracked_id)
+            .values(
+                historical_low_alert_mode="percentile",
+                rarity_percentile=5.0,
+                rarity_window_days=30,
+                rarity_min_observations=5,
+            )
+        )
+    base = datetime(2026, 8, 21, 12, 0, 0)
+    _seed_listing_history(
+        in_memory_engine,
+        pid,
+        site_key="pccomponentes",
+        url="https://pccomponentes.com/1",
+        observations=[
+            (base - timedelta(days=5), 420.0),
+            (base - timedelta(days=4), 430.0),
+            (base - timedelta(days=3), 440.0),
+            (base - timedelta(days=2), 450.0),
+            (base - timedelta(days=1), 460.0),
+            (base, 400.0),
+        ],
+        condition="new",
+    )
+    service = AlertingService(in_memory_engine, _settings())
+
+    delivered = service.evaluate_tracked_product(tracked_id, as_of=base)
+
+    assert delivered.get(PERCENTILE_RARITY) == ["telegram"]
+    assert TIERED_HISTORICAL_LOW not in delivered
+
+
+@respx.mock
+def test_evaluate_tracked_product_unknown_condition_not_bucketed(
+    in_memory_engine: Engine,
+) -> None:
+    url = TELEGRAM_SEND_URL.format(token="tok")
+    respx.post(url).mock(return_value=httpx.Response(200, json={"ok": True}))
+    tracked_id = _seed_tracked(in_memory_engine, "AMD Ryzen 9 9950X3D")
+    pid = _product_id(in_memory_engine, tracked_id)
+    base = datetime(2026, 8, 21, 12, 0, 0)
+    _seed_listing_history(
+        in_memory_engine,
+        pid,
+        site_key="amazon.es",
+        url="https://amazon.es/dp/1",
+        observations=[(base - timedelta(days=120), 600.0), (base, 400.0)],
+        condition="unknown",
+    )
+    service = AlertingService(in_memory_engine, _settings())
+
+    delivered = service.evaluate_tracked_product(tracked_id, as_of=base)
+
+    # unknown condition never forms a comparison bucket -> no v2.14 fire.
+    assert TIERED_HISTORICAL_LOW not in delivered
+    assert PERCENTILE_RARITY not in delivered

@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
+
 from alerting.rules import (
+    percentile_low_reached,
     should_fire_all_time_low,
     should_fire_meaningful_drop,
     should_fire_target_alert,
+    strongest_tiered_low,
 )
 
 # -- target-price ------------------------------------------------------------
@@ -126,5 +130,115 @@ def test_meaningful_drop_too_few_observations() -> None:
 def test_meaningful_drop_increase_no_fire() -> None:
     assert (
         should_fire_meaningful_drop(current_eur=600.0, window_eur=[500.0, 510.0, 490.0])
+        is False
+    )
+
+
+# -- tiered historical low (v2.14) -------------------------------------------
+
+_NOW = datetime(2026, 8, 21, 12, 0, 0)
+
+
+def test_tiered_returns_all_time_when_current_is_overall_min() -> None:
+    observations = [
+        (_NOW - timedelta(days=120), 600.0),
+        (_NOW - timedelta(days=50), 500.0),
+        (_NOW, 400.0),
+    ]
+    tier = strongest_tiered_low(
+        current_eur=400.0, observations=observations, reference=_NOW
+    )
+    assert tier == "all-time"
+
+
+def test_tiered_returns_30d_when_only_window_min() -> None:
+    observations = [
+        (_NOW - timedelta(days=200), 300.0),
+        (_NOW - timedelta(days=60), 350.0),
+        (_NOW - timedelta(days=15), 500.0),
+        (_NOW, 450.0),
+    ]
+    tier = strongest_tiered_low(
+        current_eur=450.0, observations=observations, reference=_NOW
+    )
+    # 450 is the min of the last 30d but a cheaper price existed at 60/200d ago,
+    # so no longer window claims it.
+    assert tier == "30d"
+
+
+def test_tiered_no_fire_when_not_a_window_min() -> None:
+    observations = [
+        (_NOW - timedelta(days=15), 300.0),
+        (_NOW, 450.0),
+    ]
+    tier = strongest_tiered_low(
+        current_eur=450.0, observations=observations, reference=_NOW
+    )
+    assert tier is None
+
+
+def test_tiered_requires_at_least_two_in_window() -> None:
+    observations = [(_NOW, 450.0)]
+    tier = strongest_tiered_low(
+        current_eur=450.0, observations=observations, reference=_NOW
+    )
+    assert tier is None
+
+
+# -- percentile rarity (v2.14) ----------------------------------------------
+
+
+def test_percentile_fires_when_below_rarity_threshold() -> None:
+    observations = [
+        (_NOW - timedelta(days=d), value)
+        for d, value in zip(
+            range(1, 10), [400.0, 420.0, 450.0, 460.0, 480.0], strict=False
+        )
+    ]
+    assert (
+        percentile_low_reached(
+            current_eur=400.0,
+            observations=observations,
+            reference=_NOW,
+            window_days=180,
+            percentile=5.0,
+            min_observations=5,
+        )
+        is True
+    )
+
+
+def test_percentile_no_fire_when_not_rare_enough() -> None:
+    observations = [
+        (_NOW - timedelta(days=d), value)
+        for d, value in zip(
+            range(1, 6), [400.0, 420.0, 450.0, 460.0, 480.0], strict=True
+        )
+    ]
+    # Current 480 is roughly the 100th percentile -> above the 5th -> no fire.
+    assert (
+        percentile_low_reached(
+            current_eur=480.0,
+            observations=observations,
+            reference=_NOW,
+            window_days=180,
+            percentile=5.0,
+            min_observations=5,
+        )
+        is False
+    )
+
+
+def test_percentile_requires_min_sample() -> None:
+    observations = [(_NOW - timedelta(days=1), 400.0), (_NOW, 410.0)]
+    assert (
+        percentile_low_reached(
+            current_eur=400.0,
+            observations=observations,
+            reference=_NOW,
+            window_days=180,
+            percentile=5.0,
+            min_observations=5,
+        )
         is False
     )

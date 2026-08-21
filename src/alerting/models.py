@@ -7,13 +7,29 @@ from datetime import datetime
 
 #: Alert-type keys stored in ``alert_deliveries.alert_type``.
 #: ``all_time_low`` and ``meaningful_drop`` are keyed on
-#: ``price_eur_equivalent`` (v2.10). The v2.14 tiered/percentile variants are
-#: still intentionally missing - they are a separate follow-up.
+#: ``price_eur_equivalent`` (v2.10). ``tiered_historical_low`` and
+#: ``percentile_rarity`` are the two configurable v2.14 historical-low modes.
 TARGET_PRICE = "target_price"
 ALL_TIME_LOW = "all_time_low"
 MEANINGFUL_DROP = "meaningful_drop"
+TIERED_HISTORICAL_LOW = "tiered_historical_low"
+PERCENTILE_RARITY = "percentile_rarity"
 
-ALL_ALERT_TYPES = frozenset({TARGET_PRICE, ALL_TIME_LOW, MEANINGFUL_DROP})
+ALL_ALERT_TYPES = frozenset(
+    {
+        TARGET_PRICE,
+        ALL_TIME_LOW,
+        MEANINGFUL_DROP,
+        TIERED_HISTORICAL_LOW,
+        PERCENTILE_RARITY,
+    }
+)
+
+#: Defaults used when a tracked product's own fields are unset, per
+#: `alerting.md`'s "per tracked_products row" config.
+DEFAULT_RARITY_PERCENTILE = 5.0
+DEFAULT_RARITY_WINDOW_DAYS = 180
+DEFAULT_TIERED_MIN_OBSERVATIONS = 2
 
 #: The "rolling-average" meaningful-drop rule is gated on the product having
 #: been tracked at least this long, per `alerting.md`'s global defaults, so a

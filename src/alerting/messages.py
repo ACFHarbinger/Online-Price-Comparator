@@ -63,3 +63,43 @@ def build_meaningful_drop_message(
         f"(-{curr} {drop:,.2f})\n"
         f"{(url or '')}"
     )
+
+
+def build_tiered_low_message(
+    product_label: str,
+    site_display_name: str,
+    url: str,
+    *,
+    new_price: float,
+    tier_label: str,
+    window_min: float,
+    currency: str | None = None,
+) -> str:
+    """Tiered historical-low message (v2.14): strongest tier reached, with link."""
+    curr = _currency(currency)
+    return (
+        f"🏷️ {tier_label} low: {product_label} @ {site_display_name}\n"
+        f"Lowest confirmed sticker in window {curr} {window_min:,.2f} "
+        f"(now {curr} {new_price:,.2f})\n"
+        f"{(url or '')}"
+    )
+
+
+def build_percentile_message(
+    product_label: str,
+    site_display_name: str,
+    url: str,
+    *,
+    new_price: float,
+    rarity_percentile: float,
+    window_days: int,
+    currency: str | None = None,
+) -> str:
+    """Percentile rarity message (v2.14), with the buy link."""
+    curr = _currency(currency)
+    return (
+        f"📈 Rare price: {product_label} @ {site_display_name}\n"
+        f"At/below the {rarity_percentile:.0f}th percentile over the last "
+        f"{window_days}d ({curr} {new_price:,.2f})\n"
+        f"{(url or '')}"
+    )

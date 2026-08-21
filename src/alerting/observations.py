@@ -34,6 +34,7 @@ class ListingObservation:
     url: str
     observed_at: datetime
     eur_amount: float
+    condition: str | None = None
 
 
 @dataclass(frozen=True)
@@ -70,6 +71,7 @@ def listing_histories_for_product(
             listings.c.url,
             price_history.c.observed_at,
             price_history.c.price_eur_equivalent,
+            price_history.c.condition,
         )
         .join(listings, listings.c.id == price_history.c.listing_id)
         .where(
@@ -103,6 +105,7 @@ def listing_histories_for_product(
                 url=str(first.url),
                 observed_at=row.observed_at,
                 eur_amount=float(row.price_eur_equivalent),
+                condition=row.condition,
             )
             for row in rows_for_listing
         ]

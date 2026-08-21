@@ -1,19 +1,21 @@
 """Pure alert-fire decision rules (no I/O, no channels).
 
-Three rules ship here:
+Rules shipped here:
 
 - **target-price crossing** (does not depend on FX).
 - **all-time-low** and **meaningful-drop**, both keyed on
   ``price_eur_equivalent`` (v2.10): a caller passes already-normalised EUR
   amounts, so these rules stay pure and currency-agnostic.
+- **tiered historical-low** and **percentile rarity** (v2.14), both keyed on
+  ``price_eur_equivalent`` within a single ``condition`` bucket.
 
-The v2.14 tiered/percentile rules are a separate follow-up - see
-`docs/moon/roadmaps/alerting.md`.
+See `docs/moon/roadmaps/alerting.md` for the full rules.
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import datetime, timedelta
 from statistics import median
 
 
@@ -103,3 +105,87 @@ def should_fire_meaningful_drop(
     if drop <= 0:
         return False
     return drop >= min_percent * baseline and drop >= min_amount
+
+
+#: The v2.14 tiered ladder, ordered strongest-claim first. ``None`` means
+#: all-time (no lookback bound). "at the highest tier reached" means we walk
+#: strongest-first and fire once on the first tier the current price clears.
+TIERED_HISTORICAL_LOW_WINDOWS: tuple[tuple[str, int | None], ...] = (
+    ("all-time", None),
+    ("365d", 365),
+    ("180d", 180),
+    ("90d", 90),
+    ("30d", 30),
+)
+
+#: ``unknown``/missing condition never forms a comparison bucket - consistent
+#: with Grok's v2.11 anomaly discipline.
+UNRESOLVED_CONDITIONS = frozenset({None, "", "unknown", "Unknown", "UNKNOWN"})
+
+
+def strongest_tiered_low(
+    *,
+    current_eur: float,
+    observations: Sequence[tuple[datetime, float]],
+    reference: datetime,
+    windows: Sequence[tuple[str, int | None]] = TIERED_HISTORICAL_LOW_WINDOWS,
+    min_observations: int = 2,
+) -> str | None:
+    """Return the label of the strongest tier the current price clears, or None.
+
+    ``observations`` is the listing's own same-condition bucket of
+    ``(observed_at, eur)`` pairs (including the current one). For each window
+    (all-time first) the current price must be at/below that window's minimum
+    to claim that tier; longer windows need at least ``min_observations`` in
+    them (so a single observation never auto-claims a low). Purely descriptive.
+    """
+    for label, days in windows:
+        if days is None:
+            in_window = list(observations)
+        else:
+            cutoff = reference - timedelta(days=days)
+            in_window = [
+                (when, value) for when, value in observations if when >= cutoff
+            ]
+        if len(in_window) < min_observations:
+            continue
+        window_min = min(value for _, value in in_window)
+        if current_eur <= window_min:
+            return label
+    return None
+
+
+def _percentile(sorted_values: Sequence[float], fraction: float) -> float:
+    """Linear-interpolation percentile (numpy default method)."""
+    if not sorted_values:
+        return 0.0
+    n = len(sorted_values)
+    position = fraction * (n - 1)
+    lower = int(position)
+    upper = min(lower + 1, n - 1)
+    weight = position - lower
+    return sorted_values[lower] * (1 - weight) + sorted_values[upper] * weight
+
+
+def percentile_low_reached(
+    *,
+    current_eur: float,
+    observations: Sequence[tuple[datetime, float]],
+    reference: datetime,
+    window_days: int = 180,
+    percentile: float = 5.0,
+    min_observations: int = 20,
+) -> bool:
+    """True when the current price is at/below the configured rarity percentile.
+
+    Computes the percentile over the listing's same-condition EUR observations
+    within the trailing ``window_days``, and requires at least
+    ``min_observations`` in that window (scaled to the window, ~1 obs per 9
+    days as a floor). Purely descriptive.
+    """
+    cutoff = reference - timedelta(days=window_days)
+    values = sorted(value for when, value in observations if when >= cutoff)
+    if len(values) < min_observations:
+        return False
+    threshold = _percentile(values, percentile / 100.0)
+    return current_eur <= threshold

@@ -45,6 +45,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.14 tiered + percentile historical-low alerts (2026-08-21, alert logic):**
+  two configurable `src/alerting/` modes, independent per
+  `tracked_products.historical_low_alert_mode` (`tiered`/`percentile`/`both`).
+  **tiered** walks a 30d/90d/180d/365d/all-time ladder strongest-claim-first
+  and fires once at the highest tier the current price clears (never five
+  messages). **percentile** fires when the current price is at/below a
+  configurable rarity percentile over a configurable trailing window, with a
+  window-scaled minimum sample. Both read `price_eur_equivalent` within the
+  listing's own same-`condition` bucket and never mix populations across
+  conditions (`unknown` forms no bucket), matching the v2.11 anomaly
+  discipline. Cooldown + delivery log reused from the v2.3/v2.4 slice. **Not
+  this pass:** the per-site tick-script cadence and the matching dashboard
+  badge - alert-rule logic only.
+
 - **v2.15 custom listing URLs Tier A (2026-08-21):** implemented single-page
   custom URL tracking for watchlist items. Created additive `custom_listing_urls`
   table, `CustomListingUrlRepository` in `src/storage/custom_urls.py`, single-page

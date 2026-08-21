@@ -180,12 +180,13 @@ To maximize analytical utility and decision speed without visual clutter:
 
 ### 3. Statistical price attributes (volatility, trend/gradient) — 2026-08-21, priority 1 of 5
 
-**Status: 🚧 In progress (2026-08-21).** The first aggregate, 30-day dashboard
-slice is implemented: it reports volatility as standard deviation divided by
-mean and an observed least-squares price slope per week, with a four-point
-sparse-history guard and the existing anomalous-listings toggle. Per-site
-statistics and condition filtering remain pending (the latter depends on
-v2.11's data model).
+**Status: ✅ Done (2026-08-21).** The aggregate dashboard implementation
+reports 90-day volatility as standard deviation divided by mean and a 30-day
+observed least-squares price slope per week. It has a four-point sparse-history
+guard, respects the existing anomalous-listings toggle, and never mixes native
+currencies before v2.10 FX normalization. Per-site statistics and condition
+filtering remain future enhancements (the latter depends on v2.11's data
+model).
 
 Direct user request: visualizing price data isn't only "what is it now" and
 "what was it before" (already covered by the v1.4 snapshot/trend charts) —

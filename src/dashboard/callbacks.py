@@ -11,13 +11,18 @@ from sqlalchemy import Engine
 
 from config.settings import get_settings, override_settings
 from dashboard.charts import build_bar_chart, build_line_chart
+from dashboard.stats import (
+    DEFAULT_TREND_WINDOW_DAYS,
+    DEFAULT_VOLATILITY_WINDOW_DAYS,
+    PriceSeriesStats,
+    compute_price_stats,
+)
 from pipeline.discover import run_discovery
 from pipeline.snapshot import persist_snapshot
 from storage.repository import (
     ListingRepository,
     ListingSummary,
     PriceHistoryRepository,
-    PriceSeriesStatistics,
     ProductPriceStats,
     ProductRepository,
 )
@@ -155,19 +160,59 @@ def _retailer_table(
     )
 
 
+def _build_trend_indicator(price_stats: PriceSeriesStats) -> html.Span:
+    """Build the trend/gradient arrow + rate badge for the hero.
+
+    Descriptive of observed history only - it never claims to predict a
+    future price (that is v2.18, which ships on a separate surface).
+    """
+    if price_stats.trend_per_week is None or price_stats.trend_pct_per_week is None:
+        return html.Span(
+            "not enough history yet",
+            className="hero-badge badge-trend-neutral",
+        )
+    currency = price_stats.currency or "EUR"
+    slope_week = price_stats.trend_per_week
+    pct_week = price_stats.trend_pct_per_week * 100
+    if slope_week < -0.01:
+        arrow, badge_class = "▼", "badge-trend-pos"  # falling = cheaper = good
+    elif slope_week > 0.01:
+        arrow, badge_class = "▲", "badge-trend-neg"  # rising = more expensive = bad
+    else:
+        arrow, badge_class = "→", "badge-trend-neutral"
+    sign = "-" if slope_week < 0 else "+"
+    text = (
+        f"{arrow} {sign}{currency} {abs(slope_week):,.2f}/wk "
+        f"({sign}{abs(pct_week):.1f}%/wk)"
+    )
+    return html.Span(text, className=f"hero-badge {badge_class}")
+
+
+def _build_volatility_badge(price_stats: PriceSeriesStats) -> html.Span:
+    """Build the volatility stat tile: coefficient of variation for the window."""
+    if price_stats.coefficient_of_variation is None:
+        return html.Span(
+            "volatility: not enough history yet",
+            className="hero-badge badge-volatility",
+        )
+    cv_pct = price_stats.coefficient_of_variation * 100
+    return html.Span(
+        f"±{cv_pct:.1f}% over last {price_stats.window_days}d",
+        className="hero-badge badge-volatility",
+    )
+
+
 def _build_hero_metrics(
     stats: ProductPriceStats,
-    arg2: PriceSeriesStatistics | float | None = None,
-    arg3: float | None = None,
+    current_lowest: float | None,
+    volatility: PriceSeriesStats | None = None,
+    trend: PriceSeriesStats | None = None,
 ) -> list[html.Span]:
-    if isinstance(arg2, PriceSeriesStatistics):
-        series_stats: PriceSeriesStatistics | None = arg2
-        current_lowest: float | None = arg3
-    else:
-        series_stats = None
-        current_lowest = arg2
-
     badges: list[html.Span] = []
+    if volatility is not None:
+        badges.append(_build_volatility_badge(volatility))
+    if trend is not None:
+        badges.append(_build_trend_indicator(trend))
     if stats.all_time_low is not None:
         curr = stats.all_time_low_currency or "EUR"
         badges.append(
@@ -193,88 +238,6 @@ def _build_hero_metrics(
                 className=f"hero-badge {pill_class}",
             )
         )
-
-    # If series_stats is explicitly provided
-    if series_stats is not None:
-        if series_stats.volatility_pct is None or series_stats.trend_per_week is None:
-            badges.append(
-                html.Span(
-                    "Price statistics: not enough history yet "
-                    f"({series_stats.observation_count}/4 points in "
-                    f"{series_stats.window_days}d)",
-                    className="hero-badge pill-delta-neutral",
-                )
-            )
-            return badges
-
-        badges.append(
-            html.Span(
-                "Price moved "
-                f"±{series_stats.volatility_pct:.1f}% over the last "
-                f"{series_stats.window_days} days",
-                className="hero-badge stat-volatility",
-            )
-        )
-        trend = series_stats.trend_per_week
-        direction = "↓" if trend < -0.01 else ("↑" if trend > 0.01 else "→")
-        trend_class = (
-            "stat-trend-down"
-            if trend < -0.01
-            else ("stat-trend-up" if trend > 0.01 else "pill-delta-neutral")
-        )
-        badges.append(
-            html.Span(
-                "Observed trend: "
-                f"{direction} {series_stats.currency or 'EUR'} {abs(trend):,.2f}/week "
-                f"({series_stats.window_days}d)",
-                className=f"hero-badge {trend_class}",
-            )
-        )
-    elif stats.volatility_90d is not None or stats.trend_30d is not None:
-        # If stats has volatility_90d and trend_30d populated
-        if (
-            stats.volatility_90d is not None
-            and stats.volatility_90d.is_sparse
-            and stats.trend_30d is not None
-            and stats.trend_30d.is_sparse
-        ):
-            badges.append(
-                html.Span(
-                    "Price statistics: not enough history yet "
-                    f"({stats.trend_30d.sample_size}/4 points in "
-                    f"{stats.trend_30d.window_days}d)",
-                    className="hero-badge pill-delta-neutral",
-                )
-            )
-            return badges
-
-        if stats.volatility_90d is not None and not stats.volatility_90d.is_sparse:
-            vol = stats.volatility_90d
-            pct_str = f"{vol.cv_percent:.1f}" if vol.cv_percent is not None else "0.0"
-            badges.append(
-                html.Span(
-                    f"Price moved ±{pct_str}% over the last {vol.window_days} days",
-                    className="hero-badge stat-volatility",
-                )
-            )
-        if stats.trend_30d is not None and not stats.trend_30d.is_sparse:
-            trend_obj = stats.trend_30d
-            t_class = (
-                "stat-trend-down"
-                if trend_obj.direction == "down"
-                else (
-                    "stat-trend-up"
-                    if trend_obj.direction == "up"
-                    else "pill-delta-neutral"
-                )
-            )
-            badges.append(
-                html.Span(
-                    f"Observed trend: {trend_obj.description}",
-                    className=f"hero-badge {t_class}",
-                )
-            )
-
     return badges
 
 
@@ -328,9 +291,10 @@ def _product_view(
     stats = price_repository.product_price_stats(
         product_id, include_anomalous=include_anomalous
     )
-    series_stats = price_repository.product_price_series_statistics(
-        product_id, include_anomalous=include_anomalous
+    volatility = compute_price_stats(
+        history, window_days=DEFAULT_VOLATILITY_WINDOW_DAYS
     )
+    trend = compute_price_stats(history, window_days=DEFAULT_TREND_WINDOW_DAYS)
 
     image_url = next(
         (listing.image_url for listing in listings if listing.image_url), None
@@ -342,7 +306,7 @@ def _product_view(
         formatted_price = _format_price(lowest.price_amount, lowest.currency)
         lowest_text = f"{formatted_price} ({lowest.site_display_name})"
 
-    hero_metrics = _build_hero_metrics(stats, series_stats, lowest_amount)
+    hero_metrics = _build_hero_metrics(stats, lowest_amount, volatility, trend)
 
     return (
         product.canonical_name or product.query_text,

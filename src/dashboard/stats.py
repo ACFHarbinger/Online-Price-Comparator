@@ -5,16 +5,17 @@ trend/gradient). They are deliberately **not** forecasts: they never claim to
 predict a future price. Price forecasting lives in its own separate surface
 with an explicit confidence band - see
 ``docs/moon/roadmaps/price_forecasting.md`` (v2.18). This module ships as part
-of the descriptive visualization work (v2.19).
+of the descriptive visualization work (v2.19) and is the **single** home for
+this statistical math - the storage layer stays a thin query layer and must not
+reach into stdlib statistics.
 
-The population used everywhere mirrors the rest of the product: the same
-confirmed / non-anomalous matched listings the anomaly detector and
-historical-low badges already run over. Never mix populations across features.
+The population used here mirrors the rest of the product: the same confirmed /
+non-anomalous matched listings the anomaly detector and historical-low badges
+already run over. Never mix populations across features.
 """
 
 from __future__ import annotations
 
-from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -23,8 +24,9 @@ from statistics import median, pstdev
 from storage.repository import SitePricePoint
 
 #: Fewer observations than this yields a statistically meaningless value for
-#: either indicator. Callers should render "not enough history yet" instead,
-#: mirroring the anomaly detector's own sparse-bucket discipline.
+#: either indicator. Mirrors the anomaly detector's own sparse-bucket
+#: discipline. Callers should render "not enough history yet" instead of a
+#: number.
 MIN_OBSERVATIONS = 3
 
 #: The 30d/90d/180d/365d windows reused from v2.14's tiered ladder so the
@@ -42,13 +44,14 @@ class PriceSeriesStats:
     """Volatility and trend descriptors for a single price window.
 
     All ratio/percentage fields are expressed as fractions (0.06 == 6%).
-    Slopes carry the currency of the underlying observations (absolute) or are
-    unitless fractions relative to the window mean (percentage).
+    Absolute slopes carry the currency of the underlying observations;
+    the percentage slope is unitless (relative to the window mean). Fields are
+    ``None`` where there were too few points to compute a meaningful value, so
+    the caller can render "not enough history yet".
     """
 
     window_days: int
     count: int
-    # `None` where there were too few points to compute a meaningful value.
     coefficient_of_variation: float | None  # population stdev / mean
     iqr_pct_of_median: float | None  # (q3 - q1) / median
     trend_per_day: float | None  # absolute least-squares slope, per day
@@ -125,12 +128,23 @@ def linear_regression_slope(
     return slope_per_second * 86_400
 
 
-def _dominant_currency(points: Sequence[SitePricePoint]) -> str | None:
-    """Most common currency among the points, used only for labelling."""
+def _dominant_currency_points(
+    points: Sequence[SitePricePoint],
+) -> tuple[str | None, list[SitePricePoint]]:
+    """Pick the most-observed currency's points.
+
+    Native-currency values are not comparable until v2.10's FX-normalized
+    storage lands, so the descriptors are computed over a single currency's
+    population rather than silently pooling EUR/data across regimes.
+    """
     if not points:
-        return None
-    counts = Counter(point.currency for point in points)
-    return counts.most_common(1)[0][0]
+        return None, []
+    grouped: dict[str, list[SitePricePoint]] = {}
+    for point in points:
+        grouped.setdefault(point.currency, []).append(point)
+    currency, compatible = max(grouped.items(), key=lambda item: len(item[1]))
+    compatible = sorted(compatible, key=lambda point: point.observed_at)
+    return currency, compatible
 
 
 def compute_price_stats(
@@ -142,24 +156,17 @@ def compute_price_stats(
 ) -> PriceSeriesStats:
     """Compute volatility + trend descriptors over a rolling price window.
 
-    Points are pooled across all confirmed listings for a product (v0 choice
-    for the single-product view). The window is ``[reference - window_days,
-    reference]``. When fewer than ``min_observations`` points fall in the
-    window, every indicator is ``None`` so the caller can render "not enough
-    history yet".
+    Points are pooled across confirmed listings for a product, then restricted
+    to the single most-observed currency (never pooled across currencies). The
+    window is ``[reference - window_days, reference]``. When fewer than
+    ``min_observations`` points fall in the window, every indicator is
+    ``None`` so the caller can render "not enough history yet".
     """
     ref = reference or datetime.now()
     cutoff = ref - timedelta(days=window_days)
-    window = sorted(
-        (
-            point
-            for point in points
-            if point.observed_at >= cutoff and point.observed_at <= ref
-        ),
-        key=lambda point: point.observed_at,
-    )
-    currency = _dominant_currency(window)
-    prices = [point.price_amount for point in window]
+    window = [point for point in points if cutoff <= point.observed_at <= ref]
+    currency, compatible = _dominant_currency_points(window)
+    prices = [point.price_amount for point in compatible]
     count = len(prices)
     if count < min_observations:
         return PriceSeriesStats(
@@ -177,7 +184,7 @@ def compute_price_stats(
     cv = coefficient_of_variation(prices)
     iqr = iqr_percent_of_median(prices)
     slope_per_day = linear_regression_slope(
-        [(point.observed_at, point.price_amount) for point in window]
+        [(point.observed_at, point.price_amount) for point in compatible]
     )
     trend_per_week: float | None = None
     trend_pct_per_week: float | None = None

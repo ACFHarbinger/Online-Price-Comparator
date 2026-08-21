@@ -43,14 +43,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   observed trend rate per week (with directional arrows and weekly percentage
   rates). Implemented `src/dashboard/stats.py` with standalone statistical
   descriptors (`coefficient_of_variation`, `iqr_percent_of_median`,
-  `linear_regression_slope`, `compute_price_stats`) and enhanced repository
-  layer with `PriceVolatilityStats`, `PriceTrendStats`, and
-  `product_price_stats`/`product_price_series_statistics`. Calculations use
-  only confirmed, non-anomalous observations by default, recompute when the
-  anomalous-listings reveal toggle changes, and enforce minimum observation
-  and timespan guards before returning descriptive statistics. Added full
-  test coverage across `test/dashboard/test_stats.py`,
-  `test/dashboard/test_charts_and_views.py`, and `test/dashboard/test_repository.py`.
+  `linear_regression_slope`, `compute_price_stats`) used directly by the
+  dashboard over history returned from the repository. Calculations use only
+  confirmed, non-anomalous observations by default, recompute when the
+  anomalous-listings reveal toggle changes, enforce a four-observation guard,
+  and select one compatible native currency rather than mixing currencies
+  before v2.10 FX normalization. Added coverage in
+  `test/dashboard/test_stats.py` and `test/dashboard/test_charts_and_views.py`.
 
 - **Test/verification scaffolding (2026-08-21, opencode):** added a reusable
   `in_memory_engine` pytest fixture in `test/conftest.py` (shared in-memory

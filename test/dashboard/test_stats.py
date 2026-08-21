@@ -12,11 +12,7 @@ from dashboard.stats import (
     iqr_percent_of_median,
     linear_regression_slope,
 )
-from storage.repository import (
-    SitePricePoint,
-    compute_price_trend,
-    compute_price_volatility,
-)
+from storage.repository import SitePricePoint
 
 
 def test_coefficient_of_variation_sparse_and_edge_cases() -> None:
@@ -128,69 +124,18 @@ def test_compute_price_stats_sparse_vs_populated() -> None:
     assert res.trend_pct_per_week < 0
 
 
-def test_compute_price_volatility_repository_helper() -> None:
+def test_compute_price_stats_does_not_mix_currencies() -> None:
+    """Mixed-currency points restrict to the most-observed currency (v2.10-ready)."""
     now = datetime(2026, 8, 21, 12, 0, 0)
-
-    # Less than 4 points -> is_sparse
-    obs_sparse = [
-        (now - timedelta(days=10), 500.0, "EUR"),
-        (now - timedelta(days=5), 480.0, "EUR"),
-        (now, 460.0, "EUR"),
+    points = [
+        SitePricePoint("amazon.es", "Amazon.es", 500.0, "EUR", now - timedelta(days=9)),
+        SitePricePoint("amazon.es", "Amazon.es", 480.0, "EUR", now - timedelta(days=6)),
+        SitePricePoint("amazon.es", "Amazon.es", 460.0, "EUR", now - timedelta(days=3)),
+        SitePricePoint("amazon.es", "Amazon.es", 450.0, "EUR", now),
+        # A US-listing in USD is the minority currency; it must be excluded.
+        SitePricePoint("bestbuy", "Best Buy", 300.0, "USD", now),
     ]
-    vol_sparse = compute_price_volatility(obs_sparse, window_days=90)
-    assert vol_sparse.is_sparse is True
-    assert vol_sparse.cv_percent is None
-    assert "not enough history" in vol_sparse.description
-
-    # 4 points
-    obs_full = [
-        (now - timedelta(days=30), 500.0, "EUR"),
-        (now - timedelta(days=20), 500.0, "EUR"),
-        (now - timedelta(days=10), 500.0, "EUR"),
-        (now, 500.0, "EUR"),
-    ]
-    vol_full = compute_price_volatility(obs_full, window_days=90)
-    assert vol_full.is_sparse is False
-    assert vol_full.cv_percent == 0.0
-    assert "±0.0%" in vol_full.description
-
-
-def test_compute_price_trend_repository_helper() -> None:
-    now = datetime(2026, 8, 21, 12, 0, 0)
-
-    # Time span < 2 days -> is_sparse
-    obs_same_day = [
-        (now, 500.0, "EUR"),
-        (now + timedelta(hours=1), 490.0, "EUR"),
-        (now + timedelta(hours=2), 480.0, "EUR"),
-        (now + timedelta(hours=3), 470.0, "EUR"),
-    ]
-    trend_same_day = compute_price_trend(obs_same_day, window_days=30)
-    assert trend_same_day.is_sparse is True
-    assert trend_same_day.direction == "sparse"
-
-    # Price decreasing by 10 EUR/day across 4 days -> -70 EUR/week
-    obs_down = [
-        (now - timedelta(days=3), 500.0, "EUR"),
-        (now - timedelta(days=2), 490.0, "EUR"),
-        (now - timedelta(days=1), 480.0, "EUR"),
-        (now, 470.0, "EUR"),
-    ]
-    trend_down = compute_price_trend(obs_down, window_days=30)
-    assert trend_down.is_sparse is False
-    assert trend_down.direction == "down"
-    assert trend_down.slope_per_week == pytest.approx(-70.0, abs=0.1)
-    assert "↘" in trend_down.description
-    assert "/wk" in trend_down.description
-
-    # Price increasing
-    obs_up = [
-        (now - timedelta(days=3), 400.0, "EUR"),
-        (now - timedelta(days=2), 410.0, "EUR"),
-        (now - timedelta(days=1), 420.0, "EUR"),
-        (now, 430.0, "EUR"),
-    ]
-    trend_up = compute_price_trend(obs_up, window_days=30)
-    assert trend_up.is_sparse is False
-    assert trend_up.direction == "up"
-    assert "↗" in trend_up.description
+    res = compute_price_stats(points, window_days=30, reference=now)
+    assert res.currency == "EUR"
+    assert res.count == 4
+    assert res.coefficient_of_variation is not None

@@ -29,6 +29,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.19 statistical price attributes (2026-08-21):** the single-product
+  hero reports price volatility (coefficient of variation / IQR percent of
+  median) in plain percentage terms and a descriptive linear-regression
+  observed trend rate per week (with directional arrows and weekly percentage
+  rates). Implemented `src/dashboard/stats.py` with standalone statistical
+  descriptors (`coefficient_of_variation`, `iqr_percent_of_median`,
+  `linear_regression_slope`, `compute_price_stats`) and enhanced repository
+  layer with `PriceVolatilityStats`, `PriceTrendStats`, and
+  `product_price_stats`/`product_price_series_statistics`. Calculations use
+  only confirmed, non-anomalous observations by default, recompute when the
+  anomalous-listings reveal toggle changes, and enforce minimum observation
+  and timespan guards before returning descriptive statistics. Added full
+  test coverage across `test/dashboard/test_stats.py`,
+  `test/dashboard/test_charts_and_views.py`, and `test/dashboard/test_repository.py`.
+
 - **Test/verification scaffolding (2026-08-21, opencode):** added a reusable
   `in_memory_engine` pytest fixture in `test/conftest.py` (shared in-memory
   SQLite engine via `StaticPool`, schema bootstrapped with

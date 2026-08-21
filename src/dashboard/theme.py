@@ -57,6 +57,10 @@ button, input {{ font: inherit; }}
 .pill-delta-pos {{ background: rgba(63, 185, 80, 0.15); color: {POSITIVE}; border: 1px solid rgba(63, 185, 80, 0.4); }}
 .pill-delta-neg {{ background: rgba(248, 81, 73, 0.15); color: {NEGATIVE}; border: 1px solid rgba(248, 81, 73, 0.4); }}
 .pill-delta-neutral {{ background: rgba(139, 148, 158, 0.15); color: {MUTED_TEXT}; border: 1px solid {PANEL_BORDER}; }}
+.stat-volatility, .pill-volatility {{ background: rgba(6, 182, 212, 0.12); color: #38BDF8; border: 1px solid rgba(6, 182, 212, 0.35); }}
+.stat-trend-down, .pill-trend-down {{ background: rgba(63, 185, 80, 0.15); color: {POSITIVE}; border: 1px solid rgba(63, 185, 80, 0.4); }}
+.stat-trend-up, .pill-trend-up {{ background: rgba(248, 81, 73, 0.15); color: {NEGATIVE}; border: 1px solid rgba(248, 81, 73, 0.4); }}
+.stat-trend-flat, .pill-trend-flat {{ background: rgba(139, 148, 158, 0.15); color: {MUTED_TEXT}; border: 1px solid {PANEL_BORDER}; }}
 .stock-dot {{ display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }}
 .stock-in {{ background-color: {POSITIVE}; }}
 .stock-out {{ background-color: {NEGATIVE}; }}

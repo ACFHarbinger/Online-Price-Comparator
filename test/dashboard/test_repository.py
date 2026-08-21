@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
+import pytest
 from sqlalchemy import Engine
 
 from storage.repository import (
@@ -132,3 +133,87 @@ def test_product_price_stats_and_anomalous_filtering(
     listings_anom = listing_repo.list_with_latest_price(prod_id, include_anomalous=True)
     listing_map_anom = {item.site_key: item.price_amount for item in listings_anom}
     assert listing_map_anom["pccomponentes"] == 100.0
+
+
+def test_product_price_series_statistics_filters_anomalies(
+    in_memory_engine: Engine,
+) -> None:
+    product_repo = ProductRepository(in_memory_engine)
+    listing_repo = ListingRepository(in_memory_engine)
+    price_repo = PriceHistoryRepository(in_memory_engine)
+    now = datetime(2026, 8, 21, 12, 0, 0)
+    product_id = product_repo.get_or_create("linear price history")
+    listing_id = listing_repo.upsert(
+        product_id=product_id,
+        site_key="amazon.es",
+        site_display_name="Amazon.es",
+        url="https://amazon.es/dp/linear",
+        image_url=None,
+        seen_at=now,
+        match_status="confirmed",
+        match_score=100.0,
+        match_reason="test listing",
+    )
+    for days_ago, price in [(28, 100.0), (21, 90.0), (14, 80.0), (7, 70.0)]:
+        price_repo.add(
+            listing_id=listing_id,
+            price_amount=price,
+            currency="EUR",
+            observed_at=now - timedelta(days=days_ago),
+            raw_price_text=None,
+        )
+    price_repo.add(
+        listing_id=listing_id,
+        price_amount=10.0,
+        currency="EUR",
+        observed_at=now - timedelta(days=1),
+        raw_price_text=None,
+        is_anomalous=True,
+    )
+
+    stats = price_repo.product_price_series_statistics(product_id, as_of=now)
+    assert stats.window_days == 30
+    assert stats.observation_count == 4
+    assert stats.currency == "EUR"
+    assert stats.volatility_pct == pytest.approx(13.1533, abs=0.001)
+    assert stats.trend_per_week == pytest.approx(-10.0)
+
+    stats_with_anomaly = price_repo.product_price_series_statistics(
+        product_id, as_of=now, include_anomalous=True
+    )
+    assert stats_with_anomaly.observation_count == 5
+    assert stats_with_anomaly.trend_per_week is not None
+
+
+def test_product_price_series_statistics_has_sparse_history_guard(
+    in_memory_engine: Engine,
+) -> None:
+    product_repo = ProductRepository(in_memory_engine)
+    listing_repo = ListingRepository(in_memory_engine)
+    price_repo = PriceHistoryRepository(in_memory_engine)
+    now = datetime(2026, 8, 21, 12, 0, 0)
+    product_id = product_repo.get_or_create("sparse price history")
+    listing_id = listing_repo.upsert(
+        product_id=product_id,
+        site_key="amazon.es",
+        site_display_name="Amazon.es",
+        url="https://amazon.es/dp/sparse",
+        image_url=None,
+        seen_at=now,
+        match_status="confirmed",
+        match_score=100.0,
+        match_reason="test listing",
+    )
+    for days_ago, price in [(20, 100.0), (10, 90.0), (1, 80.0)]:
+        price_repo.add(
+            listing_id=listing_id,
+            price_amount=price,
+            currency="EUR",
+            observed_at=now - timedelta(days=days_ago),
+            raw_price_text=None,
+        )
+
+    stats = price_repo.product_price_series_statistics(product_id, as_of=now)
+    assert stats.observation_count == 3
+    assert stats.volatility_pct is None
+    assert stats.trend_per_week is None

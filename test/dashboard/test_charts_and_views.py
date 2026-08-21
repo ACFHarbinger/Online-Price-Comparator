@@ -11,7 +11,14 @@ from dashboard.callbacks import (
     _retailer_table,
 )
 from dashboard.charts import build_bar_chart, build_line_chart
-from storage.repository import ListingSummary, ProductPriceStats, SitePricePoint
+from storage.repository import (
+    ListingSummary,
+    PriceSeriesStatistics,
+    PriceTrendStats,
+    PriceVolatilityStats,
+    ProductPriceStats,
+    SitePricePoint,
+)
 
 
 def test_build_line_chart_with_atl_and_range_selectors() -> None:
@@ -95,9 +102,16 @@ def test_build_hero_metrics() -> None:
         avg_30d=484.0,
         avg_30d_currency="EUR",
     )
+    series_stats = PriceSeriesStatistics(
+        window_days=30,
+        observation_count=4,
+        currency="EUR",
+        volatility_pct=6.0,
+        trend_per_week=-3.2,
+    )
     current_lowest = 449.0
-    badges = _build_hero_metrics(stats, current_lowest)
-    assert len(badges) == 2
+    badges = _build_hero_metrics(stats, series_stats, current_lowest)
+    assert len(badges) == 4
 
     # Check ATL badge
     atl_badge = cast(Any, badges[0])
@@ -108,6 +122,60 @@ def test_build_hero_metrics() -> None:
     delta_pill = cast(Any, badges[1])
     assert "-EUR 35.00 / -7.2% vs 30-day avg" in str(delta_pill.children)
     assert "pill-delta-pos" in str(delta_pill.className)
+
+    volatility_badge = cast(Any, badges[2])
+    assert "Price moved ±6.0% over the last 30 days" in str(volatility_badge.children)
+    trend_badge = cast(Any, badges[3])
+    assert "Observed trend: ↓ EUR 3.20/week (30d)" in str(trend_badge.children)
+
+
+def test_build_hero_metrics_explains_sparse_history() -> None:
+    stats = ProductPriceStats(None, None, None, None)
+    series_stats = PriceSeriesStatistics(30, 3, "EUR", None, None)
+
+    badges = _build_hero_metrics(stats, series_stats, None)
+
+    assert len(badges) == 1
+    assert "not enough history yet (3/4 points in 30d)" in str(badges[0].children)
+
+
+def test_build_hero_metrics_from_stats_dataclass() -> None:
+    vol = PriceVolatilityStats(
+        window_days=90,
+        sample_size=6,
+        mean_price=450.0,
+        stdev_price=20.0,
+        cv_percent=4.44,
+        currency="EUR",
+        description="±4.4% (90d vol)",
+        is_sparse=False,
+    )
+    trend = PriceTrendStats(
+        window_days=30,
+        sample_size=6,
+        slope_per_day=-0.5,
+        slope_per_week=-3.5,
+        pct_per_week=-0.78,
+        currency="EUR",
+        direction="down",
+        description="↘ -EUR 3.50/wk (-0.8%/wk)",
+        is_sparse=False,
+    )
+    stats = ProductPriceStats(
+        all_time_low=400.0,
+        all_time_low_currency="EUR",
+        avg_30d=450.0,
+        avg_30d_currency="EUR",
+        volatility_90d=vol,
+        trend_30d=trend,
+    )
+    badges = _build_hero_metrics(stats, 420.0)
+    assert len(badges) == 4
+    assert any("ATL: EUR 400.00" in str(b.children) for b in badges)
+    assert any(
+        "Price moved ±4.4% over the last 90 days" in str(b.children) for b in badges
+    )
+    assert any("Observed trend: ↘ -EUR 3.50/wk" in str(b.children) for b in badges)
 
 
 def test_format_delta_vs_avg() -> None:

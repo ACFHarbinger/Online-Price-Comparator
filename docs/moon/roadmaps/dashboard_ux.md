@@ -1,6 +1,6 @@
 # Dashboard UX & Aesthetics Roadmap
 
-**Status:** ✅ Done (v1.4) · 📋 Planned (v2.11, v2.13, v2.14) · **Source:** agy research (aesthetics), grok research (borrowed UX patterns); v2.11/v2.13/v2.14 from the 2026-08-15 global-scope brainstorm
+**Status:** ✅ Done (v1.4, v2.19) · 📋 Planned (v2.11, v2.13, v2.14) · **Source:** agy research (aesthetics), grok research (borrowed UX patterns); v2.11/v2.13/v2.14 from the 2026-08-15 global-scope brainstorm
 
 ## Aesthetic direction: "Financial Terminal" dark-slate
 
@@ -179,6 +179,13 @@ To maximize analytical utility and decision speed without visual clutter:
 - **Scraper Circuit-Breaker Status Drawer**: A sleek drawer showing per-retailer telemetry (uptime, last scrape timestamp, response latency, and rate-limit backoff status).
 
 ### 3. Statistical price attributes (volatility, trend/gradient) — 2026-08-21, priority 1 of 5
+
+**Status: 🚧 In progress (2026-08-21).** The first aggregate, 30-day dashboard
+slice is implemented: it reports volatility as standard deviation divided by
+mean and an observed least-squares price slope per week, with a four-point
+sparse-history guard and the existing anomalous-listings toggle. Per-site
+statistics and condition filtering remain pending (the latter depends on
+v2.11's data model).
 
 Direct user request: visualizing price data isn't only "what is it now" and
 "what was it before" (already covered by the v1.4 snapshot/trend charts) —

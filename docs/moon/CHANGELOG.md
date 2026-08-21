@@ -41,14 +41,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   hero reports price volatility (coefficient of variation / IQR percent of
   median) in plain percentage terms and a descriptive linear-regression
   observed trend rate per week (with directional arrows and weekly percentage
-  rates). Implemented `src/dashboard/stats.py` with standalone statistical
-  descriptors (`coefficient_of_variation`, `iqr_percent_of_median`,
-  `linear_regression_slope`, `compute_price_stats`) used directly by the
-  dashboard over history returned from the repository. Calculations use only
+  rates). Implemented as a **single** stats module, `src/dashboard/stats.py`,
+  with standalone statistical descriptors (`coefficient_of_variation`,
+  `iqr_percent_of_median`, `linear_regression_slope`, `compute_price_stats`)
+  used directly by the dashboard over history returned from the repository.
+  Reconciliation: the storage layer stays a thin query layer — the redundant
+  repository-side statistic models (`PriceVolatilityStats`, `PriceTrendStats`,
+  `compute_price_volatility`, `compute_price_trend`, `PriceSeriesStatistics`,
+  `product_price_series_statistics`) and the dead `volatility_90d`/`trend_30d`
+  branch in `_build_hero_metrics` were consolidated away. Calculations use only
   confirmed, non-anomalous observations by default, recompute when the
-  anomalous-listings reveal toggle changes, enforce a four-observation guard,
-  and select one compatible native currency rather than mixing currencies
-  before v2.10 FX normalization. Added coverage in
+  anomalous-listings reveal toggle changes, enforce an observation-count sparse
+  guard, and select one compatible native currency rather than mixing
+  currencies before v2.10 FX normalization. Coverage in
   `test/dashboard/test_stats.py` and `test/dashboard/test_charts_and_views.py`.
 
 - **Test/verification scaffolding (2026-08-21, opencode):** added a reusable

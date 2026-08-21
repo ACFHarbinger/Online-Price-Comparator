@@ -50,11 +50,13 @@ order:
    this ask.
 2. **Persistent settings/config**: customize the app, add other websites to
    the comparator, enable/disable websites per comparison. Maps to v1.7
-   (✅ done — runtime fields only, see that row's note), v2.1 (watchlist
-   tables), and the new [Per-comparison site
+   (✅ done — runtime fields only, see that row's note), v2.1 (✅ watchlist
+   tables + CLI `track`/`sites` + per-product site overrides, 2026-08-21),
+   and the [Per-comparison site
    management](roadmaps/settings_and_config.md#per-comparison-site-management-2026-08-21-priority-2-of-5)
-   section added today (per-tracked-product site inclusion override, on top
-   of the existing global `site_settings.enabled`).
+   section (per-tracked-product site inclusion override, on top of global
+   `site_settings.enabled`). Dashboard settings UI and v2.15 "add a site"
+   are still later.
 3. **Search feature**: browse the web for more sites carrying a tracked
    product. Maps to existing v2.17a (real `SearchProvider`) + v2.17b
    (discover-and-approve UX) — no new spec needed, just sequencing priority.
@@ -102,7 +104,7 @@ price meaningful instead of just a number.
 
 | ID | Item | Status | Roadmap doc |
 |---|---|---|---|
-| v2.1 | Tracked-product watchlist (persistent, not just ad-hoc searches) | 📋 Planned | [settings_and_config.md](roadmaps/settings_and_config.md) |
+| v2.1 | Tracked-product watchlist (persistent, not just ad-hoc searches) | ✅ Done (watchlist tables + `cli track`/`watchlist`/`untrack`/`sites`, global `site_settings.enabled` and per-product `tracked_product_site_overrides`, discovery honors both — 2026-08-21. `product_identity_rules` / `candidate_listings` / `alert_deliveries` / `price_analysis` deferred to the features that write them.) | [settings_and_config.md](roadmaps/settings_and_config.md) |
 | v2.2 | Scheduled/passive refresh (daily) | 📋 Planned | [settings_and_config.md](roadmaps/settings_and_config.md) |
 | v2.3 | Price-drop alerting: all-time-low, meaningful-drop, target-price rules | 📋 Planned | [alerting.md](roadmaps/alerting.md) |
 | v2.4 | Telegram bot + Discord webhook alert channels | 📋 Planned | [alerting.md](roadmaps/alerting.md) |

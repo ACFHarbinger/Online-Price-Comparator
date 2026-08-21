@@ -65,3 +65,71 @@ price_history = Table(
     Column("anomaly_reason", String, nullable=True),
     Column("anomaly_basis", String, nullable=True),
 )
+
+# v2.1 watchlist + per-site enablement. Ad-hoc `products` rows from `search`
+# stay as they are; `tracked_products` is the persistent watchlist. Absence
+# of a `site_settings` row means the site is enabled. Absence of an override
+# row means "follow that global default" — this table stores exceptions only.
+tracked_products = Table(
+    "tracked_products",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("product_id", Integer, ForeignKey("products.id"), nullable=False),
+    Column("query_text", String, nullable=False),
+    Column("canonical_name", String, nullable=True),
+    Column("enabled", Boolean, nullable=False, default=True),
+    Column("refresh_interval_hours", Integer, nullable=True),
+    Column("target_price", Float, nullable=True),
+    Column("target_currency", String, nullable=True),
+    Column(
+        "search_scope_tier",
+        String,
+        nullable=False,
+        default="local",
+    ),
+    Column(
+        "historical_low_alert_mode",
+        String,
+        nullable=False,
+        default="tiered",
+    ),
+    Column("rarity_percentile", Float, nullable=True),
+    Column("rarity_window_days", Integer, nullable=True),
+    Column("rarity_min_observations", Integer, nullable=True),
+    Column("created_at", DateTime, nullable=False),
+    Column("last_checked_at", DateTime, nullable=True),
+    UniqueConstraint("product_id", name="uq_tracked_product_product_id"),
+    UniqueConstraint("query_text", name="uq_tracked_product_query_text"),
+)
+
+site_settings = Table(
+    "site_settings",
+    metadata,
+    Column("site_key", String, primary_key=True),
+    Column("enabled", Boolean, nullable=False, default=True),
+    Column("result_limit", Integer, nullable=True),
+    Column("min_request_interval_seconds", Float, nullable=True),
+    Column("cache_ttl_seconds", Integer, nullable=True),
+    Column("browser_rendering_allowed", Boolean, nullable=False, default=False),
+    Column("min_refresh_interval_hours", Float, nullable=True),
+)
+
+tracked_product_site_overrides = Table(
+    "tracked_product_site_overrides",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column(
+        "tracked_product_id",
+        Integer,
+        ForeignKey("tracked_products.id"),
+        nullable=False,
+    ),
+    Column("site_key", String, nullable=False),
+    Column("included", Boolean, nullable=False),
+    Column("reason", String, nullable=True),
+    UniqueConstraint(
+        "tracked_product_id",
+        "site_key",
+        name="uq_tracked_product_site_override",
+    ),
+)

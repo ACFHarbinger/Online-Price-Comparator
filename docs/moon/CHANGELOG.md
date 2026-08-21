@@ -29,6 +29,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.1 watchlist + per-comparison site enable/disable (2026-08-21):** new
+  SQLite tables `tracked_products`, `site_settings`, and
+  `tracked_product_site_overrides` (schema + `src/storage/watchlist.py`, not
+  the price-history repository). `cli track` / `watchlist` / `untrack` persist
+  a watchlist without changing ad-hoc `search`. `cli sites` lists, globally
+  enables/disables retailers, and sets per-product include/exclude exceptions
+  (absence of a row still means "follow the global default"). Discovery honors
+  those flags when given a DB engine (CLI search/track and dashboard search).
+  Remaining originally-listed v2.1 tables (`product_identity_rules`,
+  `candidate_listings`, `alert_deliveries`, `price_analysis`) wait for the
+  features that write them.
+
 - **Matching excluded-term negation (2026-08-21):** `find_excluded_term` now
   ignores a prohibited accessory/category phrase when it is preceded by a
   negation particle (`sin` / `sem` / `without` / `no`, plus an intervening

@@ -20,6 +20,11 @@ def _build_all_scrapers(settings: Settings) -> list[ScraperAdapter]:
     ]
 
 
+def registered_site_keys(settings: Settings) -> list[str]:
+    """Site keys of every known scraper, ignoring enablement flags."""
+    return [scraper.site_key for scraper in _build_all_scrapers(settings)]
+
+
 def enabled_scrapers(settings: Settings) -> list[ScraperAdapter]:
     """Scrapers allowed by `ENABLED_SCRAPERS` (all of them if unset)."""
     allowlist = settings.enabled_scraper_keys()

@@ -1,6 +1,6 @@
 # Settings & Persistent Config Roadmap
 
-**Status:** 📋 Planned (v1.7, v2.1, v2.2, v2.10, v2.14) · **Source:** codex research, grounded in `src/config/settings.py`; v2.10/v2.14 from the 2026-08-15 global-scope brainstorm
+**Status:** ✅ Done (v1.7 runtime Settings; v2.1 watchlist + global/per-product site enable/disable — 2026-08-21) · 📋 Planned (v2.2, v2.10, v2.14) · **Source:** codex research, grounded in `src/config/settings.py`; v2.10/v2.14 from the 2026-08-15 global-scope brainstorm
 
 ## Two-layer config split
 
@@ -166,6 +166,9 @@ on tables already speced above rather than replacing them:
    "follow the global `site_settings.enabled` default" — this table only
    stores *exceptions*, not a full per-product/per-site matrix, so adding a
    new site never requires touching every existing tracked product's rows.
+   **Shipped 2026-08-21** via `cli sites exclude|include|clear-override` and
+   `cli sites enable|disable`; the dashboard has no settings pane yet but its
+   search box already respects these flags.
 3. **"Adding other websites to the comparator"** — this is `scrapers/`'s
    existing extension pattern (`AGENTS.md` §5 "Add a new scraper") plus
    v2.15's custom-site tracking, not a new mechanism. What's new here is
@@ -185,9 +188,15 @@ on tables already speced above rather than replacing them:
 v1.7 ships the runtime `Settings` additions only (no behavior depends on them
 yet beyond documenting intent). v2.1 adds `tracked_products` and turns
 `cli search` into two modes: an ad-hoc one-off (today's behavior, unchanged)
-and a `cli track <keywords>` that persists a watchlist entry. v2.2 adds the
-actual scheduled-refresh runner (a simple loop/cron entry point, not a new
-service — this is a personal tool, not infrastructure).
+and a `cli track <keywords>` that persists a watchlist entry. **Shipped
+2026-08-21:** those two modes, plus `site_settings` / `tracked_product_site_overrides`
+and `cli sites` for global and per-product enable/disable. Discovery (`cli
+search`/`track` and the dashboard search box) honors the flags. The other
+tables originally listed under v2.1 (`product_identity_rules`,
+`candidate_listings`, `alert_deliveries`, `price_analysis`) are not created
+yet — they wait for matching-evidence persistence and v2.3 alerting.
+v2.2 adds the actual scheduled-refresh runner (a simple loop/cron entry
+point, not a new service — this is a personal tool, not infrastructure).
 
 **v2.10 (native + FX + landed-cost + `import_regime`) lands before
 v2.11–v2.16 and before the PC configurator.** Condition buckets, site

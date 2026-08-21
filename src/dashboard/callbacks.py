@@ -26,6 +26,7 @@ from storage.repository import (
     ProductPriceStats,
     ProductRepository,
 )
+from storage.watchlist import TrackedProductRepository
 
 
 def _visible_browser_override(
@@ -324,6 +325,7 @@ def register_callbacks(app: Dash, engine: Engine) -> None:
     product_repository = ProductRepository(engine)
     listing_repository = ListingRepository(engine)
     price_repository = PriceHistoryRepository(engine)
+    tracked_repository = TrackedProductRepository(engine)
 
     @app.callback(
         Output("selected-product-id", "data"),
@@ -359,9 +361,18 @@ def register_callbacks(app: Dash, engine: Engine) -> None:
         if not query or not query.strip():
             raise PreventUpdate
 
+        cleaned_query = query.strip()
+        tracked = tracked_repository.get_by_query(cleaned_query)
         with _visible_browser_override(show_browser):
             product_id = persist_snapshot(
-                query.strip(), run_discovery(query.strip(), get_settings()), engine
+                cleaned_query,
+                run_discovery(
+                    cleaned_query,
+                    get_settings(),
+                    engine=engine,
+                    tracked_product_id=tracked.id if tracked is not None else None,
+                ),
+                engine,
             )
         return product_id, _product_options(product_repository), product_id
 

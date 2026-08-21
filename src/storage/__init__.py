@@ -8,12 +8,22 @@ from .repository import (
     ProductRepository,
     SitePricePoint,
 )
+from .watchlist import (
+    SiteOverrideRepository,
+    SiteSettingsRepository,
+    TrackedProductRepository,
+    resolve_site_keys,
+)
 
 __all__ = [
     "ListingRepository",
     "ListingSummary",
     "PriceHistoryRepository",
     "ProductRepository",
+    "SiteOverrideRepository",
     "SitePricePoint",
+    "SiteSettingsRepository",
+    "TrackedProductRepository",
     "create_db_engine",
+    "resolve_site_keys",
 ]

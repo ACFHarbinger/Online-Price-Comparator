@@ -95,12 +95,13 @@ set to validate the tier before expanding it**:
 | Rebuy, refurbed.de (or equivalent EU refurb marketplaces) | Refurb retail | Structured "refurb" listings (graded condition, dealer warranty) are a lower-risk middle ground between new-retail and individual-seller secondhand — worth prioritizing over raw classifieds where available, since condition/warranty claims are more verifiable. |
 | Scan.co.uk, Overclockers UK | New retail | UK is outside the EU customs union post-Brexit but still worth including given it's a major hardware market — landed-cost estimation (below) applies to UK sources the same as non-EU global-tier ones, not treated as EU-frictionless. |
 | LDLC.com | New retail (France) | Found during the 2026-08-21 scans. `robots.txt` verified 2026-08-21: `/recherche` (search) is disallowed, but general catalog/category pages are not — matches the scan report's own suggestion to use it as a **restock/negative-signal source** (periodically check known chipset/category URLs for a product reappearing) rather than a search-driven scraper. A v2.15 Tier A custom-URL entry is the safest fit; a full `scrapers/` category-page monitor is a smaller, later option if this pattern turns out to matter for other products too. |
+| Wallapop.es | C2C classifieds (Spain) | **Approved 2026-08-21 for v2.15 Tier A only** (Harbinger's explicit call on #37): `robots.txt` disallows `/search` and any querystring path, which this tool reads as "no automated searching for the cheapest listing across the store," but a specific known item URL (`/item/<slug>-<id>`, no query string) isn't disallowed — Harbinger's own interpretation is that tracking one already-found listing is within the site's actual objection, unlike a search crawler. **Do not build a `scrapers/` registry entry or anything that queries `/search`** — Tier A custom-URL tracking only, one page at a time, user-initiated. |
 
 All EU-wide-tier sources need the [multilingual matching](product_matching.md#multilingual-matching-v212)
 design for non-English listings, and the [condition field](product_matching.md#condition-as-a-first-class-field-v211)
 for the secondhand/refurb sources specifically.
 
-### Sites investigated 2026-08-21 and explicitly not recommended for automated scraping
+### Sites investigated 2026-08-21 and not currently pursued
 
 Real market-scan work (`docs/moon/reports/ddr5_128gb_market_scan_report.md`,
 `docs/moon/reports/rtx_3090ti_market_scan_report.md`) found these C2C
@@ -108,12 +109,13 @@ classifieds sites the most *productive* for near-budget used-hardware leads
 — but productivity isn't the bar this tool uses (see [Reliability
 hardening](#reliability-hardening-v18)'s "polite, failure-tolerant
 collector, not an anti-bot evasion system" stance). `robots.txt` was
-checked directly (2026-08-21) against each:
+checked directly (2026-08-21) against each. (Wallapop.es was originally
+listed here too — moved to the approved-candidates table above 2026-08-21
+after Harbinger's explicit review, see #37.)
 
-| Site | Finding | Recommendation |
+| Site | Finding | Status |
 |---|---|---|
-| Leboncoin.fr | `robots.txt` explicitly disallows `/recherche` (search) for most bots, blocks **named AI/LLM bots** (`GPTBot`, `ClaudeBot`, `anthropic-ai`, `CCBot`) from `/ad/` entirely, and states in plain text: *"It's forbidden to use search robots or other automatic methods"* without permission. | **Won't do** — automated scraping of any kind, search or per-listing. This is a direct, named, unambiguous refusal, not a generic bot-management pattern. Manual-only: a user can still paste a specific Leboncoin ad URL they found themselves into v2.15 Tier A, but that's a real policy grey area even for a single re-fetch given the blanket "no automatic methods" wording — flag it to Harbinger for an explicit call before enabling Leboncoin under Tier A at all, don't default it on. |
-| Wallapop.es | `robots.txt` disallows `/search` and any path with a query string (`/*?`), which blocks the search-results access pattern the scan used. General paths are otherwise not blocked for unnamed bots, but the disallow already rules out search-driven discovery. | **Won't do** as a `scrapers/` registry entry (no search access). A specific known item URL (`/item/<slug>-<id>`, no query string) is not explicitly disallowed — same "ask Harbinger first" treatment as Leboncoin before wiring it into v2.15 Tier A, given the site's own aggressive-looking bot blocklist suggests general anti-scraping intent even where not spelled out per-path. |
+| Leboncoin.fr | `robots.txt` explicitly disallows `/recherche` (search) for most bots, blocks **named AI/LLM bots** (`GPTBot`, `ClaudeBot`, `anthropic-ai`, `CCBot`) from `/ad/` entirely, and states in plain text: *"It's forbidden to use search robots or other automatic methods"* without permission. | **Postponed (#37), not rejected** — this is the highest-value classifieds source found in either scan (the €900 DDR5 match, several €1,000 RTX 3090 Ti matches), and Harbinger wants to read the site's actual full terms of service before a final call, since `robots.txt` alone is a strong-but-partial signal. No scraping, including Tier A single-URL tracking, until that review lands and is recorded here. |
 | Subito.it | `robots.txt` itself returned **HTTP 403 Forbidden** to a plain fetch (2026-08-21) — the site refused even the compliance-check request. | **Won't do.** Not pursued further; a host that blocks robots.txt retrieval itself is not a credible target for a "polite collector," full stop. |
 
 **Kleinanzeigen.de's aggressive IP-banning (above) belongs in this same

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Harbinger decision on #37, Leboncoin/Wallapop (2026-08-21):** Wallapop.es
+  approved for v2.15 Tier A custom-URL tracking only (never search, never a
+  `scrapers/` registry entry) — `robots.txt`'s disallow reads as "no
+  automated store search," not "no tracking one known listing." Leboncoin.fr
+  stays postponed, not rejected — highest-value classifieds source found in
+  either market scan, but Harbinger wants to read its actual full terms of
+  service before deciding, including for the narrow single-URL case. No
+  Leboncoin scraping of any kind until that review lands. Updated
+  `scrapers_and_retailers.md` (Wallapop moved to the approved-candidates
+  table; Leboncoin's table entry now says "postponed" not "won't do") and
+  retitled/commented issue #37 to track only the Leboncoin half.
+
 ### Added
 
 - **Market-scan reports translated into roadmap findings (2026-08-21):**

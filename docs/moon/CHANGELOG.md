@@ -21,6 +21,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **v1.5/v1.6 matching close-out (2026-08-21):** `match_listing` now
+  enforces query-token coverage >= 0.80 on meaningful non-stopword tokens,
+  `ProductIdentityProfile` carries `match_mode` (`exact_model` /
+  `strict_title` / `manual_review`) and `build_profile_from_query` picks
+  `exact_model` when a SKU-like token is present else `strict_title`, and
+  Amazon-ASIN-shaped tokens are excluded from model-token extraction so an
+  ASIN cannot become a cross-retailer identity key. Confirmed matches still
+  follow the spec's "hard model match, no conflict" path — `token_sort_ratio
+  >= 88` is applied on the no-model-token (`strict_title` / `likely`) path
+  only, because verbose retail titles of the exact SKU routinely score
+  ~40-65. `anomaly.py`'s IQR / sparse algorithm is unchanged. New suite
+  `test/matching/` covers the Ryzen 9950X3D vs-variant example, bundle/kit
+  exclusion, the coverage gate, match_mode, ASIN non-identity, and the n>=4
+  IQR plus n=2/3 excluded-term sparse fallback.
+
 - **v1.4 dashboard remainder close-out (2026-08-21):** extended the single-product
   Dash dashboard with an All-Time-Low (ATL) badge and 30-day delta vs. average pill
   in the hero header, historical trend chart range selectors (1W, 1M, 3M, 1Y, ALL)

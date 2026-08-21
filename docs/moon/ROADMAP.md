@@ -1,6 +1,6 @@
 # Roadmap
 
-**Last updated:** 2026-08-15
+**Last updated:** 2026-08-21
 **Status legend:** ✅ Done · 🚧 In progress · 📋 Planned · 🅿️ Parked (open question, not scheduled) · 🚫 Won't do
 
 ## Product direction
@@ -49,8 +49,8 @@ confirmed match to the product you actually asked about.
 | v1.2 | Amazon.es + PcComponentes scrapers | ✅ Done | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
 | v1.3 | Price/text normalization | ✅ Done | — |
 | v1.4 | Dash dashboard (snapshot bar + trend line, product image, links) | 🚧 In progress | [dashboard_ux.md](roadmaps/dashboard_ux.md) |
-| v1.5 | Product identity matching (rapidfuzz hybrid matcher) | 📋 Planned | [product_matching.md](roadmaps/product_matching.md) |
-| v1.6 | Price anomaly flagging (IQR-based) | 📋 Planned | [product_matching.md](roadmaps/product_matching.md) |
+| v1.5 | Product identity matching (rapidfuzz hybrid matcher) | ✅ Done (query-token-coverage gate, `match_mode`, ASIN-is-not-a-cross-retailer-key, `test/matching/test_matcher.py` — 2026-08-21. `token_sort_ratio >= 88` is the no-model-token/`likely` path, not the hard-model confirm path: verbose exact-SKU titles score ~40-65.) | [product_matching.md](roadmaps/product_matching.md) |
+| v1.6 | Price anomaly flagging (IQR-based) | ✅ Done (IQR n>=4 fence + sparse n=2/3 excluded-term fallback unchanged; covered by `test/matching/test_anomaly.py` — 2026-08-21) | [product_matching.md](roadmaps/product_matching.md) |
 | v1.7 | Persistent settings schema (runtime + SQLite-persisted config) | 📋 Planned | [settings_and_config.md](roadmaps/settings_and_config.md) |
 | v1.8 | Scraper reliability hardening (robots.txt, circuit breaker, shared rate limiter, structured-data-first parsing) | ✅ Done (the existing `fetch/` hardening is joined by JSON-LD-first Product/Offer parsing with CSS fallback for both live scrapers — verified 2026-08-21) | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
 | v1.9 | `AGENTS.md` rewrite for the real stack | 📋 Planned | — |

@@ -101,6 +101,17 @@ button, input {{ font: inherit; }}
 .btn-reject {{ background-color: rgba(248, 81, 73, 0.15); border: 1px solid rgba(248, 81, 73, 0.4); color: {NEGATIVE}; border-radius: 4px; padding: 4px 8px; font-size: .75rem; font-weight: 600; cursor: pointer; }}
 .btn-reject:hover {{ background-color: rgba(248, 81, 73, 0.3); }}
 .badge-score {{ display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: .72rem; font-family: {MONO_FONT}; background: rgba(56, 189, 248, 0.15); color: #38BDF8; }}
+.custom-url-panel {{ margin-top: 16px; }}
+.custom-url-input-row {{ display: flex; gap: 8px; margin-bottom: 12px; }}
+.custom-url-input {{ flex: 1; background: {PANEL_BACKGROUND}; border: 1px solid {PANEL_BORDER}; color: {PRIMARY_TEXT}; border-radius: 6px; padding: 8px 12px; font-size: .84rem; }}
+.custom-url-button {{ background-color: rgba(56, 189, 248, 0.2); border: 1px solid rgba(56, 189, 248, 0.4); color: #38BDF8; border-radius: 6px; padding: 8px 16px; font-size: .84rem; font-weight: 600; cursor: pointer; }}
+.custom-url-button:hover {{ background-color: rgba(56, 189, 248, 0.35); }}
+.custom-url-status {{ font-size: .80rem; margin-bottom: 8px; }}
+.custom-url-table {{ width: 100%; border-collapse: collapse; margin-top: 8px; }}
+.custom-url-table th, .custom-url-table td {{ padding: 10px 8px; text-align: left; border-top: 1px solid {PANEL_BORDER}; font-size: .84rem; }}
+.custom-url-table th {{ color: {MUTED_TEXT}; font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; }}
+.btn-remove-url {{ background: none; border: 1px solid rgba(248, 81, 73, 0.4); color: {NEGATIVE}; border-radius: 4px; padding: 2px 6px; font-size: .72rem; cursor: pointer; }}
+.btn-remove-url:hover {{ background: rgba(248, 81, 73, 0.2); }}
 .dash-dropdown .Select-control, .dash-dropdown .Select-menu-outer, .dash-dropdown .Select-menu {{ background-color: {PANEL_BACKGROUND}; border-color: {PANEL_BORDER}; color: {PRIMARY_TEXT}; }}
 .dash-dropdown .Select-value-label, .dash-dropdown .Select-placeholder {{ color: {MUTED_TEXT} !important; }}
 .dash-dropdown .VirtualizedSelectOption {{ background-color: {PANEL_BACKGROUND}; color: {PRIMARY_TEXT}; }}

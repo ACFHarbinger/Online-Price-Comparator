@@ -194,6 +194,49 @@ def build_layout() -> html.Div:
                                 ),
                             ],
                         ),
+                        html.Section(
+                            className="panel custom-url-panel",
+                            children=[
+                                html.Div(
+                                    className="panel-header-row",
+                                    children=[
+                                        html.H3(
+                                            "Custom Listing URLs (Tier A)",
+                                            className="panel-heading",
+                                            style={"margin": "0"},
+                                        ),
+                                    ],
+                                ),
+                                html.Div(
+                                    className="custom-url-input-row",
+                                    children=[
+                                        dcc.Input(
+                                            id="custom-url-input",
+                                            type="text",
+                                            placeholder=(
+                                                "Paste exact product page URL "
+                                                "(e.g. https://shop.com/product)..."
+                                            ),
+                                            className="custom-url-input",
+                                        ),
+                                        html.Button(
+                                            "Track URL",
+                                            id="custom-url-submit-button",
+                                            className="custom-url-button",
+                                        ),
+                                    ],
+                                ),
+                                html.Div(
+                                    id="custom-url-status-message",
+                                    className="custom-url-status",
+                                ),
+                                html.Div(
+                                    "Choose a tracked product to view and "
+                                    "add custom listing URLs.",
+                                    id="custom-urls-container",
+                                ),
+                            ],
+                        ),
                     ],
                 ),
             ),

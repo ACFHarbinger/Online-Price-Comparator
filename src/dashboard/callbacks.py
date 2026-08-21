@@ -20,10 +20,12 @@ from dashboard.stats import (
 )
 from fetch.circuit_breaker import CircuitBreaker
 from forecasting.holt import ForecastResult, forecast_prices
+from pipeline.custom_url import track_and_process_custom_url
 from pipeline.discover import run_discovery
 from pipeline.snapshot import persist_snapshot
 from pipeline.source_discovery import discover_sources_for_product
 from storage.candidates import CandidateListing, CandidateListingRepository
+from storage.custom_urls import CustomListingUrl, CustomListingUrlRepository
 from storage.repository import (
     ListingRepository,
     ListingSummary,
@@ -347,6 +349,97 @@ def _candidate_sources_panel(
                         html.Th("Match Score"),
                         html.Th("Time Limit"),
                         html.Th("Link"),
+                        html.Th("Actions"),
+                    ]
+                )
+            ),
+            html.Tbody(rows),
+        ],
+    )
+
+
+def _custom_urls_panel(
+    custom_urls: list[CustomListingUrl],
+    *,
+    as_of: datetime | None = None,
+) -> html.Div | html.Table:
+    """Build the custom listing URLs review table."""
+    if not custom_urls:
+        return html.Div(
+            "No custom listing URLs tracked yet for this product. "
+            "Paste an exact product page URL above to track it.",
+            className="empty-message",
+        )
+
+    ref_time = as_of or datetime.now()
+    rows = []
+    for item in custom_urls:
+        confidence_str = (
+            f"{int(item.parser_confidence * 100)}%"
+            if item.parser_confidence is not None
+            else "—"
+        )
+        checked_str = (
+            _format_time_ago(item.last_checked_at, ref_time)
+            if item.last_checked_at
+            else "Pending"
+        )
+        status_color = (
+            "#3FB950"
+            if item.status == "active"
+            else "#F85149"
+            if item.status in ("failed", "unmatched")
+            else "#8B949E"
+        )
+        status_badge = html.Span(
+            item.status.capitalize(),
+            style={"color": status_color, "fontWeight": "600"},
+        )
+
+        rows.append(
+            html.Tr(
+                [
+                    html.Td(item.site_display_name),
+                    html.Td(
+                        html.A(
+                            item.url,
+                            href=item.url,
+                            target="_blank",
+                            rel="noreferrer",
+                            style={
+                                "maxWidth": "300px",
+                                "overflow": "hidden",
+                                "textOverflow": "ellipsis",
+                                "display": "inline-block",
+                                "whiteSpace": "nowrap",
+                            },
+                        )
+                    ),
+                    html.Td(confidence_str, className="price-value"),
+                    html.Td(status_badge),
+                    html.Td(checked_str, className="price-value"),
+                    html.Td(
+                        html.Button(
+                            "Remove",
+                            id={"type": "custom-url-remove-btn", "index": item.id},
+                            className="btn-remove-url",
+                        )
+                    ),
+                ]
+            )
+        )
+
+    return html.Table(
+        className="custom-url-table",
+        children=[
+            html.Thead(
+                html.Tr(
+                    [
+                        html.Th("Store"),
+                        html.Th("Product Page URL"),
+                        html.Th("Confidence"),
+                        html.Th("Status"),
+                        html.Th("Last Checked"),
                         html.Th("Actions"),
                     ]
                 )
@@ -704,3 +797,86 @@ def register_callbacks(app: Dash, engine: Engine) -> None:
 
         pending = candidates_repository.list_pending(tracked.id)
         return _candidate_sources_panel(pending)
+
+    custom_urls_repository = CustomListingUrlRepository(engine)
+
+    @app.callback(
+        Output("custom-urls-container", "children"),
+        Output("custom-url-status-message", "children"),
+        Output("custom-url-status-message", "style"),
+        Output("custom-url-input", "value"),
+        Input("selected-product-id", "data"),
+        Input("custom-url-submit-button", "n_clicks"),
+        Input({"type": "custom-url-remove-btn", "index": ALL}, "n_clicks"),
+        State("custom-url-input", "value"),
+        prevent_initial_call=False,
+    )
+    def manage_custom_urls(
+        product_id: int | None,
+        _submit_clicks: int | None,
+        _remove_clicks: list[int | None] | None,
+        url_value: str | None,
+    ) -> tuple[html.Div | html.Table, str, dict[str, str], str]:
+        """Handle custom listing URL addition, removal, and listing."""
+        empty_style = {"display": "none"}
+        if product_id is None:
+            return (
+                html.Div(
+                    "Choose a tracked product to view and add custom listing URLs.",
+                    className="empty-message",
+                ),
+                "",
+                empty_style,
+                "",
+            )
+
+        tracked = None
+        for tp in tracked_repository.list_all():
+            if tp.product_id == product_id:
+                tracked = tp
+                break
+
+        if tracked is None:
+            return (
+                html.Div(
+                    "This product is not in your tracked watchlist. "
+                    "Track it first to add custom URLs.",
+                    className="empty-message",
+                ),
+                "",
+                empty_style,
+                "",
+            )
+
+        status_msg = ""
+        status_style = empty_style
+        input_clear = ""
+
+        triggered = ctx.triggered_id
+        if isinstance(triggered, dict):
+            btn_type = triggered.get("type")
+            custom_id = triggered.get("index")
+            if btn_type == "custom-url-remove-btn" and isinstance(custom_id, int):
+                custom_urls_repository.remove(custom_id)
+                status_msg = "Removed custom listing URL."
+                status_style = {"color": "#8B949E"}
+        elif (
+            triggered == "custom-url-submit-button" and url_value and url_value.strip()
+        ):
+            success, msg = track_and_process_custom_url(
+                tracked.id,
+                url_value.strip(),
+                engine,
+                get_settings(),
+            )
+            status_msg = msg
+            status_style = {"color": "#3FB950" if success else "#F85149"}
+            input_clear = "" if success else url_value
+
+        custom_list = custom_urls_repository.list_for_product(tracked.id)
+        return (
+            _custom_urls_panel(custom_list),
+            status_msg,
+            status_style,
+            input_clear,
+        )

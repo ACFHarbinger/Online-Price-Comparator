@@ -24,7 +24,9 @@ class StructuredProduct:
     item_condition: str | None = None
 
 
-def extract_structured_products(soup: BeautifulSoup) -> list[StructuredProduct]:
+def extract_structured_products(
+    soup: BeautifulSoup, *, fallback_url: str | None = None
+) -> list[StructuredProduct]:
     """Return valid Product/Offer entries from JSON-LD scripts.
 
     A malformed script or incomplete Product is ignored so callers can fall
@@ -41,7 +43,7 @@ def extract_structured_products(soup: BeautifulSoup) -> list[StructuredProduct]:
             LOGGER.debug("ignoring malformed JSON-LD", exc_info=True)
             continue
         for node in _object_nodes(payload):
-            product = _parse_product(node)
+            product = _parse_product(node, fallback_url=fallback_url)
             if product is not None:
                 products.append(product)
     return products
@@ -62,7 +64,9 @@ def _object_nodes(value: object) -> list[dict[str, object]]:
     return [node]
 
 
-def _parse_product(node: dict[str, object]) -> StructuredProduct | None:
+def _parse_product(
+    node: dict[str, object], *, fallback_url: str | None = None
+) -> StructuredProduct | None:
     if not _has_type(node.get("@type"), "Product"):
         return None
     title = _text(node.get("name"))
@@ -70,7 +74,7 @@ def _parse_product(node: dict[str, object]) -> StructuredProduct | None:
     image_url = _image_url(node.get("image"))
     for offer in _offers(node.get("offers")):
         price = _offer_price(offer)
-        url = product_url or _text(offer.get("url"))
+        url = product_url or _text(offer.get("url")) or fallback_url
         if title and price and url:
             item_condition = _text(offer.get("itemCondition")) or _text(
                 node.get("itemCondition")

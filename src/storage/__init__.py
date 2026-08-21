@@ -1,6 +1,11 @@
 """SQLite persistence for Online Price Comparator."""
 
 from .candidates import CandidateListing, CandidateListingRepository
+from .custom_urls import (
+    CustomListingUrl,
+    CustomListingUrlRepository,
+    extract_site_info_from_url,
+)
 from .db import create_db_engine
 from .repository import (
     ListingRepository,
@@ -19,6 +24,8 @@ from .watchlist import (
 __all__ = [
     "CandidateListing",
     "CandidateListingRepository",
+    "CustomListingUrl",
+    "CustomListingUrlRepository",
     "ListingRepository",
     "ListingSummary",
     "PriceHistoryRepository",
@@ -28,5 +35,6 @@ __all__ = [
     "SiteSettingsRepository",
     "TrackedProductRepository",
     "create_db_engine",
+    "extract_site_info_from_url",
     "resolve_site_keys",
 ]

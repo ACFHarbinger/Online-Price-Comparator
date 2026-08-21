@@ -66,6 +66,16 @@ def refresh_tracked_product(
         tracked_product_id=tracked.id,
     )
     persist_snapshot(tracked.query_text, raw_listings, engine)
+    try:
+        from pipeline.custom_url import refresh_custom_urls_for_product
+
+        refresh_custom_urls_for_product(tracked.id, engine, settings)
+    except Exception:  # pragma: no cover
+        logger.exception(
+            "Custom URL refresh failed for tracked product %d (%r); continuing",
+            tracked.id,
+            tracked.query_text,
+        )
     TrackedProductRepository(engine).touch_last_checked(tracked.id)
 
     if settings.alerts_enabled:

@@ -212,3 +212,30 @@ candidate_listings = Table(
         name="uq_candidate_listing",
     ),
 )
+
+# v2.15 custom listing URLs (Tier A). Exact product-page URLs added
+# directly by the user against a tracked product.
+custom_listing_urls = Table(
+    "custom_listing_urls",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column(
+        "tracked_product_id",
+        Integer,
+        ForeignKey("tracked_products.id"),
+        nullable=False,
+    ),
+    Column("url", String, nullable=False),
+    Column("site_key", String, nullable=False),
+    Column("site_display_name", String, nullable=False),
+    Column("parser_confidence", Float, nullable=True),
+    Column("status", String, nullable=False, default="active"),
+    Column("last_checked_at", DateTime, nullable=True),
+    Column("last_error", String, nullable=True),
+    Column("added_at", DateTime, nullable=False),
+    UniqueConstraint(
+        "tracked_product_id",
+        "url",
+        name="uq_custom_listing_url",
+    ),
+)

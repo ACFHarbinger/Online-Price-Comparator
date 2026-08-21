@@ -45,6 +45,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.15 custom listing URLs Tier A (2026-08-21):** implemented single-page
+  custom URL tracking for watchlist items. Created additive `custom_listing_urls`
+  table, `CustomListingUrlRepository` in `src/storage/custom_urls.py`, single-page
+  fetcher in `src/scrapers/custom_url.py`, and pipeline processor in
+  `src/pipeline/custom_url.py`. Custom URLs are fetched with robots checks and host
+  rate limiting, parsed structured-data-first (JSON-LD Product/Offer) with OpenGraph
+  meta tag fallback, validated against the tracked product's `ProductIdentityProfile`,
+  extracted for condition and normalized to EUR equivalent before promoting to
+  `listings` and `price_history`. Wired into passive/scheduled watchlist refresh
+  loop in `src/pipeline/refresh.py` and added custom URL tracking input and review
+  panel in `src/dashboard/`. Comprehensive test coverage in
+  `test/storage/test_custom_urls.py`, `test/scrapers/test_custom_url.py`,
+  `test/pipeline/test_custom_url.py`, and `test/dashboard/test_custom_url_view.py`.
+
 - **v2.8 KuantoKusta verification consumer (2026-08-21):** manual
   `verify_kuantokusta_hints_for_product` consumes typed external retailer URL
   hints, performs a polite robots-checked, rate-limited fetch of each real

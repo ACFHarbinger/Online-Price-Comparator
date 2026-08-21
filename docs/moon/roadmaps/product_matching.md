@@ -271,6 +271,15 @@ either/or):**
    noticing when the alias table needs a new entry instead of silently
    leaning on translation forever for a term that recurs often.
 
+**Alias lists shipped 2026-08-22:** `src/matching/aliases.py` rewrites
+known DE/ES/PT/EN category-noun and accessory phrases to canonical tokens
+before coverage and `token_sort_ratio`. `MatchResult.resolution` records
+`alias_table` vs `direct`; `persist_snapshot` appends `[alias_table]` on
+`match_reason` when a rewrite fired. German excluded-bundle terms
+(`Mainboard`, `Netzteil`, `Gehäuse`, `Komplettsystem`) join the CPU list.
+Model/SKU tokens are not aliased. Machine translation is still the later
+fallback — no translation API, no new Settings keys this slice.
+
 ## Out of scope for this feature
 
 - Auto-merging listings purely by title similarity with no hard gates — flagged

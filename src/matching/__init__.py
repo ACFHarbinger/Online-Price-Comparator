@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .aliases import apply_aliases
 from .anomaly import AnomalyResult, detect_anomalies
 from .condition import (
     ConditionResult,
@@ -35,6 +36,7 @@ __all__ = [
     "ProductCategory",
     "ProductIdentityProfile",
     "StorageInterface",
+    "apply_aliases",
     "build_profile_from_query",
     "detect_anomalies",
     "detect_product_category",

@@ -61,6 +61,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.12 multilingual alias lists (2026-08-22):** per-market alias table for
+  category nouns and accessory/bundle words (`Grafikkarte`/`graphics card`/
+  `placa gráfica`, `Prozessor`/`processor`, `Mainboard`/`Netzteil`/`Gehäuse`)
+  applied before coverage and scoring. `MatchResult.resolution` is
+  `alias_table` when a rewrite fired, persisted on `match_reason`. German
+  excluded-bundle terms added to the CPU list. Model/SKU tokens stay
+  verbatim. Machine-translation fallback is **not** this slice.
+
 - **v2.20 client-side monitor: extension skeleton (2026-08-21, first slice):**
   new top-level `extension/` directory — a Manifest V3 content script for
   Leboncoin.fr that reads the JSON-LD `Product`/`Offer` block from the page DOM

@@ -91,7 +91,11 @@ def persist_snapshot(
             seen_at=raw.fetched_at,
             match_status=match.status.value,
             match_score=match.score,
-            match_reason=match.reason,
+            match_reason=(
+                match.reason
+                if match.resolution == "direct"
+                else f"{match.reason} [{match.resolution}]"
+            ),
             condition=classified.condition.value,
             condition_source=classified.source.value,
             condition_confidence=classified.confidence,

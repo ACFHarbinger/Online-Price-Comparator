@@ -36,6 +36,15 @@ DEFAULT_EXCLUDED_TERMS = frozenset(
         "torre gaming",
         "desktop",
         "personalizado",
+        "mainboard",
+        "netzteil",
+        "gehäuse",
+        "gehause",
+        "kühler",
+        "kuehler",
+        "komplettsystem",
+        "komplett pc",
+        "komplettpc",
     }
 )
 """Common bundle, accessory, and category-conflict terms for v1 matching."""
@@ -87,6 +96,7 @@ RAM_EXCLUDED_TERMS = frozenset(
         "hard disk",
         "hard drive",
         "solid state",
+        "mainboard",
     }
 )
 

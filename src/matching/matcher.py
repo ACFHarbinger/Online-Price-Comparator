@@ -10,6 +10,7 @@ from rapidfuzz.fuzz import token_set_ratio, token_sort_ratio
 
 from normalize.text import dedupe_key
 
+from .aliases import aliases_changed, apply_aliases
 from .profile import (
     MatchMode,
     ModuleType,
@@ -90,6 +91,7 @@ class MatchResult:
     status: MatchStatus
     score: float
     reason: str
+    resolution: str = "direct"  # "direct" | "alias_table"
 
 
 def match_listing(
@@ -109,20 +111,28 @@ def match_listing(
     *are* identity gates (step 2); ``extra`` is consulted structured-data
     first, then the title.
     """
-    normalized_title = dedupe_key(title)
-    if not normalized_title:
+    raw_title = dedupe_key(title)
+    if not raw_title:
         return MatchResult(MatchStatus.REJECTED, 0.0, "empty title")
 
-    normalized_name = dedupe_key(profile.canonical_name)
+    raw_name = dedupe_key(profile.canonical_name)
+    normalized_title = apply_aliases(raw_title)
+    normalized_name = apply_aliases(raw_name)
+    used_aliases = aliases_changed(raw_title, normalized_title) or aliases_changed(
+        raw_name, normalized_name
+    )
+    resolution = "alias_table" if used_aliases else "direct"
     score = float(token_sort_ratio(normalized_name, normalized_title))
     token_set_score = float(token_set_ratio(normalized_name, normalized_title))
-    title_model_tokens = _extract_model_tokens(normalized_title)
+    title_model_tokens = _extract_model_tokens(raw_title)
     coverage = _query_token_coverage(normalized_name, normalized_title)
 
     if profile.required_model_tokens and not (
         profile.required_model_tokens & title_model_tokens
     ):
-        return MatchResult(MatchStatus.REJECTED, score, "model token mismatch")
+        return MatchResult(
+            MatchStatus.REJECTED, score, "model token mismatch", resolution
+        )
 
     excluded_term = _first_excluded_term(profile, normalized_title)
     if excluded_term is not None:
@@ -130,15 +140,18 @@ def match_listing(
             MatchStatus.REJECTED,
             score,
             f"excluded term: {excluded_term}",
+            resolution,
         )
 
     title_tokens = frozenset(normalized_title.split())
     if profile.required_brand_tokens and not (
         profile.required_brand_tokens & title_tokens
     ):
-        return MatchResult(MatchStatus.REJECTED, score, "brand mismatch")
+        return MatchResult(MatchStatus.REJECTED, score, "brand mismatch", resolution)
 
-    compatibility = _compatibility_gate(profile, title, extra, score)
+    compatibility = _compatibility_gate(
+        profile, title, extra, score, resolution=resolution
+    )
     if compatibility is not None:
         return compatibility
 
@@ -150,12 +163,13 @@ def match_listing(
                 "query-token coverage below threshold "
                 f"({coverage:.2f} < {_MIN_QUERY_TOKEN_COVERAGE:.2f})"
             ),
+            resolution,
         )
 
     has_model_match = bool(profile.required_model_tokens & title_model_tokens)
 
     if profile.match_mode is MatchMode.MANUAL_REVIEW:
-        return MatchResult(MatchStatus.REVIEW, score, "manual review mode")
+        return MatchResult(MatchStatus.REVIEW, score, "manual review mode", resolution)
 
     # Confirmed is "hard model match, no conflict". token_sort_ratio >= 88
     # is *not* applied on this path: real retail titles are verbose and
@@ -164,21 +178,27 @@ def match_listing(
     # supporting evidence only (it rates bundles highly because the
     # requested title is a subset of the bundle title).
     if profile.match_mode is MatchMode.EXACT_MODEL and has_model_match:
-        return MatchResult(MatchStatus.CONFIRMED, score, "model token match")
+        return MatchResult(
+            MatchStatus.CONFIRMED, score, "model token match", resolution
+        )
 
     if score >= _LIKELY_SORT_RATIO and coverage >= _LIKELY_QUERY_TOKEN_COVERAGE:
         return MatchResult(
             MatchStatus.LIKELY,
             score,
             f"strong title match (token-set {token_set_score:.0f})",
+            resolution,
         )
     if score >= _REVIEW_SORT_RATIO:
         return MatchResult(
             MatchStatus.REVIEW,
             score,
             f"ambiguous title match (token-set {token_set_score:.0f})",
+            resolution,
         )
-    return MatchResult(MatchStatus.REJECTED, score, "title score below threshold")
+    return MatchResult(
+        MatchStatus.REJECTED, score, "title score below threshold", resolution
+    )
 
 
 def _query_token_coverage(normalized_query: str, normalized_title: str) -> float:
@@ -210,6 +230,8 @@ def _compatibility_gate(
     title: str,
     extra: dict[str, Any] | None,
     score: float,
+    *,
+    resolution: str,
 ) -> MatchResult | None:
     """RAM module-type / storage-interface hard gates. None = no opinion."""
     if profile.category is ProductCategory.RAM:
@@ -220,18 +242,21 @@ def _compatibility_gate(
                 MatchStatus.REVIEW,
                 score,
                 "unknown module type",
+                resolution,
             )
         if listing_type is ModuleType.UNKNOWN:
             return MatchResult(
                 MatchStatus.REVIEW,
                 score,
                 "unknown module type",
+                resolution,
             )
         if listing_type is not wanted_module:
             return MatchResult(
                 MatchStatus.REJECTED,
                 score,
                 "module type mismatch",
+                resolution,
             )
         return None
     if profile.category is ProductCategory.STORAGE:
@@ -244,12 +269,14 @@ def _compatibility_gate(
                 MatchStatus.REVIEW,
                 score,
                 "unknown storage interface",
+                resolution,
             )
         if listing_iface is not wanted_interface:
             return MatchResult(
                 MatchStatus.REJECTED,
                 score,
                 "storage interface mismatch",
+                resolution,
             )
     return None
 
@@ -258,8 +285,12 @@ def _first_excluded_term(
     profile: ProductIdentityProfile, normalized_title: str
 ) -> str | None:
     """Return the first non-negated prohibited phrase in a normalized title."""
+    aliased_excluded = frozenset(apply_aliases(term) for term in profile.excluded_terms)
+    aliased_allowed = frozenset(
+        apply_aliases(term) for term in profile.allowed_variant_terms
+    )
     return find_excluded_term(
         normalized_title,
-        profile.excluded_terms,
-        allowed_terms=profile.allowed_variant_terms,
+        aliased_excluded,
+        allowed_terms=aliased_allowed,
     )

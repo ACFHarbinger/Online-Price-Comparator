@@ -104,7 +104,7 @@ price meaningful instead of just a number.
 
 | ID | Item | Status | Roadmap doc |
 |---|---|---|---|
-| v2.1 | Tracked-product watchlist (persistent, not just ad-hoc searches) | ✅ Done (watchlist tables + `cli track`/`watchlist`/`untrack`/`sites`, global `site_settings.enabled` and per-product `tracked_product_site_overrides`, discovery honors both — 2026-08-21. `product_identity_rules` / `candidate_listings` / `alert_deliveries` / `price_analysis` deferred to the features that write them.) | [settings_and_config.md](roadmaps/settings_and_config.md) |
+| v2.1 | Tracked-product watchlist (persistent, not just ad-hoc searches) | ✅ Done (watchlist tables + `cli track`/`watchlist`/`untrack`/`sites`, global `site_settings.enabled` and per-product `tracked_product_site_overrides`, discovery honors both — 2026-08-21, [#10](https://github.com/ACFHarbinger/Online-Price-Comparator/issues/10). `product_identity_rules` / `candidate_listings` / `alert_deliveries` / `price_analysis` deferred to the features that write them.) | [settings_and_config.md](roadmaps/settings_and_config.md) |
 | v2.2 | Scheduled/passive refresh (daily) | 📋 Planned | [settings_and_config.md](roadmaps/settings_and_config.md) |
 | v2.3 | Price-drop alerting: all-time-low, meaningful-drop, target-price rules | 📋 Planned | [alerting.md](roadmaps/alerting.md) |
 | v2.4 | Telegram bot + Discord webhook alert channels | 📋 Planned | [alerting.md](roadmaps/alerting.md) |

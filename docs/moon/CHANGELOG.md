@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **3rd market-scan report translated into roadmap findings (2026-08-21):**
+  read the new `docs/moon/reports/ssd_4tb_hdd_2022tb_market_scan_report.md`
+  (4TB SSD / 20-22TB HDD scan). No new candidate sites (Geizhals/eBay/
+  Leboncoin all already covered by the prior two reports' updates). New
+  findings folded into `scrapers_and_retailers.md`'s cross-cutting section:
+  two more `stock_state` values (`purchase_in_progress`, `sold`) with a
+  design principle that a sold/pending tracked listing's last price should
+  still be persisted as a final historical observation, not discarded;
+  Leboncoin's numeric-query search-relevance unreliability (client-side
+  capacity re-filtering needed once v2.20 exists); a bulk-enterprise-
+  reseller vendor class as a candidate future v2.16 input. Extended
+  `product_matching.md`'s "Category compatibility hard-gates" section with
+  a storage `interface` (SATA/NVMe/SAS/USB) hard-gate alongside RAM's
+  `module_type`, plus guidance to keep `condition`'s statistical bucket
+  enum coarse while preserving richer seller-provided condition text
+  (Recertified/OEM/graded-refurb) verbatim in a separate display field.
+  Added to issue #36. Documentation only, no code.
+
 ### Changed
 
 - **Leboncoin resolved: client-side monitor un-parked as v2.20 (2026-08-21):**

@@ -206,6 +206,21 @@ existing model/brand hard gates exist to prevent.
   (`Aufrüstkit`, prebuilt-PC listings, laptop listings that merely mention
   a RAM capacity) surfaced repeatedly in the scan and aren't covered by
   `DEFAULT_EXCLUDED_TERMS`'s current CPU-oriented vocabulary.
+- **Same class of gate for storage** (added from the 2026-08-21 SSD/HDD
+  scan, `docs/moon/reports/ssd_4tb_hdd_2022tb_market_scan_report.md`): add
+  `interface` (`SATA` / `NVMe` / `SAS` / `USB` for external enclosures)
+  as a hard-gate field for storage-category profiles. Unlike RAM's
+  RDIMM/UDIMM fork this isn't an electrical-incompatibility case, but the
+  price spread between interfaces at the same capacity is wide enough
+  (the scan found €329 SATA vs. €419+ NVMe at the same 4TB) that a
+  cross-interface "match" would misrepresent what's actually cheapest for
+  a buyer who specifically wants (or specifically can't use) one
+  interface — treat as a hard gate when the tracked product specifies an
+  interface, not a soft ranking signal. Brand alone is not a reliable
+  proxy for market tier at high capacities (a "consumer" line can be a
+  rebadged enterprise drive past a certain capacity) — key on
+  capacity + form factor + interface, extracted the same
+  structured-data-first-then-title-keywords way as `module_type`.
 - Not yet implemented — this section records the finding and the intended
   design; wiring it into `matching/matcher.py` and `matching/profile.py`
   is real follow-up work, not done as part of today's other matching

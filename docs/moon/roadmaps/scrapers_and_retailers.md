@@ -178,6 +178,65 @@ beyond source selection:
   is shown, rather than assuming scope from a generic "shipping available"
   flag — feeds v2.9/v2.13's landed-cost work.
 
+**Storage-category findings (SSD/HDD, 2026-08-21 3rd market scan —
+`docs/moon/reports/ssd_4tb_hdd_2022tb_market_scan_report.md`):**
+
+- **Two more stock states, both worth persisting rather than discarding**:
+  Leboncoin's `"Achat en cours"` (purchase in progress — a buy was
+  initiated but may not finalize) and `"Vendu"` (sold). Extends the
+  `stock_state` enum above to `in_stock` / `unavailable` /
+  `undispatchable_to_location` / `purchase_in_progress` / `sold`. **Design
+  principle**: a sold/pending listing's last-shown price is still a real,
+  useful historical price-floor data point — the scan's own best evidence
+  that sub-budget pricing does occasionally clear came from exactly these
+  "sold" rows. A tracked listing (e.g. a v2.15 Tier A custom URL) that
+  transitions to `sold`/`purchase_in_progress` should record that final
+  price as one last `price_history` observation before the tracker marks
+  it inactive, not silently stop without capturing it.
+- **Search relevance cannot be trusted for numeric/capacity queries on
+  Leboncoin**: free-text search fuzzy-matched "1,5 To" against a "22to"
+  query. Not directly actionable today (Leboncoin has no automated
+  collection method pending [v2.20](client_side_monitor.md)), but the
+  same client-side capacity re-filtering (parse from the listing's own
+  title, don't trust search relevance) will matter once that extension
+  actually parses Leboncoin pages.
+- **Form-factor/interface is a hard filter for SSDs**, same class of
+  finding as RAM's `module_type`: SATA vs. NVMe (and PCIe generation
+  within NVMe) span a wide price range for the same capacity — see
+  [product_matching.md](product_matching.md#category-compatibility-hard-gates-2026-08-21-from-market-scan-findings)
+  for the matching addition.
+- **Brand is not a reliable tier proxy at high capacities**: Seagate
+  BarraCuda (normally consumer-budget) is the *cheapest* 20TB option
+  specifically because 20TB+ BarraCuda is manufactured on the same
+  nearline platform as Seagate's enterprise lines — a crawler/matcher
+  should key on capacity + form factor + interface, not brand-implied
+  market tier.
+- **External (USB-enclosure) drives are a legitimate, distinct, cheaper
+  path to a given capacity** — manufacturers sometimes price the external
+  SKU below the equivalent bare internal drive. Capture as its own
+  sub-category (an `enclosure`/`interface` value, not excluded from
+  results) rather than filtered out as "not a real internal HDD."
+- **Condition labels are richer in storage than in GPU/RAM**: "New,"
+  "New (Other)," "OEM" (bare/white-label, often ex-datacenter),
+  "Recertified" (manufacturer-equivalent warranty), "Refurbished — graded/
+  tested/warrantied," and plain "Used" all appeared as materially
+  different risk/price tiers, particularly from specialist bulk
+  enterprise-HDD resellers. **Design guidance**: keep `condition`'s
+  statistical bucket enum coarse (the v2.11 IQR-per-bucket design needs
+  enough samples per bucket to be meaningful — more buckets fragments
+  that) but capture the seller's own verbatim condition/grading text in
+  a separate free-text field alongside it, so a "Recertified, 1-yr
+  warranty" listing displays as such to the user even while it's
+  statistically pooled with plain "refurb" for anomaly-detection
+  purposes. Don't silently collapse the display label; do keep the
+  statistical bucket set small.
+- **Bulk enterprise-hardware resellers are a recurring, distinct vendor
+  class** (seen on both eBay and, per the RAM/GPU scans, elsewhere) with
+  pricing/stock patterns that differ from both retail and casual private
+  sellers — a candidate input for [v2.16](#site-value-proposition-scoring-v216)'s
+  scoring if/when per-seller (not just per-site) granularity is ever
+  worth the complexity; not proposed as a v2.16 requirement today.
+
 ### Global tier (v2.13) — RAM and other small, low-customs-friction categories
 
 Candidate sources: Newegg (US), Amazon global TLDs (.com, .de already covered

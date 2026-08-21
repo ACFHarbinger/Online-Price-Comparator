@@ -29,6 +29,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.10 currency/FX normalization (2026-08-21):** `price_history` now stores
+  the native sticker (`price_native`/`currency_native`) alongside a scrape-time
+  EUR equivalent (`price_eur_equivalent`, `fx_rate_used`, `fx_rate_date`).
+  New `src/fx/` fetches ECB eurofxref-daily.xml (quoted as units of foreign
+  currency per 1 EUR), caches it for `fx_rate_cache_ttl_hours`, and fail-closes
+  to a NULL EUR equivalent when the rate is missing. EUR identity conversion
+  needs no network. `persist_snapshot` writes the pair; `matching/anomaly.py`
+  still runs on native amounts this slice. Landed-cost / ranking / dashboard
+  dual-price display and wiring anomaly/forecasting onto EUR-equivalent are
+  follow-ups.
+
 - **v2.6 stock & stale-data honesty banners (2026-08-21):** enhanced dashboard
   with honest circuit-breaker and stale-data visibility. Surfaced open circuit
   breakers via `CircuitBreaker.open_sites()` as top warning banners and retailer

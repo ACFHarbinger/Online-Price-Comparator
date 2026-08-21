@@ -1,6 +1,6 @@
 # Settings & Persistent Config Roadmap
 
-**Status:** ✅ Done (v1.7 runtime Settings; v2.1 watchlist + global/per-product site enable/disable; v2.2 scheduled/passive refresh — 2026-08-21) · 📋 Planned (v2.10, v2.14) · **Source:** codex research, grounded in `src/config/settings.py`; v2.10/v2.14 from the 2026-08-15 global-scope brainstorm
+**Status:** ✅ Done (v1.7 runtime Settings; v2.1 watchlist + global/per-product site enable/disable; v2.2 scheduled/passive refresh; v2.10 native + EUR-equivalent persistence — 2026-08-21) · 📋 Planned (v2.14) · **Source:** codex research, grounded in `src/config/settings.py`; v2.10/v2.14 from the 2026-08-15 global-scope brainstorm
 
 ## Two-layer config split
 
@@ -94,6 +94,14 @@ original boundary named as its own trigger for revisiting.
 - `display_currency` (existing field, still useful) controls which currency
   headline numbers render in; the *stored* data is always both, regardless
   of display preference.
+
+**Shipped 2026-08-21 (persistence slice):** ECB `eurofxref-daily.xml` via
+`src/fx/`, scrape-time conversion in `persist_snapshot`, additive
+`price_history` columns. `fx_rate_used` is ECB units of native currency per
+1 EUR. Fetch/parse failure stores native only (NULL EUR equivalent). IQR
+anomaly detection, dashboard ranking, and forecasting are **not** switched
+onto `price_eur_equivalent` yet. Landed-cost / `import_regime` columns and
+dual native+EUR dashboard display remain later v2.10 follow-ups.
 
 ## `search_scope_tier` — per-tracked-product geography (v2.1, extended)
 

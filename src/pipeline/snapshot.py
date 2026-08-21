@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 from sqlalchemy import Engine
 
+from fx.ecb import convert_to_eur
 from matching import (
     MatchStatus,
     build_profile_from_query,
@@ -49,9 +50,11 @@ def persist_snapshot(
     be parsed are skipped entirely (logged, not fatal).
 
     Confirmed listings are then checked for cross-retailer price outliers
-    (`matching.detect_anomalies`, over this snapshot's confirmed prices)
-    before writing `price_history` - an anomalous point is still recorded
-    (never dropped), just flagged so read-side queries skip past it.
+    (`matching.detect_anomalies`, over this snapshot's confirmed *native*
+    prices) before writing `price_history` - an anomalous point is still
+    recorded (never dropped), just flagged so read-side queries skip past
+    it. v2.10 also persists native sticker + scrape-time EUR equivalent
+    (ECB rate); IQR still runs on native amounts this slice.
     """
     product_repo = ProductRepository(engine)
     listing_repo = ListingRepository(engine)
@@ -110,6 +113,7 @@ def persist_snapshot(
                 observation.raw.source,
                 anomaly.basis,
             )
+        conversion = convert_to_eur(observation.amount, observation.currency)
         price_repo.add(
             listing_id=observation.listing_id,
             price_amount=observation.amount,
@@ -119,6 +123,11 @@ def persist_snapshot(
             is_anomalous=anomaly.is_anomalous,
             anomaly_reason=anomaly.reason,
             anomaly_basis=anomaly.basis,
+            price_native=conversion.price_native,
+            currency_native=conversion.currency_native,
+            price_eur_equivalent=conversion.price_eur_equivalent,
+            fx_rate_used=conversion.fx_rate_used,
+            fx_rate_date=conversion.fx_rate_date,
         )
 
     return product_id

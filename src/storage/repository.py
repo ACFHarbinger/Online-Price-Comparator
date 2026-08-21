@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 from sqlalchemy import Engine, func, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -265,8 +265,21 @@ class PriceHistoryRepository:
         is_anomalous: bool = False,
         anomaly_reason: str | None = None,
         anomaly_basis: str | None = None,
+        price_native: float | None = None,
+        currency_native: str | None = None,
+        price_eur_equivalent: float | None = None,
+        fx_rate_used: float | None = None,
+        fx_rate_date: date | None = None,
     ) -> None:
-        """Append a new price observation for a listing."""
+        """Append a new price observation for a listing.
+
+        ``price_amount``/``currency`` stay the native sticker (pre-v2.10
+        callers unchanged). When FX fields are omitted they default to the
+        native pair with no EUR equivalent, which is honest for tests and
+        historical rows that never saw a rate.
+        """
+        native_amount = price_amount if price_native is None else price_native
+        native_currency = currency if currency_native is None else currency_native
         with self.engine.begin() as conn:
             conn.execute(
                 price_history.insert().values(
@@ -278,6 +291,11 @@ class PriceHistoryRepository:
                     is_anomalous=is_anomalous,
                     anomaly_reason=anomaly_reason,
                     anomaly_basis=anomaly_basis,
+                    price_native=native_amount,
+                    currency_native=native_currency,
+                    price_eur_equivalent=price_eur_equivalent,
+                    fx_rate_used=fx_rate_used,
+                    fx_rate_date=fx_rate_date,
                 )
             )
 

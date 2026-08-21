@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "OPC Client-Side Monitor (Leboncoin)",
+  "version": "0.1.0",
+  "description": "Reads the price/title JSON-LD from a Leboncoin ad page the user has open. v0: detects + snapshots only - no diffing, no OPC integration yet.",
+  "permissions": ["storage"],
+  "host_permissions": ["https://www.leboncoin.fr/ad/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://www.leboncoin.fr/ad/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

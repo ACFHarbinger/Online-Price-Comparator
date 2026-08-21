@@ -61,6 +61,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.20 client-side monitor: extension skeleton (2026-08-21, first slice):**
+  new top-level `extension/` directory — a Manifest V3 content script for
+  Leboncoin.fr that reads the JSON-LD `Product`/`Offer` block from the page DOM
+  and stores a timestamped snapshot in `chrome.storage.local`. **No OPC
+  integration yet**: no diffing, no JSON-lines handoff, no `cli refresh` import
+  flag (those are the rest of v2.20's v0 scope). Host permission scoped to
+  `https://www.leboncoin.fr/ad/*` only.
+
 - **RAM `module_type` + storage `interface` hard-gates (2026-08-21):**
   `ProductIdentityProfile` now carries category-specific compatibility
   fields extracted structured-data-first, then title keywords, then

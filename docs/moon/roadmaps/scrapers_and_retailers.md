@@ -96,6 +96,7 @@ set to validate the tier before expanding it**:
 | Scan.co.uk, Overclockers UK | New retail | UK is outside the EU customs union post-Brexit but still worth including given it's a major hardware market — landed-cost estimation (below) applies to UK sources the same as non-EU global-tier ones, not treated as EU-frictionless. |
 | LDLC.com | New retail (France) | Found during the 2026-08-21 scans. `robots.txt` verified 2026-08-21: `/recherche` (search) is disallowed, but general catalog/category pages are not — matches the scan report's own suggestion to use it as a **restock/negative-signal source** (periodically check known chipset/category URLs for a product reappearing) rather than a search-driven scraper. A v2.15 Tier A custom-URL entry is the safest fit; a full `scrapers/` category-page monitor is a smaller, later option if this pattern turns out to matter for other products too. |
 | Wallapop.es | C2C classifieds (Spain) | **Approved 2026-08-21 for v2.15 Tier A only** (Harbinger's explicit call on #37): `robots.txt` disallows `/search` and any querystring path, which this tool reads as "no automated searching for the cheapest listing across the store," but a specific known item URL (`/item/<slug>-<id>`, no query string) isn't disallowed — Harbinger's own interpretation is that tracking one already-found listing is within the site's actual objection, unlike a search crawler. **Do not build a `scrapers/` registry entry or anything that queries `/search`** — Tier A custom-URL tracking only, one page at a time, user-initiated. |
+| Leboncoin.fr | C2C classifieds (France) | **Decided 2026-08-21 (#37): server-side collection stays ruled out** (`robots.txt` blocks named AI/LLM bots from `/ad/` and states *"forbidden to use search robots or other automatic methods"*), **but user-browser-initiated monitoring is approved** — Harbinger's research draws a real distinction between a server acting as an independent bot and a check run as the user's own browser session, "a human who refreshes the page, but faster," the same reasoning legitimate products like Distill Web Monitor/Visualping rely on. **Gated on [v2.20](client_side_monitor.md) shipping** — not even v2.15 Tier A (server-side) applies here in the meantime. Was the single most productive source in either 2026-08-21 market scan (the €900 DDR5 match, several €1,000 RTX 3090 Ti matches) — worth the wait. |
 
 All EU-wide-tier sources need the [multilingual matching](product_matching.md#multilingual-matching-v212)
 design for non-English listings, and the [condition field](product_matching.md#condition-as-a-first-class-field-v211)
@@ -105,17 +106,17 @@ for the secondhand/refurb sources specifically.
 
 Real market-scan work (`docs/moon/reports/ddr5_128gb_market_scan_report.md`,
 `docs/moon/reports/rtx_3090ti_market_scan_report.md`) found these C2C
-classifieds sites the most *productive* for near-budget used-hardware leads
-— but productivity isn't the bar this tool uses (see [Reliability
+classifieds sites productive for near-budget used-hardware leads — but
+productivity isn't the bar this tool uses (see [Reliability
 hardening](#reliability-hardening-v18)'s "polite, failure-tolerant
 collector, not an anti-bot evasion system" stance). `robots.txt` was
-checked directly (2026-08-21) against each. (Wallapop.es was originally
-listed here too — moved to the approved-candidates table above 2026-08-21
-after Harbinger's explicit review, see #37.)
+checked directly (2026-08-21) against each. (Wallapop.es and Leboncoin.fr
+were originally listed here too — both moved to the candidates table above
+2026-08-21 after Harbinger's explicit review on #37; Leboncoin's approval
+is conditional on v2.20 shipping first.)
 
 | Site | Finding | Status |
 |---|---|---|
-| Leboncoin.fr | `robots.txt` explicitly disallows `/recherche` (search) for most bots, blocks **named AI/LLM bots** (`GPTBot`, `ClaudeBot`, `anthropic-ai`, `CCBot`) from `/ad/` entirely, and states in plain text: *"It's forbidden to use search robots or other automatic methods"* without permission. | **Postponed (#37), not rejected** — this is the highest-value classifieds source found in either scan (the €900 DDR5 match, several €1,000 RTX 3090 Ti matches), and Harbinger wants to read the site's actual full terms of service before a final call, since `robots.txt` alone is a strong-but-partial signal. No scraping, including Tier A single-URL tracking, until that review lands and is recorded here. |
 | Subito.it | `robots.txt` itself returned **HTTP 403 Forbidden** to a plain fetch (2026-08-21) — the site refused even the compliance-check request. | **Won't do.** Not pursued further; a host that blocks robots.txt retrieval itself is not a credible target for a "polite collector," full stop. |
 
 **Kleinanzeigen.de's aggressive IP-banning (above) belongs in this same

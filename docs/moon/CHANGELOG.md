@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Leboncoin resolved: client-side monitor un-parked as v2.20 (2026-08-21):**
+  Harbinger's follow-up ToS research found real French-market precedent
+  distinguishing a detection-only "human who refreshes the page, but
+  faster" bot from account-automation/mass-messaging/protection-circumvention
+  bots — plus the same legal reasoning legitimate products (Distill Web
+  Monitor, Visualping) build on: local, browser-initiated monitoring
+  instead of server-side polling. Un-parked `ROADMAP.md`'s "Browser
+  extension / userscript" Parked row under this new, specific motivation
+  (new milestone v2.20, new doc `client_side_monitor.md`) — content
+  script + local snapshot/diff + a new per-site `collection_method`
+  (`server_scrape`/`client_extension`/`search_api`/`hint_only`) so
+  `pipeline.discover`/`refresh` never silently falls back to server-side
+  scraping for a client-extension-flagged site. Leboncoin.fr moved from
+  "postponed" to "approved for client-extension collection, gated on
+  v2.20 shipping" — still no server-side collection method of any kind
+  (including v2.15 Tier A) in the meantime. New issue #38 (v2.20);
+  #37 stays open tracking that dependency. Documentation only, no code.
+
 - **Harbinger decision on #37, Leboncoin/Wallapop (2026-08-21):** Wallapop.es
   approved for v2.15 Tier A custom-URL tracking only (never search, never a
   `scrapers/` registry entry) — `robots.txt`'s disallow reads as "no

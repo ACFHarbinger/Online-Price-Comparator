@@ -1,6 +1,6 @@
 # Dashboard UX & Aesthetics Roadmap
 
-**Status:** 🚧 In progress (v1.4) · 📋 Planned (v2.11, v2.13, v2.14) · **Source:** agy research (aesthetics), grok research (borrowed UX patterns); v2.11/v2.13/v2.14 from the 2026-08-15 global-scope brainstorm
+**Status:** ✅ Done (v1.4) · 📋 Planned (v2.11, v2.13, v2.14) · **Source:** agy research (aesthetics), grok research (borrowed UX patterns); v2.11/v2.13/v2.14 from the 2026-08-15 global-scope brainstorm
 
 ## Aesthetic direction: "Financial Terminal" dark-slate
 
@@ -177,6 +177,41 @@ To maximize analytical utility and decision speed without visual clutter:
 ### 2. Statistical Anomaly & Trust Telemetry Modals
 - **"Why was this flagged?" Anomaly Inspection Card**: Clicking an anomalous deal badge reveals an explainability card showing the sample size, current median, IQR fences, and seller rating signals.
 - **Scraper Circuit-Breaker Status Drawer**: A sleek drawer showing per-retailer telemetry (uptime, last scrape timestamp, response latency, and rate-limit backoff status).
+
+### 3. Statistical price attributes (volatility, trend/gradient) — 2026-08-21, priority 1 of 5
+
+Direct user request: visualizing price data isn't only "what is it now" and
+"what was it before" (already covered by the v1.4 snapshot/trend charts) —
+add the statistical shape of the price series itself, per-site and/or
+aggregated across confirmed listings for a product, same
+confirmed/non-anomalous/same-condition population the anomaly detector and
+historical-low badges already use (never mix populations across features).
+
+- **Volatility/variance indicator**: a small stat tile or sparkline-adjacent
+  figure — coefficient of variation (`stdev / mean`) or IQR-as-%-of-median
+  over a configurable rolling window (reuse the same 30d/90d/180d/365d
+  windows as v2.14's tiered ladder for a consistent mental model), labeled
+  plainly ("price has moved ±6% over the last 90 days"), not a bare number
+  without units/context.
+- **Trend/gradient indicator**: a short rolling linear-regression slope
+  (7d/30d) shown as a small directional arrow/sparkline plus a labeled rate
+  ("-€3.20/week" or "+1.1%/week") next to the current-lowest-price callout
+  in the hero header. **This is a descriptive statistic about observed
+  history, not a forecast** — it must never claim to predict a future price.
+  See [price_forecasting.md](price_forecasting.md) for the separate,
+  explicitly-labeled-as-predictive feature this deliberately is not; the
+  trend indicator here is the stepping stone that feature's v0 design
+  reuses, kept in this file because it ships as part of the descriptive
+  visualization work, not the forecasting one.
+- Both figures respect the existing anomalous-listings toggle (v1.4) and
+  condition filter chips (above) — recompute when either changes, never
+  silently mix hidden anomalous points or cross-condition data into the
+  displayed variance/trend.
+- Sparse-history guard: below a minimum observation count for the selected
+  window, show "not enough history yet" rather than a statistically
+  meaningless number from 2-3 points — same discipline as the anomaly
+  detector's own sparse-bucket handling in
+  [product_matching.md](product_matching.md).
 
 ---
 

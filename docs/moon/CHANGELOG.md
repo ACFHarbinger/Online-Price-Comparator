@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed (2026-08-21 priority list)
+
+- **2026-08-21 priority list from Harbinger, documented before implementation:**
+  five priorities, in order — (1) price-data visualization including
+  statistical attributes (variance, trend/gradient), (2) persistent
+  settings/config with per-comparison site enable/disable, (3) source
+  discovery search, (4) visual aesthetics + other roadmap items, (5) price
+  forecasting. Added `ROADMAP.md`'s new "Current priorities (2026-08-21)"
+  section mapping each to roadmap IDs; added new spec content for the two
+  priorities that needed it (statistics view in `dashboard_ux.md`,
+  per-product site override in `settings_and_config.md`) plus a new
+  `price_forecasting.md` un-parking the previously-twice-rejected
+  forecasting idea under an explicit separate-surface/confidence-band
+  design (new milestone v2.18). Priorities 3 and 4 map to existing v2.17a/b
+  and v1.4/dashboard_ux.md work — no new spec, just re-sequencing.
+  Fixed `v1.7`'s `ROADMAP.md` status line (was still marked incomplete
+  after `792b90c` landed the runtime `Settings` fields) and
+  `product_matching.md`'s status header (was still "Planned" after Grok's
+  v1.5/v1.6 close-out landed).
+
 ### Added
 
 - **Test/verification scaffolding (2026-08-21, opencode):** added a reusable
@@ -46,7 +66,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Added tests under `test/dashboard/`.
 
 - **v1.8 scraper reliability close-out (2026-08-21):** Amazon.es and
-
   PcComponentes now parse complete schema.org `Product`/`Offer` JSON-LD before
   trying their existing CSS selectors. Malformed or incomplete structured data
   is ignored safely and falls through to CSS parsing. Added fixture-backed

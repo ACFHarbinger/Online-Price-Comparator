@@ -35,6 +35,44 @@ agy researched dashboard aesthetics, codex researched matching/anomaly/alerting
 algorithms grounded directly in this repo's actual schema) — see the per-feature
 roadmap docs for the full reasoning behind each decision.
 
+## Current priorities (2026-08-21)
+
+Direct steer from Harbinger, layered on top of the v1/v2/v3 milestone
+structure below (which sequences by *trust-building order*, not by
+near-term want-it-now priority — this section is the latter). In priority
+order:
+
+1. **Different ways to visualize price data** — historical prices, cross-site/
+   cross-distributor comparison, historical-vs-historical, **and statistical
+   attributes (variance, current trend/gradient)**. Top priority. Maps to
+   v1.4 (✅ done) plus the new [Statistical price attributes](roadmaps/dashboard_ux.md#3-statistical-price-attributes-volatility-trendgradient--2026-08-21-priority-1-of-5)
+   section added today — that's the un-speced part of this ask.
+2. **Persistent settings/config**: customize the app, add other websites to
+   the comparator, enable/disable websites per comparison. Maps to v1.7
+   (✅ done — runtime fields only, see that row's note), v2.1 (watchlist
+   tables), and the new [Per-comparison site
+   management](roadmaps/settings_and_config.md#per-comparison-site-management-2026-08-21-priority-2-of-5)
+   section added today (per-tracked-product site inclusion override, on top
+   of the existing global `site_settings.enabled`).
+3. **Search feature**: browse the web for more sites carrying a tracked
+   product. Maps to existing v2.17a (real `SearchProvider`) + v2.17b
+   (discover-and-approve UX) — no new spec needed, just sequencing priority.
+4. **Visual aesthetics + other relevant roadmap items**. Maps to the
+   existing "Financial Terminal" aesthetic direction in
+   [dashboard_ux.md](roadmaps/dashboard_ux.md) (already shipped in v1.4) and
+   whatever else is next-most-ready when this priority's turn comes up — not
+   a fixed scope, revisit against the milestone tables below at that point.
+5. **Price prediction**: how prices are likely to evolve over a future
+   window. Lowest of the five, but real — **un-parks** the "Price
+   forecasting" row this document's Parked table twice explicitly rejected.
+   That rejection was specifically about blending a forecast into the
+   descriptive tiered-low badge ("prediction theater"); this request is the
+   escalation path the parked note itself anticipated ("worth investigating
+   as a separate research track"). New milestone **v2.18**, new doc
+   [price_forecasting.md](roadmaps/price_forecasting.md) — see that file for
+   the separate-surface/confidence-band/never-blended design this un-parking
+   is conditioned on.
+
 ## Milestones
 
 ### v1 — Trustworthy foundation
@@ -48,12 +86,12 @@ confirmed match to the product you actually asked about.
 | v1.1 | Search-API + scraper abstraction, SQLite persistence, `search` CLI | ✅ Done (abstraction only — the first real `SearchProvider` is v2.17a, not implied by this row) | — |
 | v1.2 | Amazon.es + PcComponentes scrapers | ✅ Done | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
 | v1.3 | Price/text normalization | ✅ Done | — |
-| v1.4 | Dash dashboard (snapshot bar + trend line, product image, links) | 🚧 In progress | [dashboard_ux.md](roadmaps/dashboard_ux.md) |
+| v1.4 | Dash dashboard (snapshot bar + trend line, product image, links) | ✅ Done (hero ATL badge + 30d delta pill, trend range selectors + dashed ATL reference line, table stock/shipping/delta-vs-avg columns, anomaly reveal toggle, repository stats — verified 2026-08-21) | [dashboard_ux.md](roadmaps/dashboard_ux.md) |
 | v1.5 | Product identity matching (rapidfuzz hybrid matcher) | ✅ Done (query-token-coverage gate, `match_mode`, ASIN-is-not-a-cross-retailer-key, `test/matching/test_matcher.py` — 2026-08-21. `token_sort_ratio >= 88` is the no-model-token/`likely` path, not the hard-model confirm path: verbose exact-SKU titles score ~40-65.) | [product_matching.md](roadmaps/product_matching.md) |
 | v1.6 | Price anomaly flagging (IQR-based) | ✅ Done (IQR n>=4 fence + sparse n=2/3 excluded-term fallback unchanged; covered by `test/matching/test_anomaly.py` — 2026-08-21) | [product_matching.md](roadmaps/product_matching.md) |
-| v1.7 | Persistent settings schema (runtime + SQLite-persisted config) | 📋 Planned | [settings_and_config.md](roadmaps/settings_and_config.md) |
+| v1.7 | Persistent settings schema (runtime + SQLite-persisted config) | ✅ Done (runtime `Settings` additions landed `792b90c` — 2026-08-21, per `settings_and_config.md`'s "v1.7 ships the runtime `Settings` additions only" sequencing note. The SQLite-persisted tables, `tracked_products` etc., are v2.1, not v1.7.) | [settings_and_config.md](roadmaps/settings_and_config.md) |
 | v1.8 | Scraper reliability hardening (robots.txt, circuit breaker, shared rate limiter, structured-data-first parsing) | ✅ Done (the existing `fetch/` hardening is joined by JSON-LD-first Product/Offer parsing with CSS fallback for both live scrapers — verified 2026-08-21) | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
-| v1.9 | `AGENTS.md` rewrite for the real stack | 📋 Planned | — |
+| v1.9 | `AGENTS.md` rewrite for the real stack | ✅ Done (landed `c6e615b`; stale status caught and fixed 2026-08-21) | — |
 
 ### v2 — Decision + notify, still personal-scale
 
@@ -81,6 +119,7 @@ price meaningful instead of just a number.
 | v2.16 | Site value-proposition scorecard: extreme-value, consistency/volatility, destination-specific fulfillment SLA, and reliability | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
 | v2.17a | Real `SearchProvider` (SerpAPI or Google CSE) behind the existing Settings keys — v1.1 delivered only the abstraction + `null_provider.py` | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
 | v2.17b | Manual, per-product source discovery UX (approve-before-persist; depends on v2.17a) | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
+| v2.18 | Price forecasting: confidence-banded, separate-surface future-price projection, never blended with descriptive tiered-low/anomaly features | 📋 Planned (un-parked 2026-08-21, see [Current priorities](#current-priorities-2026-08-21) and the Parked table's note below) | [price_forecasting.md](roadmaps/price_forecasting.md) |
 
 ### v3+ — Later
 
@@ -99,7 +138,7 @@ Valuable but not urgent, or genuinely needs v1/v2 trust to be worth building.
 |---|---|---|
 | 🅿️ Browser extension / userscript | Real UX win, real maintenance cost | Revisit only if you're opening Amazon/PCC in-browser more than the dashboard. Personal userscript first, not a store listing. |
 | 🅿️ Simple buy-now-vs-wait guidance | Explicitly **not** ML/prediction — grok's warning against "prediction theater" stands | Operationalized as descriptive stats via v2.14's two configurable modes (tiered historical-low, and percentile rarity for when you can afford to wait for something genuinely unusual). Kept parked here only for true forecasting (see next row), which is still out of scope. |
-| 🅿️ Price forecasting (ARIMA or similar time-series methods) | Genuinely different from v2.14's descriptive tiers — this would be an actual prediction, which the roadmap has twice now explicitly rejected for the shipped product ("prediction theater"). Noted 2026-08-15 as worth investigating **as a separate research track**, not a feature to build | If pursued, must stay clearly separated from the tiered-low alert/badge — never blended into the same UI surface or presented with the same confidence, so a forecast can't be mistaken for the descriptive fact it sits next to. |
+| ~~🅿️ Price forecasting~~ | **Un-parked 2026-08-21** — direct user request, now v2.18, see [price_forecasting.md](roadmaps/price_forecasting.md) | This row's original separate-surface/never-blended-with-the-tiered-low-badge constraint is preserved as v2.18's actual design, not dropped by un-parking. |
 
 ### Scope boundaries
 

@@ -148,16 +148,11 @@ dashboard never touches `scrapers`/`search` directly — it only reads from
 
 ## 7. Known Constraints
 
-**CPU thermal/cooling issue on the primary dev machine.** This machine has
-had a live CPU cooling failure. Builds, `just start`-style dev-server
-launches, and running the actual app are fine. **Never run any test command**
-(`pytest`, `just test`, `just bench`, `just check`'s test step, or any
-test-suite invocation) without the user's explicit go-ahead for that specific
-run — this has caused real crashes/logouts. Safe alternatives for validation:
-`ruff check`, `mypy`, `python -m py_compile`, `pytest --collect-only`
-(discovery only, no execution). If the user confirms new hardware is
-installed and this constraint is resolved, this section is stale — confirm
-with the user before dropping this caution.
+None currently open. (The CPU cooling issue that previously blocked
+`pytest`/`just test`/`just bench` runs was resolved — confirmed by the user
+2026-08-21, replacement cooler installed and working; also no longer
+applicable to this environment's dev machine regardless. Full test suite
+runs are fine.)
 
 ## 8. Data, Privacy & Scraping Ethics
 

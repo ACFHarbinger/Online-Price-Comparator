@@ -145,6 +145,41 @@ New tables alongside the existing `products` / `listings` / `price_history`
 - **`price_analysis`** — observation/listing reference plus match and anomaly
   outcome + reasons (feeds both matching and anomaly detection).
 
+## Per-comparison site management (2026-08-21, priority 2 of 5)
+
+**Why:** direct user request, 2026-08-21 — "customize the app, including
+adding other websites to the comparator and allowing him to enable/disable
+websites for certain comparisons." Two distinct capabilities, both building
+on tables already speced above rather than replacing them:
+
+1. **Global site enable/disable** — already covered by `site_settings.enabled`
+   (above). No new design needed; this is the existing per-site toggle
+   applied app-wide (e.g. "stop querying PCDIGA everywhere").
+2. **Per-tracked-product site inclusion** (new) — a tracked product needs to
+   opt a site *out* of its own comparisons without disabling that site
+   globally (e.g. "don't check Amazon.es for this one item because its
+   listing there is a mismatched bundle," while Amazon.es stays enabled for
+   every other tracked product). New join table **`tracked_product_site_overrides`**:
+   `tracked_product_id`, `site_key`, `included` (bool), `reason` (free text,
+   optional — "site sells a bundle-only SKU here," "confirmed wrong variant
+   listed," etc.). Absence of a row for a `(product, site)` pair means
+   "follow the global `site_settings.enabled` default" — this table only
+   stores *exceptions*, not a full per-product/per-site matrix, so adding a
+   new site never requires touching every existing tracked product's rows.
+3. **"Adding other websites to the comparator"** — this is `scrapers/`'s
+   existing extension pattern (`AGENTS.md` §5 "Add a new scraper") plus
+   v2.15's custom-site tracking, not a new mechanism. What's new here is
+   making that discoverable/manageable *from settings* rather than only
+   via a code change: v2.15 Tier A (track a specific listing URL) is
+   already a user-facing, no-code action once implemented — this note just
+   confirms it's the intended vehicle for "add other websites," so v2.15's
+   priority should track this request rather than being treated as a
+   separate, lower-priority idea. A registered site's own scraper code
+   (Tier B, "custom searchable site") still requires implementing the
+   `ScraperAdapter` Protocol — that's a code change by design (arbitrary
+   site scraping can't be safely no-code without the fail-closed/rate-limit/
+   robots.txt contract every scraper must follow), not a gap to close here.
+
 ## Sequencing
 
 v1.7 ships the runtime `Settings` additions only (no behavior depends on them

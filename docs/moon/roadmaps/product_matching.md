@@ -1,6 +1,6 @@
 # Product Matching & Anomaly Detection Roadmap
 
-**Status:** 📋 Planned (v1.5, v1.6, v2.10-v2.13) · **Source:** codex research, grounded directly in this repo's schema; v2.10-v2.13 additions from the 2026-08-15 global-scope brainstorm
+**Status:** ✅ Done (v1.5, v1.6 — closed out by Grok 2026-08-21) · 📋 Planned (v2.10-v2.13) · **Source:** codex research, grounded directly in this repo's schema; v2.10-v2.13 additions from the 2026-08-15 global-scope brainstorm
 
 ## Why this is the highest-leverage roadmap item
 

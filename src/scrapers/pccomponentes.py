@@ -17,6 +17,7 @@ from urllib.parse import quote_plus, urljoin
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
+
 from config.settings import Settings, get_settings
 from fetch.browser import fetch_rendered_html
 from fetch.circuit_breaker import CircuitBreaker
@@ -25,6 +26,7 @@ from fetch.rate_limit import HostRateLimiter
 from fetch.response_cache import get_cached, set_cached
 from fetch.robots import is_allowed
 from models.listing import RawListing
+from scrapers.structured_data import StructuredProduct, extract_structured_products
 
 LOGGER = logging.getLogger(__name__)
 
@@ -141,6 +143,9 @@ class PcComponentesScraper:
     def _listings_from_html(self, html: str, *, limit: int) -> list[RawListing]:
         """Parse a search-results HTML body into listings (or [] if unusable)."""
         soup = BeautifulSoup(html, "lxml")
+        structured = self._structured_listings(soup, limit=limit)
+        if structured:
+            return structured
         cards = soup.select(_CARD_SELECTOR)
         if not cards:
             LOGGER.warning("PcComponentes returned no recognizable product cards")
@@ -164,6 +169,33 @@ class PcComponentesScraper:
             seen_urls.add(listing.url)
             listings.append(listing)
         return listings
+
+    def _structured_listings(
+        self, soup: BeautifulSoup, *, limit: int
+    ) -> list[RawListing]:
+        """Prefer complete schema.org Product/Offer entries when available."""
+        fetched_at = datetime.now().astimezone()
+        return [
+            self._listing_from_structured(product, fetched_at)
+            for product in extract_structured_products(soup)[:limit]
+        ]
+
+    def _listing_from_structured(
+        self, product: StructuredProduct, fetched_at: datetime
+    ) -> RawListing:
+        return RawListing(
+            source=self.site_key,
+            source_kind="scraper",
+            title=product.title,
+            url=urljoin(_BASE_URL, product.url),
+            price_text=product.price_text,
+            currency_hint=product.currency,
+            image_url=(
+                urljoin(_BASE_URL, product.image_url) if product.image_url else None
+            ),
+            site_display_name="PcComponentes",
+            fetched_at=fetched_at,
+        )
 
     def _parse_card(self, card: Tag, fetched_at: datetime) -> RawListing | None:
         """Convert one product card to a listing when all required values exist."""

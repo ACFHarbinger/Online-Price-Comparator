@@ -13,6 +13,7 @@ from urllib.parse import quote_plus, urljoin
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
+
 from config.settings import get_settings
 from fetch.circuit_breaker import CircuitBreaker
 from fetch.http_client import DEFAULT_USER_AGENT, build_http_client, get_with_retry
@@ -20,6 +21,7 @@ from fetch.rate_limit import HostRateLimiter
 from fetch.response_cache import get_cached, set_cached
 from fetch.robots import is_allowed
 from models.listing import RawListing
+from scrapers.structured_data import StructuredProduct, extract_structured_products
 
 LOGGER = logging.getLogger(__name__)
 
@@ -153,6 +155,9 @@ class AmazonScraper:
             return []
 
         soup = BeautifulSoup(html, "lxml")
+        structured = self._structured_listings(soup, limit=limit)
+        if structured:
+            return structured
         cards = soup.select(_CARD_SELECTOR)
         if not cards:
             LOGGER.warning(
@@ -170,6 +175,35 @@ class AmazonScraper:
             if listing is not None:
                 listings.append(listing)
         return listings
+
+    def _structured_listings(
+        self, soup: BeautifulSoup, *, limit: int
+    ) -> list[RawListing]:
+        """Prefer complete schema.org Product/Offer entries when available."""
+        fetched_at = datetime.now().astimezone()
+        return [
+            self._listing_from_structured(product, fetched_at)
+            for product in extract_structured_products(soup)[:limit]
+        ]
+
+    def _listing_from_structured(
+        self, product: StructuredProduct, fetched_at: datetime
+    ) -> RawListing:
+        return RawListing(
+            source=self.site_key,
+            source_kind="scraper",
+            title=product.title,
+            url=urljoin(f"{self._base_url}/", product.url),
+            price_text=product.price_text,
+            currency_hint=product.currency or self._config["currency"],
+            image_url=(
+                urljoin(f"{self._base_url}/", product.image_url)
+                if product.image_url
+                else None
+            ),
+            site_display_name=self._config["display_name"],
+            fetched_at=fetched_at,
+        )
 
     def _parse_card(self, card: Tag, fetched_at: datetime) -> RawListing | None:
         """Convert one search-result card when title, URL, and price exist."""

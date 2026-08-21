@@ -1,6 +1,6 @@
 # Scrapers & Retailer Coverage Roadmap
 
-**Status:** 🚧 In progress (2 of ~7 retailers live) · 📋 Planned (v2.12, v2.13, v2.15-v2.17) · **Source:** codex research (reliability), grok research (retailer priority); v2.12/v2.13/v2.15-v2.17 from the 2026-08-15 global-scope brainstorm
+**Status:** ✅ v1.8 reliability hardening complete (including structured-data-first parsing for both live scrapers — verified 2026-08-21) · 🚧 In progress (2 of ~7 retailers live) · 📋 Planned (v2.12, v2.13, v2.15-v2.17) · **Source:** codex research (reliability), grok research (retailer priority); v2.12/v2.13/v2.15-v2.17 from the 2026-08-15 global-scope brainstorm
 
 ## Current state
 
@@ -47,7 +47,8 @@ grounded in actual behavior, not hypotheticals.
 - A small, current, manually curated set of User-Agent strings if needed — one
   per scraper *session*, not per request. Prefer an honest, application-identifying
   UA where a retailer's policy permits it.
-- **Structured-data-first parsing**: prefer `application/ld+json` or embedded JSON
+- **Structured-data-first parsing** (✅ complete for Amazon.es and
+  PcComponentes): prefer `application/ld+json` or embedded JSON
   state over brittle CSS selectors when a site provides it (more robust to layout
   changes than the current selector-based approach).
 - Fixture-based parser tests from saved, sanitized HTML for normal / changed-layout

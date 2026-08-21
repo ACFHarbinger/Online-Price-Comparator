@@ -52,7 +52,7 @@ confirmed match to the product you actually asked about.
 | v1.5 | Product identity matching (rapidfuzz hybrid matcher) | 📋 Planned | [product_matching.md](roadmaps/product_matching.md) |
 | v1.6 | Price anomaly flagging (IQR-based) | 📋 Planned | [product_matching.md](roadmaps/product_matching.md) |
 | v1.7 | Persistent settings schema (runtime + SQLite-persisted config) | 📋 Planned | [settings_and_config.md](roadmaps/settings_and_config.md) |
-| v1.8 | Scraper reliability hardening (robots.txt, circuit breaker, shared rate limiter, structured-data-first parsing) | 📋 Planned | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
+| v1.8 | Scraper reliability hardening (robots.txt, circuit breaker, shared rate limiter, structured-data-first parsing) | ✅ Done (the existing `fetch/` hardening is joined by JSON-LD-first Product/Offer parsing with CSS fallback for both live scrapers — verified 2026-08-21) | [scrapers_and_retailers.md](roadmaps/scrapers_and_retailers.md) |
 | v1.9 | `AGENTS.md` rewrite for the real stack | 📋 Planned | — |
 
 ### v2 — Decision + notify, still personal-scale

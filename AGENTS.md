@@ -65,6 +65,7 @@ responsibility per package:
 | `fetch/` | Shared HTTP client, retry-with-backoff, process-wide rate limiter, circuit breaker, robots.txt check, short-lived response cache |
 | `normalize/` | Locale-aware price string → `(amount, currency)` parsing; title display-normalization + dedupe keys |
 | `matching/` | Product identity matching (`ProductIdentityProfile`, `match_listing`) and cross-retailer price anomaly detection (`detect_anomalies`) |
+| `scoring/` | Per-site value-proposition scorecard (v2.16): four independent cells on same-condition EUR series; compute-on-read, never a composite |
 | `storage/` | SQLite schema (SQLAlchemy Core) + repository layer — the only code that touches the DB directly |
 | `pipeline/` | Orchestration: `discover` (fan out to search/scrapers) → `snapshot` (match → anomaly-check → persist) |
 | `dashboard/` | Dash app: `theme.py` (palette/typography), `charts.py`, `layout.py`, `callbacks.py`, `app.py` (factory) |

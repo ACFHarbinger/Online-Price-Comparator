@@ -1,6 +1,6 @@
 # Scrapers & Retailer Coverage Roadmap
 
-**Status:** ✅ v1.8 reliability hardening complete (including structured-data-first parsing for both original live scrapers — verified 2026-08-21) · ✅ v2.7 Portugal retailer coverage (2026-08-21) · ✅ v2.8 KuantoKusta external-URL hints + real-shop verification (2026-08-21) · 🚧 v2.12 EU new-retail start (Mindfactory.de + Alternate.de) · ✅ v2.15 Tier A custom listing URLs (2026-08-21) · ✅ v2.17a SerpAPI SearchProvider (2026-08-21) · ✅ v2.17b discover-and-approve UX (2026-08-21) · 📋 Planned (v2.13, v2.15 Tier B, v2.16) · **Source:** codex research (reliability), grok research (retailer priority); v2.12/v2.13/v2.15-v2.17 from the 2026-08-15 global-scope brainstorm
+**Status:** ✅ v1.8 reliability hardening complete (including structured-data-first parsing for both original live scrapers — verified 2026-08-21) · ✅ v2.7 Portugal retailer coverage (2026-08-21) · ✅ v2.8 KuantoKusta external-URL hints + real-shop verification (2026-08-21) · 🚧 v2.12 EU new-retail start (Mindfactory.de + Alternate.de) · ✅ v2.15 Tier A custom listing URLs (2026-08-21) · ✅ v2.16 four-cell site scorecard (2026-08-21) · ✅ v2.17a SerpAPI SearchProvider (2026-08-21) · ✅ v2.17b discover-and-approve UX (2026-08-21) · 📋 Planned (v2.13, v2.15 Tier B) · **Source:** codex research (reliability), grok research (retailer priority); v2.12/v2.13/v2.15-v2.17 from the 2026-08-15 global-scope brainstorm
 
 ## Current state
 
@@ -318,6 +318,20 @@ and percentile alert modes separate rather than merged):
   than silently scoring — same minimum-sample-size discipline used
   throughout this roadmap (meaningful-drop, all-time-low, rarity alerts all
   already gate on sample size).
+
+**v2.16 shipped 2026-08-21:** `src/scoring/scorecard.py` computes the four
+cells on read (`score_sites` / `scorecards_for_product`). Price cells run
+inside one exact `condition` on `price_eur_equivalent` (via
+`alerting.observations.listing_histories_for_product`, which already drops
+NULL EUR). Extreme-value is a cross-site percentile rank of the latest
+sticker, with a rarity annotation from `percentile_low_reached`; consistency
+is this site's median rank paired with `coefficient_of_variation` of its own
+series; reliability is `CircuitBreaker.open_sites()` / `failure_count()`
+(fetch-health, not seller trust); fulfillment SLA is honestly `unavailable`
+until v2.13 persists delivery estimates. Fewer than two same-condition sites
+yields `confidence="low"` rather than a rank. There is no composite field
+and no schema change. Dashboard / v2.17b candidate scoring still consume
+this module as a follow-up — they were out of this slice.
 
 ## Per-product source discovery (v2.17)
 

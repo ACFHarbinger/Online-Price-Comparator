@@ -61,6 +61,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.16 site value-proposition scorecard (2026-08-21):** new compute-on-read
+  `src/scoring/` module with four independent cells per site × exact
+  `condition` — not a composite score. Extreme-value is the latest sticker's
+  percentile rank in the same-condition EUR pool (rarity annotated via
+  `alerting.rules.percentile_low_reached`); consistency pairs the site's
+  median rank with `dashboard.stats.coefficient_of_variation`; reliability
+  reads `CircuitBreaker.open_sites()` / `failure_count()` (fetch-health, not
+  seller trust); fulfillment SLA reports `unavailable` until v2.13 persists
+  delivery estimates. Sparse single-site buckets are low-confidence; `unknown`
+  / missing EUR is skipped, never invented. No schema change. Dashboard
+  wiring is not this slice. [#33](https://github.com/ACFHarbinger/Online-Price-Comparator/issues/33).
+
 - **v2.14 per-site refresh cadence (2026-08-21):** the scheduled/passive
   refresh tick now honours each site's own `site_settings.min_refresh_interval_hours`
   (a v2.1 field nothing previously read). `pipeline.refresh` computes the site

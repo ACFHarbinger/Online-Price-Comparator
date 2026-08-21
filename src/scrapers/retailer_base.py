@@ -171,7 +171,10 @@ class IberianRetailerScraper:
             ),
             site_display_name=self._config.display_name,
             fetched_at=fetched_at,
-            extra={"parser": "json_ld"},
+            extra={
+                "parser": "json_ld",
+                "item_condition": product.item_condition,
+            },
         )
 
     def _parse_card(self, card: Tag, fetched_at: datetime) -> RawListing | None:

@@ -21,6 +21,7 @@ class StructuredProduct:
     currency: str | None
     url: str
     image_url: str | None
+    item_condition: str | None = None
 
 
 def extract_structured_products(soup: BeautifulSoup) -> list[StructuredProduct]:
@@ -71,12 +72,16 @@ def _parse_product(node: dict[str, object]) -> StructuredProduct | None:
         price = _offer_price(offer)
         url = product_url or _text(offer.get("url"))
         if title and price and url:
+            item_condition = _text(offer.get("itemCondition")) or _text(
+                node.get("itemCondition")
+            )
             return StructuredProduct(
                 title=title,
                 price_text=price,
                 currency=_text(offer.get("priceCurrency")),
                 url=url,
                 image_url=image_url,
+                item_condition=item_condition or None,
             )
     return None
 

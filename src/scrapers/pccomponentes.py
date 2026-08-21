@@ -195,6 +195,7 @@ class PcComponentesScraper:
             ),
             site_display_name="PcComponentes",
             fetched_at=fetched_at,
+            extra={"item_condition": product.item_condition},
         )
 
     def _parse_card(self, card: Tag, fetched_at: datetime) -> RawListing | None:

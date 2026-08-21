@@ -92,7 +92,9 @@ def match_listing(profile: ProductIdentityProfile, title: str) -> MatchResult:
     Matching is title-versus-profile only. Amazon ASINs (in titles, URLs,
     or listing ``extra``) are stable *Amazon* listing identifiers, not
     cross-retailer identity keys — this function never reads an ASIN and
-    ASIN-shaped tokens are not treated as model/SKU keys.
+    ASIN-shaped tokens are not treated as model/SKU keys. Listing
+    ``condition`` is extracted separately by ``extract_condition`` and is
+    not an identity gate.
     """
     normalized_title = dedupe_key(title)
     if not normalized_title:

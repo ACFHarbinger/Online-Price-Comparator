@@ -126,6 +126,9 @@ class ListingRepository:
         match_status: str,
         match_score: float | None,
         match_reason: str | None,
+        condition: str | None = None,
+        condition_source: str | None = None,
+        condition_confidence: float | None = None,
     ) -> int:
         """Insert a listing, or refresh it (incl. its match verdict) if it exists.
 
@@ -145,6 +148,9 @@ class ListingRepository:
                 match_status=match_status,
                 match_score=match_score,
                 match_reason=match_reason,
+                condition=condition,
+                condition_source=condition_source,
+                condition_confidence=condition_confidence,
             )
             stmt = stmt.on_conflict_do_update(
                 index_elements=["product_id", "site_key", "url"],
@@ -154,6 +160,9 @@ class ListingRepository:
                     "match_status": match_status,
                     "match_score": match_score,
                     "match_reason": match_reason,
+                    "condition": condition,
+                    "condition_source": condition_source,
+                    "condition_confidence": condition_confidence,
                 },
             )
             conn.execute(stmt)
@@ -270,6 +279,9 @@ class PriceHistoryRepository:
         price_eur_equivalent: float | None = None,
         fx_rate_used: float | None = None,
         fx_rate_date: date | None = None,
+        condition: str | None = None,
+        condition_source: str | None = None,
+        condition_confidence: float | None = None,
     ) -> None:
         """Append a new price observation for a listing.
 
@@ -296,6 +308,9 @@ class PriceHistoryRepository:
                     price_eur_equivalent=price_eur_equivalent,
                     fx_rate_used=fx_rate_used,
                     fx_rate_date=fx_rate_date,
+                    condition=condition,
+                    condition_source=condition_source,
+                    condition_confidence=condition_confidence,
                 )
             )
 

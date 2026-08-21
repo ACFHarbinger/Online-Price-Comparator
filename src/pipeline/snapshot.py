@@ -12,6 +12,7 @@ from matching import (
     MatchStatus,
     build_profile_from_query,
     detect_anomalies,
+    extract_condition,
     match_listing,
 )
 from models.listing import RawListing
@@ -33,6 +34,9 @@ class _ConfirmedObservation:
     listing_id: int
     amount: float
     currency: str
+    condition: str
+    condition_source: str
+    condition_confidence: float
 
 
 def persist_snapshot(
@@ -54,7 +58,10 @@ def persist_snapshot(
     prices) before writing `price_history` - an anomalous point is still
     recorded (never dropped), just flagged so read-side queries skip past
     it. v2.10 also persists native sticker + scrape-time EUR equivalent
-    (ECB rate); IQR still runs on native amounts this slice.
+    (ECB rate); IQR still runs on native amounts this slice. v2.11 persists
+    listing-level current-belief condition plus the same value on each
+    ``price_history`` row as an observation-time snapshot. IQR is **not**
+    bucketed by condition yet.
     """
     product_repo = ProductRepository(engine)
     listing_repo = ListingRepository(engine)
@@ -76,6 +83,9 @@ def persist_snapshot(
             continue
 
         match = match_listing(profile, raw.title)
+        classified = extract_condition(
+            raw.title, extra=raw.extra, site_key=raw.source, profile=profile
+        )
         listing_id = listing_repo.upsert(
             product_id=product_id,
             site_key=raw.source,
@@ -86,6 +96,9 @@ def persist_snapshot(
             match_status=match.status.value,
             match_score=match.score,
             match_reason=match.reason,
+            condition=classified.condition.value,
+            condition_source=classified.source.value,
+            condition_confidence=classified.confidence,
         )
 
         if match.status is not MatchStatus.CONFIRMED:
@@ -98,7 +111,17 @@ def persist_snapshot(
             )
             continue
 
-        confirmed.append(_ConfirmedObservation(raw, listing_id, amount, currency))
+        confirmed.append(
+            _ConfirmedObservation(
+                raw,
+                listing_id,
+                amount,
+                currency,
+                classified.condition.value,
+                classified.source.value,
+                classified.confidence,
+            )
+        )
 
     anomalies = detect_anomalies(
         [observation.amount for observation in confirmed],
@@ -128,6 +151,9 @@ def persist_snapshot(
             price_eur_equivalent=conversion.price_eur_equivalent,
             fx_rate_used=conversion.fx_rate_used,
             fx_rate_date=conversion.fx_rate_date,
+            condition=observation.condition,
+            condition_source=observation.condition_source,
+            condition_confidence=observation.condition_confidence,
         )
 
     return product_id

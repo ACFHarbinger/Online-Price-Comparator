@@ -1,6 +1,6 @@
 # Product Matching & Anomaly Detection Roadmap
 
-**Status:** ✅ Done (v1.5, v1.6 — closed out by Grok 2026-08-21) · 📋 Planned (v2.10-v2.13) · **Source:** codex research, grounded directly in this repo's schema; v2.10-v2.13 additions from the 2026-08-15 global-scope brainstorm
+**Status:** ✅ Done (v1.5, v1.6 — closed out by Grok 2026-08-21) · 🚧 In progress (v2.11 condition extraction + persistence, IQR not yet bucketed) · 📋 Planned (v2.12-v2.13) · **Source:** codex research, grounded directly in this repo's schema; v2.10-v2.13 additions from the 2026-08-15 global-scope brainstorm
 
 ## Why this is the highest-leverage roadmap item
 
@@ -161,6 +161,14 @@ profile:
   snapshot bar and retailer table need a condition badge/filter, since
   showing a €700 used listing directly beside a €2200 new one without
   labeling which is which would be actively misleading, not just incomplete.
+
+**Shipped 2026-08-21 (extraction + persistence):** `matching.extract_condition`
+implements structured-data → title heuristic → `unknown`, with
+`source_policy` only for known new-stock site keys. `persist_snapshot`
+writes current belief on `listings` and an observation-time copy on
+`price_history`. Pre-v2.11 rows stay NULL. IQR is still the v1.6
+cross-condition fence — bucketing is a follow-up. Dashboard badges/filters
+are not this slice.
 
 This does not weaken the anomaly detector's original purpose (catching
 mispriced/scam listings within a condition bucket) — it just stops applying

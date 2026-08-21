@@ -51,6 +51,22 @@ button, input {{ font: inherit; }}
 .lowest-label {{ color: {MUTED_TEXT}; font-size: .75rem; font-weight: 700; letter-spacing: .08em; }}
 .lowest-price, .price-value {{ font-family: {MONO_FONT}; font-variant-numeric: tabular-nums; }}
 .lowest-price {{ margin-top: 5px; color: {POSITIVE}; font-size: 1.35rem; font-weight: 700; }}
+.hero-metrics {{ display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }}
+.hero-badge {{ display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 6px; font-size: .82rem; font-weight: 600; font-family: {MONO_FONT}; font-variant-numeric: tabular-nums; }}
+.badge-atl {{ background: rgba(63, 185, 80, 0.15); color: {POSITIVE}; border: 1px solid rgba(63, 185, 80, 0.4); }}
+.pill-delta-pos {{ background: rgba(63, 185, 80, 0.15); color: {POSITIVE}; border: 1px solid rgba(63, 185, 80, 0.4); }}
+.pill-delta-neg {{ background: rgba(248, 81, 73, 0.15); color: {NEGATIVE}; border: 1px solid rgba(248, 81, 73, 0.4); }}
+.pill-delta-neutral {{ background: rgba(139, 148, 158, 0.15); color: {MUTED_TEXT}; border: 1px solid {PANEL_BORDER}; }}
+.stock-dot {{ display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }}
+.stock-in {{ background-color: {POSITIVE}; }}
+.stock-out {{ background-color: {NEGATIVE}; }}
+.stock-unknown {{ background-color: {MUTED_TEXT}; }}
+.reveal-anomalies-checkbox {{ margin: 0 0 16px; font-size: .82rem; }}
+.reveal-anomalies-checkbox label, .reveal-anomalies-checkbox label:hover,
+.reveal-anomalies-checkbox label span, .reveal-anomalies-checkbox label:hover span {{
+    color: {MUTED_TEXT} !important; opacity: 1 !important;
+}}
+.reveal-anomalies-checkbox input {{ margin-right: 6px; accent-color: {POSITIVE}; }}
 .chart-grid {{ display: grid; grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr); gap: 16px; margin-bottom: 16px; }}
 .panel {{ padding: 18px; }}
 .panel-heading {{ margin: 0 0 12px; font-size: .84rem; color: {MUTED_TEXT}; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }}

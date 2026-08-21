@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
-
-from sqlalchemy import Engine, func, select
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from datetime import datetime, timedelta
 
 from models.product import Product
+from sqlalchemy import Engine, func, select
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from storage.schema import listings, price_history, products
 
 # Listings with any other match_status ("review"/"rejected") are kept in
@@ -166,19 +165,24 @@ class ListingRepository:
             ).scalar_one()
             return int(listing_id)
 
-    def list_with_latest_price(self, product_id: int) -> list[ListingSummary]:
+    def list_with_latest_price(
+        self, product_id: int, *, include_anomalous: bool = False
+    ) -> list[ListingSummary]:
         """Every listing for a product plus its most recent price, for the links panel.
 
         Left-joined so a listing with no parseable price observation yet still
         appears (with `price_amount`/`currency`/`observed_at` as None) rather
         than being silently dropped.
         """
+        anomalous_filter = (
+            () if include_anomalous else (price_history.c.is_anomalous.is_(False),)
+        )
         latest_per_listing = (
             select(
                 price_history.c.listing_id,
                 func.max(price_history.c.observed_at).label("max_observed_at"),
             )
-            .where(price_history.c.is_anomalous.is_(False))
+            .where(*anomalous_filter)
             .group_by(price_history.c.listing_id)
             .subquery()
         )
@@ -189,7 +193,7 @@ class ListingRepository:
                 price_history.c.currency,
                 price_history.c.observed_at,
             )
-            .where(price_history.c.is_anomalous.is_(False))
+            .where(*anomalous_filter)
             .join(
                 latest_per_listing,
                 (price_history.c.listing_id == latest_per_listing.c.listing_id)
@@ -233,6 +237,16 @@ class ListingRepository:
         ]
 
 
+@dataclass(frozen=True)
+class ProductPriceStats:
+    """Summary price metrics across all confirmed listings for a product."""
+
+    all_time_low: float | None
+    all_time_low_currency: str | None
+    avg_30d: float | None
+    avg_30d_currency: str | None
+
+
 class PriceHistoryRepository:
     """Reads/writes the `price_history` table."""
 
@@ -266,19 +280,24 @@ class PriceHistoryRepository:
                 )
             )
 
-    def latest_prices_by_site(self, product_id: int) -> list[SitePricePoint]:
-        """One row per site: its most recent observed, non-anomalous price.
+    def latest_prices_by_site(
+        self, product_id: int, *, include_anomalous: bool = False
+    ) -> list[SitePricePoint]:
+        """One row per site: its most recent observed price.
 
-        Drives the snapshot chart. Anomalous observations are excluded
-        entirely, not just deprioritized - the "latest" price for a site
-        skips past any flagged rows to the most recent trustworthy one.
+        Drives the snapshot chart. When `include_anomalous` is False (default),
+        anomalous observations are excluded entirely. When True, anomalous
+        observations are included.
         """
+        anomalous_filter = (
+            () if include_anomalous else (price_history.c.is_anomalous.is_(False),)
+        )
         latest_per_listing = (
             select(
                 price_history.c.listing_id,
                 func.max(price_history.c.observed_at).label("max_observed_at"),
             )
-            .where(price_history.c.is_anomalous.is_(False))
+            .where(*anomalous_filter)
             .group_by(price_history.c.listing_id)
             .subquery()
         )
@@ -299,7 +318,7 @@ class PriceHistoryRepository:
             .where(
                 listings.c.product_id == product_id,
                 listings.c.match_status.in_(MATCHED_STATUSES),
-                price_history.c.is_anomalous.is_(False),
+                *anomalous_filter,
             )
         )
         with self.engine.connect() as conn:
@@ -315,12 +334,17 @@ class PriceHistoryRepository:
             for row in rows
         ]
 
-    def price_history_by_site(self, product_id: int) -> list[SitePricePoint]:
-        """Full non-anomalous price history for a product, ordered by time.
+    def price_history_by_site(
+        self, product_id: int, *, include_anomalous: bool = False
+    ) -> list[SitePricePoint]:
+        """Full price history for a product, ordered by time.
 
-        Drives the trend chart. Anomalous points are dropped from the
-        series rather than shown as a spike/dip in the line chart.
+        Drives the trend chart. When `include_anomalous` is False (default),
+        anomalous points are dropped from the series. When True, they are included.
         """
+        anomalous_filter = (
+            () if include_anomalous else (price_history.c.is_anomalous.is_(False),)
+        )
         stmt = (
             select(
                 listings.c.site_key,
@@ -333,7 +357,7 @@ class PriceHistoryRepository:
             .where(
                 listings.c.product_id == product_id,
                 listings.c.match_status.in_(MATCHED_STATUSES),
-                price_history.c.is_anomalous.is_(False),
+                *anomalous_filter,
             )
             .order_by(price_history.c.observed_at)
         )
@@ -349,3 +373,76 @@ class PriceHistoryRepository:
             )
             for row in rows
         ]
+
+    def product_price_stats(
+        self,
+        product_id: int,
+        *,
+        as_of: datetime | None = None,
+        include_anomalous: bool = False,
+    ) -> ProductPriceStats:
+        """Return all-time low price and 30-day average price for a product.
+
+        Calculated across matched listings. When `include_anomalous` is False
+        (default), anomalous price observations are excluded.
+        """
+        reference_time = as_of or datetime.now()
+        thirty_days_ago = reference_time - timedelta(days=30)
+
+        anomalous_filter = (
+            () if include_anomalous else (price_history.c.is_anomalous.is_(False),)
+        )
+
+        atl_stmt = (
+            select(
+                price_history.c.price_amount,
+                price_history.c.currency,
+            )
+            .join(listings, listings.c.id == price_history.c.listing_id)
+            .where(
+                listings.c.product_id == product_id,
+                listings.c.match_status.in_(MATCHED_STATUSES),
+                *anomalous_filter,
+            )
+            .order_by(price_history.c.price_amount.asc())
+            .limit(1)
+        )
+
+        avg_stmt = (
+            select(
+                func.avg(price_history.c.price_amount).label("avg_price"),
+                price_history.c.currency,
+            )
+            .join(listings, listings.c.id == price_history.c.listing_id)
+            .where(
+                listings.c.product_id == product_id,
+                listings.c.match_status.in_(MATCHED_STATUSES),
+                price_history.c.observed_at >= thirty_days_ago,
+                price_history.c.observed_at <= reference_time,
+                *anomalous_filter,
+            )
+            .group_by(price_history.c.currency)
+            .order_by(func.count(price_history.c.id).desc())
+            .limit(1)
+        )
+
+        with self.engine.connect() as conn:
+            atl_row = conn.execute(atl_stmt).one_or_none()
+            avg_row = conn.execute(avg_stmt).one_or_none()
+
+        atl_price = float(atl_row.price_amount) if atl_row is not None else None
+        atl_currency = str(atl_row.currency) if atl_row is not None else None
+
+        avg_price = (
+            float(avg_row.avg_price)
+            if avg_row is not None and avg_row.avg_price is not None
+            else None
+        )
+        avg_currency = str(avg_row.currency) if avg_row is not None else None
+
+        return ProductPriceStats(
+            all_time_low=atl_price,
+            all_time_low_currency=atl_currency,
+            avg_30d=avg_price,
+            avg_30d_currency=avg_currency,
+        )

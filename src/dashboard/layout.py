@@ -72,11 +72,32 @@ def build_layout() -> html.Div:
                             ),
                             html.Div("CURRENT LOWEST", className="lowest-label"),
                             html.Div(
-                                "—", id="current-lowest-price", className="lowest-price"
+                                [
+                                    html.Span(
+                                        "—",
+                                        id="current-lowest-price",
+                                        className="lowest-price",
+                                    ),
+                                    html.Div(
+                                        id="hero-metrics-container",
+                                        className="hero-metrics",
+                                    ),
+                                ]
                             ),
                         ],
                     ),
                 ],
+            ),
+            dcc.Checklist(
+                id="reveal-anomalies-checkbox",
+                className="reveal-anomalies-checkbox",
+                options=[
+                    {
+                        "label": " Show anomalous listings (flagged price outliers)",
+                        "value": "reveal",
+                    }
+                ],
+                value=[],
             ),
             dcc.Loading(
                 type="default",

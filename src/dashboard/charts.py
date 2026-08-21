@@ -5,13 +5,13 @@ from __future__ import annotations
 from collections import defaultdict
 
 import plotly.graph_objects as go  # type: ignore[import-untyped]
-
 from dashboard.theme import (
     FALLBACK_RETAILER_COLOR,
     MONO_FONT,
     MUTED_TEXT,
     PANEL_BACKGROUND,
     PANEL_BORDER,
+    POSITIVE,
     PRIMARY_TEXT,
     RETAILER_COLORS,
     UI_FONT,
@@ -76,8 +76,10 @@ def build_bar_chart(points: list[SitePricePoint]) -> go.Figure:
     return figure
 
 
-def build_line_chart(points: list[SitePricePoint]) -> go.Figure:
-    """Build a historical price chart with a consistently coloured line per site."""
+def build_line_chart(
+    points: list[SitePricePoint], *, all_time_low: float | None = None
+) -> go.Figure:
+    """Build a historical price chart with range selectors and an ATL line."""
     if not points:
         return _empty_figure("No price history recorded yet")
 
@@ -101,5 +103,34 @@ def build_line_chart(points: list[SitePricePoint]) -> go.Figure:
                 "<extra>%{fullData.name}</extra>"
             ),
         )
-    figure.update_xaxes(tickfont={"color": MUTED_TEXT}, type="date")
+
+    if all_time_low is not None:
+        figure.add_hline(
+            y=all_time_low,
+            line_dash="dash",
+            line_color=POSITIVE,
+            line_width=1.5,
+            annotation_text=f"ATL: EUR {all_time_low:,.2f}",
+            annotation_position="bottom right",
+            annotation_font={"family": MONO_FONT, "size": 11, "color": POSITIVE},
+        )
+
+    figure.update_xaxes(
+        tickfont={"color": MUTED_TEXT},
+        type="date",
+        rangeselector={
+            "buttons": [
+                {"count": 7, "label": "1W", "step": "day", "stepmode": "backward"},
+                {"count": 1, "label": "1M", "step": "month", "stepmode": "backward"},
+                {"count": 3, "label": "3M", "step": "month", "stepmode": "backward"},
+                {"count": 1, "label": "1Y", "step": "year", "stepmode": "backward"},
+                {"step": "all", "label": "ALL"},
+            ],
+            "bgcolor": PANEL_BACKGROUND,
+            "activecolor": PANEL_BORDER,
+            "bordercolor": PANEL_BORDER,
+            "borderwidth": 1,
+            "font": {"family": UI_FONT, "color": PRIMARY_TEXT, "size": 11},
+        },
+    )
     return figure

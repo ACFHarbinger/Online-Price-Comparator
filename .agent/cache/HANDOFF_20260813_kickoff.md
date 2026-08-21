@@ -146,7 +146,7 @@ keywords, then produce a dashboard with:
   `src/utils/` currently, all placeholders). `test/` mirrors it
   (`test_core.py`, `test_cli.py`, `test_utils.py`, `test_main.py`,
   `conftest.py`).
-- **`.agent/AGENTS.md` is stale/wrong for this project** — it describes a
+- **`AGENTS.md` is stale/wrong for this project** — it describes a
   C++/CMake/GoogleTest stack (copy-pasted from a sibling C++ variant of the
   template and never adapted for the Python variant). The real stack is what
   `pyproject.toml` actually says: Python/uv/pytest/ruff/mypy. Don't follow

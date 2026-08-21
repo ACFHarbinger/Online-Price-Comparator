@@ -78,7 +78,7 @@ def persist_snapshot(
             )
             continue
 
-        match = match_listing(profile, raw.title)
+        match = match_listing(profile, raw.title, extra=raw.extra)
         classified = extract_condition(
             raw.title, extra=raw.extra, site_key=raw.source, profile=profile
         )

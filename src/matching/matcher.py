@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Any
 
 from rapidfuzz.fuzz import token_set_ratio, token_sort_ratio
 
@@ -11,9 +12,14 @@ from normalize.text import dedupe_key
 
 from .profile import (
     MatchMode,
+    ModuleType,
+    ProductCategory,
     ProductIdentityProfile,
+    StorageInterface,
     _extract_model_tokens,
     _looks_like_amazon_asin,
+    extract_module_type,
+    extract_storage_interface,
     find_excluded_term,
 )
 
@@ -86,7 +92,12 @@ class MatchResult:
     reason: str
 
 
-def match_listing(profile: ProductIdentityProfile, title: str) -> MatchResult:
+def match_listing(
+    profile: ProductIdentityProfile,
+    title: str,
+    *,
+    extra: dict[str, Any] | None = None,
+) -> MatchResult:
     """Decide whether a scraped listing title matches a product profile.
 
     Matching is title-versus-profile only. Amazon ASINs (in titles, URLs,
@@ -94,7 +105,9 @@ def match_listing(profile: ProductIdentityProfile, title: str) -> MatchResult:
     cross-retailer identity keys — this function never reads an ASIN and
     ASIN-shaped tokens are not treated as model/SKU keys. Listing
     ``condition`` is extracted separately by ``extract_condition`` and is
-    not an identity gate.
+    not an identity gate. RAM ``module_type`` and storage ``interface``
+    *are* identity gates (step 2); ``extra`` is consulted structured-data
+    first, then the title.
     """
     normalized_title = dedupe_key(title)
     if not normalized_title:
@@ -124,6 +137,10 @@ def match_listing(profile: ProductIdentityProfile, title: str) -> MatchResult:
         profile.required_brand_tokens & title_tokens
     ):
         return MatchResult(MatchStatus.REJECTED, score, "brand mismatch")
+
+    compatibility = _compatibility_gate(profile, title, extra, score)
+    if compatibility is not None:
+        return compatibility
 
     if coverage < _MIN_QUERY_TOKEN_COVERAGE:
         return MatchResult(
@@ -186,6 +203,55 @@ def _meaningful_query_tokens(normalized_query: str) -> frozenset[str]:
         and len(token) > 1
         and not _looks_like_amazon_asin(token)
     )
+
+
+def _compatibility_gate(
+    profile: ProductIdentityProfile,
+    title: str,
+    extra: dict[str, Any] | None,
+    score: float,
+) -> MatchResult | None:
+    """RAM module-type / storage-interface hard gates. None = no opinion."""
+    if profile.category is ProductCategory.RAM:
+        listing_type = extract_module_type(title, extra=extra)
+        wanted_module = profile.module_type
+        if wanted_module is ModuleType.UNKNOWN:
+            return MatchResult(
+                MatchStatus.REVIEW,
+                score,
+                "unknown module type",
+            )
+        if listing_type is ModuleType.UNKNOWN:
+            return MatchResult(
+                MatchStatus.REVIEW,
+                score,
+                "unknown module type",
+            )
+        if listing_type is not wanted_module:
+            return MatchResult(
+                MatchStatus.REJECTED,
+                score,
+                "module type mismatch",
+            )
+        return None
+    if profile.category is ProductCategory.STORAGE:
+        wanted_interface = profile.storage_interface
+        if wanted_interface is StorageInterface.UNKNOWN:
+            return None
+        listing_iface = extract_storage_interface(title, extra=extra)
+        if listing_iface is StorageInterface.UNKNOWN:
+            return MatchResult(
+                MatchStatus.REVIEW,
+                score,
+                "unknown storage interface",
+            )
+        if listing_iface is not wanted_interface:
+            return MatchResult(
+                MatchStatus.REJECTED,
+                score,
+                "storage interface mismatch",
+            )
+    return None
 
 
 def _first_excluded_term(

@@ -1,6 +1,6 @@
 # Product Matching & Anomaly Detection Roadmap
 
-**Status:** ✅ Done (v1.5, v1.6, v2.11 extraction + IQR-per-condition on EUR-equivalent — 2026-08-21) · 📋 Planned (v2.12-v2.13; dashboard condition badge/filter) · **Source:** codex research, grounded directly in this repo's schema; v2.10-v2.13 additions from the 2026-08-15 global-scope brainstorm
+**Status:** ✅ Done (v1.5, v1.6, v2.11 extraction + IQR-per-condition on EUR-equivalent — 2026-08-21) · ✅ RAM `module_type` + storage `interface` hard-gates (2026-08-21) · 📋 Planned (v2.12-v2.13; dashboard condition badge/filter) · **Source:** codex research, grounded directly in this repo's schema; v2.10-v2.13 additions from the 2026-08-15 global-scope brainstorm
 
 ## Why this is the highest-leverage roadmap item
 
@@ -43,6 +43,11 @@ filter, not a clustering step, and it never silently merges listings.
      "Sin Ventilador" / "without a cooler" is a no-fan CPU, not a cooler
      listing. Positive mentions (`Cooler para Ryzen…`) still reject.
    - Reject category-conflicting terms (for a CPU: motherboard/PSU/case terms disqualify).
+   - RAM `module_type` (`UDIMM` / `RDIMM` / `SODIMM`) and storage `interface`
+     (`SATA` / `NVMe` / `SAS` / `USB`): structured-data-first, then title
+     keywords, then `unknown`. Mismatch is a hard reject. `unknown` is
+     `review`, never assumed UDIMM or a matching bus. Storage gates only
+     when the tracked product specifies an interface.
    - Amazon ASIN is a stable *Amazon* listing identifier, not a cross-retailer identity key.
 3. **Score the survivors**:
    - `token_sort_ratio(canonical_name, title) >= 88`
@@ -221,10 +226,16 @@ existing model/brand hard gates exist to prevent.
   rebadged enterprise drive past a certain capacity) — key on
   capacity + form factor + interface, extracted the same
   structured-data-first-then-title-keywords way as `module_type`.
-- Not yet implemented — this section records the finding and the intended
-  design; wiring it into `matching/matcher.py` and `matching/profile.py`
-  is real follow-up work, not done as part of today's other matching
-  changes.
+**Shipped 2026-08-21:** `ProductIdentityProfile` carries `category`,
+`module_type`, and `storage_interface`. `build_profile_from_query` detects
+RAM vs storage from keywords, extracts the gate fields from the query, and
+swaps in `RAM_EXCLUDED_TERMS` (Aufrüstkit / laptop / prebuilt / SSD-as-RAM,
+and *not* `kit`/`desktop` which false-positive on legitimate memory kits).
+`match_listing(..., extra=)` runs the gates before fuzzy scoring.
+Structured listing extra wins over the title. RAM with an unspecified
+module type is `review` (never assumed UDIMM). Storage with an unspecified
+interface does not gate. Dashboard display of these fields is not this
+slice.
 
 ## Multilingual matching (v2.12)
 

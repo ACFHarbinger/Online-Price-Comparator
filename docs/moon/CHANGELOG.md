@@ -61,6 +61,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **RAM `module_type` + storage `interface` hard-gates (2026-08-21):**
+  `ProductIdentityProfile` now carries category-specific compatibility
+  fields extracted structured-data-first, then title keywords, then
+  `unknown`. RAM `UDIMM`/`RDIMM`/`SODIMM` mismatch is a hard reject;
+  `unknown` is `review`, never assumed UDIMM. Storage `SATA`/`NVMe`/`SAS`/
+  `USB` gates only when the tracked product specifies an interface.
+  RAM-category `excluded_terms` drop `kit`/`desktop` (false positives on
+  memory kits) and add Aufrüstkit / laptop / prebuilt / SSD-as-RAM terms.
+  `match_listing` accepts optional `extra=` so JSON-LD wins over the
+  title. [#36](https://github.com/ACFHarbinger/Online-Price-Comparator/issues/36).
+
 - **v2.16 dashboard scorecard integration (2026-08-21):** wired the four-cell site
   value-proposition scorecard (`scorecards_for_product` from `src/scoring/`) into
   a dedicated dashboard panel (`#scorecard-container`) and table. Renders

@@ -12,8 +12,14 @@ from .condition import (
 from .matcher import MatchResult, MatchStatus, match_listing
 from .profile import (
     MatchMode,
+    ModuleType,
+    ProductCategory,
     ProductIdentityProfile,
+    StorageInterface,
     build_profile_from_query,
+    detect_product_category,
+    extract_module_type,
+    extract_storage_interface,
     find_excluded_term,
 )
 
@@ -25,10 +31,16 @@ __all__ = [
     "MatchMode",
     "MatchResult",
     "MatchStatus",
+    "ModuleType",
+    "ProductCategory",
     "ProductIdentityProfile",
+    "StorageInterface",
     "build_profile_from_query",
     "detect_anomalies",
+    "detect_product_category",
     "extract_condition",
+    "extract_module_type",
+    "extract_storage_interface",
     "find_excluded_term",
     "match_listing",
 ]

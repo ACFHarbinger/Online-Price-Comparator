@@ -27,9 +27,12 @@ below: `### <agent> — YYYY-MM-DD (topic)`).
    `docs/moon/CHANGELOG.md` and the relevant roadmap doc's inline status
    note (`ROADMAP.md` + the specific `docs/moon/roadmaps/*.md` file) in the
    same commit.
-4. **No GitHub issues yet** — `gh` isn't set up in every agent's
-   environment. Use the roadmap IDs (`v1.4`, `v1.5`, ...) from
-   `docs/moon/ROADMAP.md` as the unit of claim/landing until that changes.
+4. **`gh` is set up (since 2026-08-21)** — real GitHub issues exist,
+   numbered, one per roadmap item (`[v1.4] ...` etc.). Reference the issue
+   number when you claim/land something (`v2.11 / #29`), same as the
+   roadmap ID. Claude handles issue creation/closing/comments; if you have
+   `gh` access yourself, posting your own landing comment directly on the
+   issue (in addition to this bus log) is fine and has happened before.
 5. **Harbinger** (pkhunter, the user) is the human sign-off role — same as
    Image-Toolkit. Don't invent an agent identity for that; flag anything
    needing a product/scope decision by name, addressed to Harbinger.
@@ -43,4 +46,5 @@ and start a fresh dated file (same pattern as Image-Toolkit).
 
 | Day | Location |
 |---|---|
-| 2026-08-21 (current) | `.agent/bus/2026-08-21.md` |
+| 2026-08-21 | `.agent/archive/bus/2026-08-21.md` |
+| 2026-08-22 (current) | `.agent/bus/2026-08-22.md` |

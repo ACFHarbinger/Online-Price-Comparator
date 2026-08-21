@@ -177,6 +177,40 @@ This does not weaken the anomaly detector's original purpose (catching
 mispriced/scam listings within a condition bucket) — it just stops applying
 a new-market statistical fence to a fundamentally different population.
 
+## Category compatibility hard-gates (2026-08-21, from market-scan findings)
+
+**Why:** real crawler field-testing (`docs/moon/reports/ddr5_128gb_market_scan_report.md`,
+21 August 2026) found that RAM search results mix in full PCs, laptops,
+storage devices, and RAM+motherboard bundles far more than GPU searches
+do, and — more seriously — that server/workstation **ECC Registered
+(RDIMM)** memory kits are **electrically incompatible** with the vast
+majority of consumer desktop motherboards. This isn't a performance
+difference like GPU tiers; a matched listing that's the wrong module type
+is simply not usable in the tracked build, the same class of error the
+existing model/brand hard gates exist to prevent.
+
+**Design, extending the existing hard-gate list** (`match_listing`'s step
+2, before any fuzzy scoring):
+
+- Add `module_type` (`UDIMM` / `RDIMM` / `SODIMM`) as a category-specific
+  hard-gate field for RAM-category identity profiles, alongside the
+  existing `required_model_tokens`/`required_brand_tokens`. Extract from
+  structured data where available, falling back to title-keyword detection
+  (`ECC Registered`, `RDIMM`, `SODIMM`/`SO-DIMM` are the strongest
+  signals), falling back to `unknown` — an `unknown` module type is a
+  `review` outcome, never silently assumed to be the compatible `UDIMM`.
+  This is a hard reject, not a scoring signal, same treatment as the
+  existing motherboard/PSU/case category-conflict terms.
+- RAM-category `excluded_terms` need a richer default list than the
+  CPU-focused set currently shipped — bundle/full-system terms
+  (`Aufrüstkit`, prebuilt-PC listings, laptop listings that merely mention
+  a RAM capacity) surfaced repeatedly in the scan and aren't covered by
+  `DEFAULT_EXCLUDED_TERMS`'s current CPU-oriented vocabulary.
+- Not yet implemented — this section records the finding and the intended
+  design; wiring it into `matching/matcher.py` and `matching/profile.py`
+  is real follow-up work, not done as part of today's other matching
+  changes.
+
 ## Multilingual matching (v2.12)
 
 **Why:** the EU-wide tier explicitly includes native-language-only sites

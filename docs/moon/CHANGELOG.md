@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Market-scan reports translated into roadmap findings (2026-08-21):**
+  read `docs/moon/reports/{ddr5_128gb,rtx_3090ti}_market_scan_report.md`
+  (real crawler field-testing from the same day) and verified the new
+  candidate sites' `robots.txt` directly rather than trusting the reports'
+  own recommended scrape methods at face value. Found a real conflict:
+  Geizhals.de's search parameter (`asuch=`) is explicitly disallowed by
+  its own `robots.txt`, and Leboncoin.fr/Wallapop.es/Subito.it — despite
+  being the reports' "most productive" sources — either explicitly forbid
+  automated methods (Leboncoin names `ClaudeBot`/`GPTBot` by host in its
+  disallow list), block search access, or refuse the compliance-check
+  fetch itself (Subito, HTTP 403 on `robots.txt`). Updated
+  `scrapers_and_retailers.md` with verified-compliant EU-wide candidates
+  (Geizhals.de, LDLC.com — both routed to v2.15 Tier A custom-URL tracking
+  rather than a `scrapers/` registry entry, since their search access is
+  blocked but individual known pages aren't confirmed disallowed),
+  confirmed Mindfactory.de/Alternate.de are clean for v2.12's in-flight
+  work (#34), documented the three not-recommended sites with reasoning,
+  and folded Kleinanzeigen's empirically-observed IP-ban-after-2-requests
+  into its existing entry. Added `product_matching.md`'s
+  "Category compatibility hard-gates" section (RAM `module_type` —
+  RDIMM/ECC is electrically incompatible with consumer desktop boards,
+  not just a spec/performance variant like GPU tiers) and several
+  cross-cutting design notes (three-state stock model including
+  `undispatchable_to_location`, a "market regime" price-step-change flag,
+  new-old-stock/`stock_age`, `shipping_confirmed_pt` tri-state). New
+  GitHub issues #35 (verified-compliant source candidates), #36 (RDIMM/
+  stock-state/market-regime cross-cutting technical additions), and #37
+  (a Harbinger decision needed on Leboncoin/Wallapop manual-URL tracking
+  — flagged, not silently decided either way). Nothing implemented in
+  code this pass — documentation and issue-tracking only.
+
 - **v2.3 close-out: all-time-low + meaningful-drop alerts, refresh wiring
   (2026-08-21):** `src/alerting/rules.py` gains `should_fire_all_time_low`
   and `should_fire_meaningful_drop`, both operating on

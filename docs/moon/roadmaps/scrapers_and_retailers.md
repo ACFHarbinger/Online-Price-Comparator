@@ -88,15 +88,92 @@ set to validate the tier before expanding it**:
 
 | Source | Type | Notes |
 |---|---|---|
-| Mindfactory.de, Alternate.de | New retail | Germany's two largest PC-hardware retailers; frequently undercut Iberian prices on new stock alone, before even considering secondhand. |
-| eBay.de | Auction / Buy-It-Now marketplace | Structured-ish listings, seller ratings, often ships EU-wide. Separate scraper from Kleinanzeigen. |
-| ebay-kleinanzeigen.de | Local classifieds | **A different site** from eBay.de (do not parameterize one scraper as the other). Where many surplus/datacenter-refresh cards actually surface. Individual-seller, local-pickup common — needs per-listing condition/seller-signal extraction and honest `import_regime` / shipping (often `eu_domestic` + pickup, not a shop SLA). |
+| Mindfactory.de, Alternate.de | New retail | Germany's two largest PC-hardware retailers; frequently undercut Iberian prices on new stock alone, before even considering secondhand. `robots.txt` verified 2026-08-21: general catalog/search browsing is **not** disallowed for either, no crawl-delay specified — self-impose the usual 8–15s conservative default anyway. **In progress**, see v2.12 (#34). |
+| Geizhals.de | Price-comparison aggregator (DE/AT, pan-EU merchants) | Found during the 2026-08-21 DDR5/RTX-3090-Ti market scans (`docs/moon/reports/`) — **not previously in this list**, and high-leverage: a single product page already aggregates live offers from many DE/AT retailers plus a client-rendered price-history chart, cheaper than scraping each merchant separately. **robots.txt caveat (verified 2026-08-21): the search/filter method the scan reports actually used (`?...asuch=...`) is explicitly disallowed** (`Disallow: /*?*asuch=`). Individual product-page URLs (not reached via that query param) are not confirmed either way. **Do not build a v2.12 registry scraper against Geizhals's search.** Treat it as a v2.15 Tier A custom-URL source instead — the user finds a specific Geizhals product page themselves (browser, not automation) and the tool just re-fetches that one already-known page, which is a materially different (and lower-risk) request pattern than automated search crawling. |
+| eBay.de | Auction / Buy-It-Now marketplace | Structured-ish listings, seller ratings, often ships EU-wide. Separate scraper from Kleinanzeigen. eBay publishes an official **Browse API** (REST, OAuth2 client-credentials) — per the 2026-08-21 scan reports, **prefer the official API over HTML scraping** here specifically; it's the recommended integration path for reliability and staying within terms of service, and the search-result HTML itself is server-rendered/scrapeable as a fallback if the API integration is deferred. |
+| ebay-kleinanzeigen.de | Local classifieds | **A different site** from eBay.de (do not parameterize one scraper as the other). Where many surplus/datacenter-refresh cards actually surface. Individual-seller, local-pickup common — needs per-listing condition/seller-signal extraction and honest `import_regime` / shipping (often `eu_domestic` + pickup, not a shop SLA). **Operational finding, 2026-08-21**: the market-scan reports observed an outright IP-range ban after only **two** automated search requests ("IP-Bereich vorübergehend gesperrt"). This is the most bot-defensive site in either scan. Per this doc's own "explicitly not worth pursuing" list below (no IP-reputation evasion, no escalating volume after a block), **do not build an automated search scraper for this site** — a permanently-blocked host key defeats the purpose anyway. If it's wanted at all, scope it to the same v2.15 Tier A custom-URL pattern as Geizhals (one known listing, manually found, periodically re-fetched at a very conservative interval), not a `scrapers/` registry entry, and drop it immediately (no retry) on any block signal. |
 | Rebuy, refurbed.de (or equivalent EU refurb marketplaces) | Refurb retail | Structured "refurb" listings (graded condition, dealer warranty) are a lower-risk middle ground between new-retail and individual-seller secondhand — worth prioritizing over raw classifieds where available, since condition/warranty claims are more verifiable. |
 | Scan.co.uk, Overclockers UK | New retail | UK is outside the EU customs union post-Brexit but still worth including given it's a major hardware market — landed-cost estimation (below) applies to UK sources the same as non-EU global-tier ones, not treated as EU-frictionless. |
+| LDLC.com | New retail (France) | Found during the 2026-08-21 scans. `robots.txt` verified 2026-08-21: `/recherche` (search) is disallowed, but general catalog/category pages are not — matches the scan report's own suggestion to use it as a **restock/negative-signal source** (periodically check known chipset/category URLs for a product reappearing) rather than a search-driven scraper. A v2.15 Tier A custom-URL entry is the safest fit; a full `scrapers/` category-page monitor is a smaller, later option if this pattern turns out to matter for other products too. |
 
 All EU-wide-tier sources need the [multilingual matching](product_matching.md#multilingual-matching-v212)
 design for non-English listings, and the [condition field](product_matching.md#condition-as-a-first-class-field-v211)
 for the secondhand/refurb sources specifically.
+
+### Sites investigated 2026-08-21 and explicitly not recommended for automated scraping
+
+Real market-scan work (`docs/moon/reports/ddr5_128gb_market_scan_report.md`,
+`docs/moon/reports/rtx_3090ti_market_scan_report.md`) found these C2C
+classifieds sites the most *productive* for near-budget used-hardware leads
+— but productivity isn't the bar this tool uses (see [Reliability
+hardening](#reliability-hardening-v18)'s "polite, failure-tolerant
+collector, not an anti-bot evasion system" stance). `robots.txt` was
+checked directly (2026-08-21) against each:
+
+| Site | Finding | Recommendation |
+|---|---|---|
+| Leboncoin.fr | `robots.txt` explicitly disallows `/recherche` (search) for most bots, blocks **named AI/LLM bots** (`GPTBot`, `ClaudeBot`, `anthropic-ai`, `CCBot`) from `/ad/` entirely, and states in plain text: *"It's forbidden to use search robots or other automatic methods"* without permission. | **Won't do** — automated scraping of any kind, search or per-listing. This is a direct, named, unambiguous refusal, not a generic bot-management pattern. Manual-only: a user can still paste a specific Leboncoin ad URL they found themselves into v2.15 Tier A, but that's a real policy grey area even for a single re-fetch given the blanket "no automatic methods" wording — flag it to Harbinger for an explicit call before enabling Leboncoin under Tier A at all, don't default it on. |
+| Wallapop.es | `robots.txt` disallows `/search` and any path with a query string (`/*?`), which blocks the search-results access pattern the scan used. General paths are otherwise not blocked for unnamed bots, but the disallow already rules out search-driven discovery. | **Won't do** as a `scrapers/` registry entry (no search access). A specific known item URL (`/item/<slug>-<id>`, no query string) is not explicitly disallowed — same "ask Harbinger first" treatment as Leboncoin before wiring it into v2.15 Tier A, given the site's own aggressive-looking bot blocklist suggests general anti-scraping intent even where not spelled out per-path. |
+| Subito.it | `robots.txt` itself returned **HTTP 403 Forbidden** to a plain fetch (2026-08-21) — the site refused even the compliance-check request. | **Won't do.** Not pursued further; a host that blocks robots.txt retrieval itself is not a credible target for a "polite collector," full stop. |
+
+**Kleinanzeigen.de's aggressive IP-banning (above) belongs in this same
+category in practice**, even though it's still listed as a v2.12 candidate
+above under the manual/custom-URL carve-out — the default assumption for
+any new source should be "verify `robots.txt` and do one cautious manual
+probe before writing a scraper," not "productive in a market scan implies
+safe to automate," since this pass found three-of-four scanned classifieds
+sites actively hostile to automation.
+
+### Cross-cutting crawler-design findings (2026-08-21 market scans)
+
+From the same two reports, findings that affect scraper/model design
+beyond source selection:
+
+- **Third stock-state**: Amazon EU showed listings priced and displayed,
+  but flagged *"This item cannot be dispatched to your selected delivery
+  location"* — distinct from both `in_stock` and `unavailable`. A crawler
+  must not treat a price shown in this state as a confirmed purchasable
+  price. Worth a `stock_state` enum (`in_stock` / `unavailable` /
+  `undispatchable_to_location`) instead of the implicit two-state model
+  scrapers currently use.
+- **RAM compatibility is a hard filter, not a spec/sort attribute**:
+  server/workstation ECC Registered (RDIMM) memory is electrically
+  incompatible with the vast majority of consumer desktop motherboards —
+  unlike GPU tiers, which mostly just differ in performance. A `module_type`
+  field (`UDIMM` / `RDIMM` / `SODIMM`) should hard-gate RAM matches the same
+  way [product_matching.md](product_matching.md)'s category-conflict gate
+  already hard-gates a CPU search against a motherboard listing — see that
+  doc for the specific addition.
+- **Category disambiguation matters more for RAM than GPUs**: a single
+  free-text "128GB" search returns full PCs, laptops, storage devices, and
+  RAM+motherboard bundles, not just RAM kits — this is exactly the kind of
+  bundle/category-conflict problem [product_matching.md](product_matching.md)'s
+  `excluded_terms` gate already exists for; RAM-category profiles need a
+  richer default exclusion list than the CPU-focused one currently shipped.
+- **"Market regime" price-step detection**: the DDR5 scan found a sudden,
+  broad, cross-site price step-up not visible in older product reviews on
+  the same SKUs — a monthly or slower snapshot cadence would have missed
+  the timing of this shift entirely. Reinforces the case for v2.14's daily
+  per-site refresh cadence over anything slower for volatile categories,
+  and is a candidate input for [v2.19](dashboard_ux.md#3-statistical-price-attributes-volatility-trendgradient--2026-08-21-priority-1-of-5)'s
+  trend/gradient indicator (a step-change is a distinct shape from a
+  gradual drift, potentially worth its own flag later).
+- **New-old-stock (NOS) ambiguity**: EVGA exited the GPU business in 2022,
+  so "new" RTX 3090 Ti listings today are unsold old-dated retailer stock,
+  not current production — materially affects both price expectations and
+  warranty. A `stock_age`/`nos_flag` distinct from `condition=new` is a
+  candidate future field, not built yet.
+- **Buyer-protection/escrow as a trust signal**: Leboncoin's "Transaction
+  sécurisée" badge (and equivalents) changes a listing's practical risk
+  profile — worth capturing verbatim if/when any such site is ever
+  integrated, though per the table above none of the scanned ones currently
+  qualify for automated collection.
+- **Shipping-to-Portugal should be captured verbatim, not inferred**: badge
+  text/scope was frequently unverifiable from listing metadata alone,
+  especially on classifieds. Recommend a `shipping_confirmed_pt`
+  tri-state (`true`/`false`/`unknown`) alongside whatever raw shipping text
+  is shown, rather than assuming scope from a generic "shipping available"
+  flag — feeds v2.9/v2.13's landed-cost work.
 
 ### Global tier (v2.13) — RAM and other small, low-customs-friction categories
 

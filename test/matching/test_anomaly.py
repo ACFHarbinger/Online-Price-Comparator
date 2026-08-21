@@ -112,6 +112,15 @@ def test_sparse_expensive_exact_sku_without_bundle_signal_is_kept() -> None:
     assert all(item.is_anomalous is False for item in results)
 
 
+def test_sparse_negated_cooler_term_is_not_a_bundle_signal() -> None:
+    """'Sin Ventilador' is not an excluded-term hit, so a 2.5x SKU stays visible."""
+    no_fan = "AMD Ryzen 9 9950X3D Sin Ventilador"
+    prices = [609.82, 615.00, 2531.51]
+    titles = [_CPU_TITLE, _CPU_TITLE, no_fan]
+    results = detect_anomalies(prices, titles)
+    assert all(item.is_anomalous is False for item in results)
+
+
 def test_sparse_bundle_below_2_5x_is_not_flagged() -> None:
     prices = [609.82, 615.00, 800.00]
     titles = [_CPU_TITLE, _CPU_TITLE, _KIT_TITLE]

@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import statistics
-from collections.abc import Iterable
 from dataclasses import dataclass
 
-from matching.profile import DEFAULT_EXCLUDED_TERMS
-from normalize.text import dedupe_key
+from matching.profile import find_excluded_term
 
 
 @dataclass(frozen=True)
@@ -17,35 +15,6 @@ class AnomalyResult:
     basis: str | None  # None when not anomalous; else a short human-readable
     # summary of the numbers behind the decision, e.g.
     # "n=6, median=520.00, IQR=45.00, high_fence=610.00"
-
-
-def _find_excluded_term(
-    title: str, excluded_terms: Iterable[str] = DEFAULT_EXCLUDED_TERMS
-) -> str | None:
-    """Return the first excluded term from `excluded_terms` matching `title`."""
-    normalized_title = dedupe_key(title)
-    if not normalized_title:
-        return None
-    title_tokens = normalized_title.split()
-
-    matches: list[tuple[int, str]] = []
-    for term in excluded_terms:
-        normalized_term = dedupe_key(term)
-        if not normalized_term:
-            continue
-        term_tokens = normalized_term.split()
-        width = len(term_tokens)
-        if width == 0:
-            continue
-        for index in range(len(title_tokens) - width + 1):
-            if title_tokens[index : index + width] == term_tokens:
-                matches.append((index, term))
-                break
-
-    if not matches:
-        return None
-    matches.sort(key=lambda item: item[0])
-    return matches[0][1]
 
 
 def detect_anomalies(prices: list[float], titles: list[str]) -> list[AnomalyResult]:
@@ -109,7 +78,7 @@ def detect_anomalies(prices: list[float], titles: list[str]) -> list[AnomalyResu
         p = prices[i]
         others = prices[:i] + prices[i + 1 : n]
         median_of_others = statistics.median(others)
-        excluded_term = _find_excluded_term(titles[i])
+        excluded_term = find_excluded_term(titles[i])
 
         if p >= 2.5 * median_of_others and excluded_term is not None:
             results.append(

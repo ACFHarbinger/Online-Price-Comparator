@@ -14,6 +14,7 @@ from .profile import (
     ProductIdentityProfile,
     _extract_model_tokens,
     _looks_like_amazon_asin,
+    find_excluded_term,
 )
 
 # Function words dropped before computing query-token coverage. Product
@@ -188,18 +189,9 @@ def _meaningful_query_tokens(normalized_query: str) -> frozenset[str]:
 def _first_excluded_term(
     profile: ProductIdentityProfile, normalized_title: str
 ) -> str | None:
-    """Return the first prohibited phrase occurring in a normalized title."""
-    title_tokens = normalized_title.split()
-    allowed_terms = {dedupe_key(term) for term in profile.allowed_variant_terms}
-    matches: list[tuple[int, str]] = []
-    for term in profile.excluded_terms:
-        normalized_term = dedupe_key(term)
-        if not normalized_term or normalized_term in allowed_terms:
-            continue
-        term_tokens = normalized_term.split()
-        width = len(term_tokens)
-        for index in range(len(title_tokens) - width + 1):
-            if title_tokens[index : index + width] == term_tokens:
-                matches.append((index, normalized_term))
-                break
-    return min(matches, default=(-1, ""))[1] or None
+    """Return the first non-negated prohibited phrase in a normalized title."""
+    return find_excluded_term(
+        normalized_title,
+        profile.excluded_terms,
+        allowed_terms=profile.allowed_variant_terms,
+    )

@@ -29,6 +29,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Matching excluded-term negation (2026-08-21):** `find_excluded_term` now
+  ignores a prohibited accessory/category phrase when it is preceded by a
+  negation particle (`sin` / `sem` / `without` / `no`, plus an intervening
+  article). Amazon.es "Sin Ventilador" / "without a cooler" CPU titles
+  confirm instead of false-rejecting on `ventilador`/`cooler`; positive
+  mentions (`Cooler para Ryzen…`, `con ventilador`) still reject. Shared
+  by the matcher and the sparse anomaly path.
+
 - **v2.19 statistical price attributes (2026-08-21):** the single-product
   hero reports price volatility (coefficient of variation / IQR percent of
   median) in plain percentage terms and a descriptive linear-regression

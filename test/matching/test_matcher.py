@@ -162,6 +162,36 @@ def test_brand_mismatch_is_rejected() -> None:
     assert result.reason == "brand mismatch"
 
 
+def test_negated_cooler_terms_do_not_reject_cpu_titles() -> None:
+    """Amazon.es 'Sin Ventilador' is a no-fan CPU, not a cooler listing."""
+    profile = _ryzen_profile()
+    for title in (
+        "AMD Ryzen 9 9950X3D 16 núcleos 32 hilos Socket AM5 - Sin Ventilador",
+        "AMD Ryzen 9 9950X3D without a cooler tray",
+        "AMD Ryzen 9 9950X3D sem cooler",
+        "AMD Ryzen 9 9950X3D no cooler included",
+    ):
+        result = match_listing(profile, title)
+        assert result.status is MatchStatus.CONFIRMED, title
+        assert result.reason == "model token match"
+
+
+def test_positive_cooler_listings_are_still_rejected() -> None:
+    """A cooler/fan sold for the SKU is still an accessory, not the CPU."""
+    profile = _ryzen_profile()
+    cooler = match_listing(profile, "Cooler para AMD Ryzen 9 9950X3D socket AM5")
+    assert cooler.status is MatchStatus.REJECTED
+    assert cooler.reason.startswith("excluded term:")
+
+    fan = match_listing(profile, "Ventilador CPU AMD Ryzen 9 9950X3D")
+    assert fan.status is MatchStatus.REJECTED
+    assert fan.reason.startswith("excluded term:")
+
+    with_fan = match_listing(profile, "AMD Ryzen 9 9950X3D con ventilador stock")
+    assert with_fan.status is MatchStatus.REJECTED
+    assert with_fan.reason.startswith("excluded term:")
+
+
 def test_empty_title_is_rejected() -> None:
     result = match_listing(_ryzen_profile(), "   ")
     assert result.status is MatchStatus.REJECTED

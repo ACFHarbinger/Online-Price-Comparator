@@ -37,7 +37,11 @@ filter, not a clustering step, and it never silently merges listings.
    strip punctuation, extract alphanumeric model tokens containing at least one digit.
 2. **Hard gates** (before any fuzzy scoring):
    - If the product has a model token, require an exact normalized model-token match.
-   - Reject if an excluded bundle/variant term appears and wasn't explicitly allowed.
+   - Reject if an excluded bundle/variant term appears and wasn't explicitly
+     allowed. A preceding negation particle (`sin` / `sem` / `without` / `no`,
+     optionally plus an article) does **not** count — Amazon.es
+     "Sin Ventilador" / "without a cooler" is a no-fan CPU, not a cooler
+     listing. Positive mentions (`Cooler para Ryzen…`) still reject.
    - Reject category-conflicting terms (for a CPU: motherboard/PSU/case terms disqualify).
    - Amazon ASIN is a stable *Amazon* listing identifier, not a cross-retailer identity key.
 3. **Score the survivors**:

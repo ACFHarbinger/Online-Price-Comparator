@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -37,6 +38,62 @@ DEFAULT_EXCLUDED_TERMS = frozenset(
     }
 )
 """Common bundle, accessory, and category-conflict terms for v1 matching."""
+
+# Particles that negate an immediately following excluded term so a CPU sold
+# "Sin Ventilador" / "without a cooler" is not rejected as a cooler listing.
+# Articles between the particle and the term ("without a cooler") are skipped.
+_EXCLUDED_TERM_NEGATIONS = frozenset({"sin", "sem", "without", "no"})
+_EXCLUDED_TERM_NEGATION_SKIP = frozenset(
+    {"a", "an", "the", "un", "una", "um", "uma", "el", "la"}
+)
+
+
+def find_excluded_term(
+    title: str,
+    excluded_terms: Iterable[str] = DEFAULT_EXCLUDED_TERMS,
+    *,
+    allowed_terms: Iterable[str] = (),
+) -> str | None:
+    """Return the first non-negated excluded phrase occurring in ``title``.
+
+    A hit is ignored when it is preceded by a negation particle (``sin
+    ventilador``, ``sem cooler``, ``without a cooler``, ``no cooler``).
+    Positive accessory mentions (``Cooler para Ryzen…``, ``con ventilador``)
+    still match. ``allowed_terms`` is the per-profile exception list.
+    """
+    normalized_title = dedupe_key(title)
+    if not normalized_title:
+        return None
+    title_tokens = normalized_title.split()
+    allowed = {dedupe_key(term) for term in allowed_terms if dedupe_key(term)}
+    matches: list[tuple[int, str]] = []
+    for term in excluded_terms:
+        normalized_term = dedupe_key(term)
+        if not normalized_term or normalized_term in allowed:
+            continue
+        term_tokens = normalized_term.split()
+        width = len(term_tokens)
+        if width == 0:
+            continue
+        for index in range(len(title_tokens) - width + 1):
+            if title_tokens[index : index + width] != term_tokens:
+                continue
+            if _excluded_term_is_negated(title_tokens, index):
+                continue
+            matches.append((index, term))
+            break
+    if not matches:
+        return None
+    matches.sort(key=lambda item: item[0])
+    return matches[0][1]
+
+
+def _excluded_term_is_negated(title_tokens: list[str], match_index: int) -> bool:
+    """True when ``title_tokens[match_index]`` is preceded by a negation particle."""
+    index = match_index - 1
+    while index >= 0 and title_tokens[index] in _EXCLUDED_TERM_NEGATION_SKIP:
+        index -= 1
+    return index >= 0 and title_tokens[index] in _EXCLUDED_TERM_NEGATIONS
 
 
 class MatchMode(StrEnum):

@@ -45,6 +45,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.8 KuantoKusta verification consumer (2026-08-21):** manual
+  `verify_kuantokusta_hints_for_product` consumes typed external retailer URL
+  hints, performs a polite robots-checked, rate-limited fetch of each real
+  retailer page, requires complete Product/Offer JSON-LD and an identity
+  match, then creates a time-limited **pending** candidate through the shared
+  `CandidateListingRepository`. It never parses or stores the aggregator's
+  displayed price, and it rejects unmatched pages and duplicate URLs. User
+  approval remains required before a candidate is promoted.
+
+- **v2.11 condition-bucketed IQR (2026-08-21):** `detect_anomalies` now fences
+  each exact condition on scrape-time `price_eur_equivalent` (never mixed
+  native currencies, never landed-cost). `unknown` and missing EUR values
+  are excluded from every sample. Sparse buckets (n<4 in that condition,
+  including sparse `new`) never auto-hide. `persist_snapshot` converts to
+  EUR before the fence. Dashboard condition badges/filters remain later.
+
 - **v2.11 listing condition field (2026-08-21):** additive `condition` /
   `condition_source` / `condition_confidence` on `listings` (current belief)
   and `price_history` (observation-time snapshot). `extract_condition` reads

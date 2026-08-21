@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 from sqlalchemy import Engine
 
-from fx.ecb import convert_to_eur
+from fx.ecb import Conversion, convert_to_eur
 from matching import (
     MatchStatus,
     build_profile_from_query,
@@ -32,8 +32,7 @@ class _ConfirmedObservation:
 
     raw: RawListing
     listing_id: int
-    amount: float
-    currency: str
+    conversion: Conversion
     condition: str
     condition_source: str
     condition_confidence: float
@@ -54,14 +53,11 @@ def persist_snapshot(
     be parsed are skipped entirely (logged, not fatal).
 
     Confirmed listings are then checked for cross-retailer price outliers
-    (`matching.detect_anomalies`, over this snapshot's confirmed *native*
-    prices) before writing `price_history` - an anomalous point is still
-    recorded (never dropped), just flagged so read-side queries skip past
-    it. v2.10 also persists native sticker + scrape-time EUR equivalent
-    (ECB rate); IQR still runs on native amounts this slice. v2.11 persists
-    listing-level current-belief condition plus the same value on each
-    ``price_history`` row as an observation-time snapshot. IQR is **not**
-    bucketed by condition yet.
+    (`matching.detect_anomalies`, per exact condition bucket on scrape-time
+    EUR-equivalent stickers). An anomalous point is still recorded (never
+    dropped), just flagged so read-side queries skip past it. ``unknown``
+    condition and missing EUR equivalents never enter an IQR sample;
+    sparse buckets (n<4) never auto-hide.
     """
     product_repo = ProductRepository(engine)
     listing_repo = ListingRepository(engine)
@@ -115,8 +111,7 @@ def persist_snapshot(
             _ConfirmedObservation(
                 raw,
                 listing_id,
-                amount,
-                currency,
+                convert_to_eur(amount, currency),
                 classified.condition.value,
                 classified.source.value,
                 classified.confidence,
@@ -124,8 +119,9 @@ def persist_snapshot(
         )
 
     anomalies = detect_anomalies(
-        [observation.amount for observation in confirmed],
+        [observation.conversion.price_eur_equivalent for observation in confirmed],
         [observation.raw.title for observation in confirmed],
+        conditions=[observation.condition for observation in confirmed],
     )
     for observation, anomaly in zip(confirmed, anomalies, strict=True):
         if anomaly.is_anomalous:
@@ -136,11 +132,11 @@ def persist_snapshot(
                 observation.raw.source,
                 anomaly.basis,
             )
-        conversion = convert_to_eur(observation.amount, observation.currency)
+        conversion = observation.conversion
         price_repo.add(
             listing_id=observation.listing_id,
-            price_amount=observation.amount,
-            currency=observation.currency,
+            price_amount=conversion.price_native,
+            currency=conversion.currency_native,
             observed_at=observation.raw.fetched_at,
             raw_price_text=observation.raw.price_text,
             is_anomalous=anomaly.is_anomalous,

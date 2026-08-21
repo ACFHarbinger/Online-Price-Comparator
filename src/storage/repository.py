@@ -5,9 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from models.product import Product
 from sqlalchemy import Engine, func, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+
+from models.product import Product
 from storage.schema import listings, price_history, products
 
 # Listings with any other match_status ("review"/"rejected") are kept in

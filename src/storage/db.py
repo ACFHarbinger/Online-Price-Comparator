@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from sqlalchemy import Column, Engine, create_engine, inspect, text
+
 from storage.schema import metadata
 
 

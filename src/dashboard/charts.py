@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 
 import plotly.graph_objects as go  # type: ignore[import-untyped]
+
 from dashboard.theme import (
     FALLBACK_RETAILER_COLOR,
     MONO_FONT,

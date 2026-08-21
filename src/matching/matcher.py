@@ -5,8 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from normalize.text import dedupe_key
 from rapidfuzz.fuzz import token_set_ratio, token_sort_ratio
+
+from normalize.text import dedupe_key
 
 from .profile import (
     MatchMode,

@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.pool import StaticPool
+
 from storage.schema import metadata
 
 

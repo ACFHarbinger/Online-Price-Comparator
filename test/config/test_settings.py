@@ -5,6 +5,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 import pytest
+
 from config.settings import Settings, get_settings, override_settings
 
 

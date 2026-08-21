@@ -5,13 +5,14 @@ from __future__ import annotations
 import contextlib
 from typing import Any
 
-from config.settings import get_settings, override_settings
 from dash import Dash, Input, Output, State, ctx, html, no_update
 from dash.exceptions import PreventUpdate
+from sqlalchemy import Engine
+
+from config.settings import get_settings, override_settings
 from dashboard.charts import build_bar_chart, build_line_chart
 from pipeline.discover import run_discovery
 from pipeline.snapshot import persist_snapshot
-from sqlalchemy import Engine
 from storage.repository import (
     ListingRepository,
     ListingSummary,

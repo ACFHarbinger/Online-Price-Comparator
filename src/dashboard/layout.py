@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dash import dcc, html
+
 from dashboard.charts import build_bar_chart, build_line_chart
 
 

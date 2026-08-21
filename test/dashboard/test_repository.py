@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 from sqlalchemy import Engine
+
 from storage.repository import (
     ListingRepository,
     PriceHistoryRepository,

@@ -98,7 +98,7 @@ def test_cli_refresh_roundtrip(
 
     monkeypatch.setattr(
         "pipeline.refresh.run_discovery",
-        lambda query, settings, limit=20, engine=None, tracked_product_id=None: [
+        lambda *args, **kwargs: [
             RawListing(
                 source="amazon.es",
                 source_kind="scraper",

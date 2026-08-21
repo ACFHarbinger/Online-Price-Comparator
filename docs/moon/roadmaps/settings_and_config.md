@@ -1,6 +1,6 @@
 # Settings & Persistent Config Roadmap
 
-**Status:** ✅ Done (v1.7 runtime Settings; v2.1 watchlist + global/per-product site enable/disable — 2026-08-21) · 📋 Planned (v2.2, v2.10, v2.14) · **Source:** codex research, grounded in `src/config/settings.py`; v2.10/v2.14 from the 2026-08-15 global-scope brainstorm
+**Status:** ✅ Done (v1.7 runtime Settings; v2.1 watchlist + global/per-product site enable/disable; v2.2 scheduled/passive refresh — 2026-08-21) · 📋 Planned (v2.10, v2.14) · **Source:** codex research, grounded in `src/config/settings.py`; v2.10/v2.14 from the 2026-08-15 global-scope brainstorm
 
 ## Two-layer config split
 

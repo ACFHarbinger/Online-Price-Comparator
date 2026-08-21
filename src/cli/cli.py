@@ -8,6 +8,10 @@ from collections.abc import Sequence
 
 from config.settings import get_settings
 from pipeline.discover import run_discovery
+from pipeline.refresh import (
+    refresh_watchlist,
+    run_monitoring_loop,
+)
 from pipeline.snapshot import persist_snapshot
 from scrapers.registry import registered_site_keys
 from storage.db import create_db_engine
@@ -203,6 +207,49 @@ def _run_site_override(
     return 0
 
 
+def _run_refresh(force: bool, limit: int, watch: bool, interval_seconds: float) -> int:
+    """Refresh prices for due (or all, if force) watchlist products."""
+    settings = get_settings()
+    engine = create_db_engine(settings.database_path)
+
+    if watch:
+        print(
+            f"Starting passive watchlist monitoring (interval: {interval_seconds}s). "
+            "Press Ctrl+C to stop."
+        )
+        try:
+            run_monitoring_loop(
+                engine,
+                settings,
+                check_interval_seconds=interval_seconds,
+            )
+        except KeyboardInterrupt:
+            print("\nMonitoring stopped.")
+        return 0
+
+    refreshed = refresh_watchlist(engine, settings, force=force, limit=limit)
+    if not refreshed:
+        print("No watchlist products were due for refresh. Use --force to refresh all.")
+        return 0
+
+    print(f"Refreshed {len(refreshed)} watchlist product(s):")
+    listing_repo = ListingRepository(engine)
+    tracked_repo = TrackedProductRepository(engine)
+    for prod_id, count in refreshed.items():
+        tracked = tracked_repo.get(prod_id)
+        name = tracked.query_text if tracked else f"Product #{prod_id}"
+        target_prod_id = tracked.product_id if tracked else prod_id
+        listings = listing_repo.list_with_latest_price(target_prod_id)
+        priced = [item for item in listings if item.price_amount is not None]
+        print(f"\n  [{prod_id}] {name} ({count} listings, {len(priced)} confirmed):")
+        for listing in priced:
+            assert listing.price_amount is not None and listing.currency is not None
+            price = f"{listing.price_amount:>10.2f} {listing.currency}"
+            print(f"    {price}  [{listing.site_display_name:<12}] {listing.url}")
+
+    return 0
+
+
 def _run_dashboard(host: str, port: int, debug: bool) -> int:
     """Launch the Dash dashboard's development server."""
     from dashboard.app import create_app
@@ -267,6 +314,31 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="Save the watchlist entry without scraping",
     )
 
+    refresh_parser = subparsers.add_parser(
+        "refresh", help="Refresh prices for tracked watchlist products"
+    )
+    refresh_parser.add_argument(
+        "--force",
+        "--all",
+        action="store_true",
+        dest="force",
+        help="Refresh all enabled products even if not yet due",
+    )
+    refresh_parser.add_argument(
+        "--limit", type=int, default=20, help="Max results per source"
+    )
+    refresh_parser.add_argument(
+        "--watch",
+        action="store_true",
+        help="Run continuously as a monitoring loop",
+    )
+    refresh_parser.add_argument(
+        "--interval-seconds",
+        type=float,
+        default=60.0,
+        help="Seconds between monitoring passes in watch mode",
+    )
+
     untrack_parser = subparsers.add_parser(
         "untrack", help="Disable a watchlist entry (price history is kept)"
     )
@@ -315,6 +387,9 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "track":
         return _run_track(args.keywords, args.limit, args.scope, args.no_refresh)
+
+    if args.command == "refresh":
+        return _run_refresh(args.force, args.limit, args.watch, args.interval_seconds)
 
     if args.command == "untrack":
         return _run_untrack(args.keywords)

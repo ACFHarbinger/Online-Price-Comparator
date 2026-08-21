@@ -29,6 +29,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.2 scheduled and passive refresh (2026-08-21):** added `src/pipeline/refresh.py`
+  orchestrating watchlist re-checks (`is_due_for_refresh`, `refresh_tracked_product`,
+  `refresh_watchlist`, `run_monitoring_loop`). Checks whether enabled watchlist items
+  are due based on per-product `refresh_interval_hours` overrides or the global
+  `Settings.refresh_interval_hours` (default: 12h), discovers listings honoring site
+  settings and overrides, persists snapshots, and touches `last_checked_at`. Added
+  CLI command `online-price-comparator refresh [--force] [--limit N] [--watch] [--interval-seconds S]`
+  for manual, cron, or continuous passive background monitoring. Full test coverage
+  in `test/pipeline/test_refresh.py` and `test/test_cli.py`.
+
 - **v2.18 forecasting first slice (2026-08-21, in progress):** added the
   dependency-free Holt linear-trend model in `forecasting.holt`. It aggregates
   daily same-currency medians, refuses histories with fewer than eight

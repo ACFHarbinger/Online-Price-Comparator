@@ -61,6 +61,7 @@ class SiteSetting:
     cache_ttl_seconds: int | None
     browser_rendering_allowed: bool
     min_refresh_interval_hours: float | None
+    collection_method: str = "server_scrape"
 
 
 @dataclass(frozen=True)
@@ -268,6 +269,7 @@ class SiteSettingsRepository:
             cache_ttl_seconds=None,
             browser_rendering_allowed=False,
             min_refresh_interval_hours=None,
+            collection_method="server_scrape",
         )
         stmt = stmt.on_conflict_do_update(
             index_elements=["site_key"],
@@ -289,9 +291,26 @@ class SiteSettingsRepository:
                 cache_ttl_seconds=row.cache_ttl_seconds,
                 browser_rendering_allowed=bool(row.browser_rendering_allowed),
                 min_refresh_interval_hours=row.min_refresh_interval_hours,
+                collection_method=str(row.collection_method or "server_scrape"),
             )
             for row in rows
         ]
+
+    def non_server_scrape_keys(self) -> set[str]:
+        """Site keys whose collection method is anything but ``server_scrape``.
+
+        ``pipeline.discover`` must never server-side scrape these - a site
+        flagged ``client_extension`` is collected via the browser extension,
+        and ``search_api``/``hint_only`` sites are not server-scraped either.
+        A missing ``site_settings`` row means ``server_scrape`` (the default).
+        """
+        with self.engine.connect() as conn:
+            rows = conn.execute(
+                select(site_settings.c.site_key).where(
+                    site_settings.c.collection_method != "server_scrape"
+                )
+            ).all()
+        return {str(row.site_key) for row in rows}
 
 
 class SiteOverrideRepository:

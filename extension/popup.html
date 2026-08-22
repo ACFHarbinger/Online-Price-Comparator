@@ -6,26 +6,31 @@
       body {
         font-family: system-ui, sans-serif;
         font-size: 13px;
-        width: 240px;
+        width: 260px;
         padding: 12px;
         margin: 0;
       }
       h1 { font-size: 14px; margin: 0 0 8px; }
-      p { margin: 6px 0; color: #555; }
+      label, p { margin: 6px 0; color: #555; }
+      input { width: 100%; box-sizing: border-box; padding: 5px 6px; margin-bottom: 8px; }
       button {
         width: 100%;
         padding: 8px 10px;
         font-size: 13px;
         cursor: pointer;
+        margin-bottom: 6px;
       }
       #status { min-height: 1em; margin-top: 8px; font-size: 12px; color: #1a73e8; }
     </style>
   </head>
   <body>
     <h1>OPC Leboncoin monitor</h1>
-    <p>Exports accumulated detected price changes as a JSON-lines file, to import with
-       <code>cli refresh --import-extension-file</code>.</p>
-    <button id="export">Export detected changes</button>
+    <p>Detected price changes are pushed to OPC's localhost endpoint, or exported to a
+       JSON-lines file for <code>cli refresh --import-extension-file</code>.</p>
+    <label for="endpoint">OPC localhost endpoint</label>
+    <input id="endpoint" value="http://127.0.0.1:8050/api/extension/import" />
+    <button id="post">Send changes to OPC</button>
+    <button id="export">Export to JSON-lines file</button>
     <div id="status"></div>
     <script src="popup.js"></script>
   </body>

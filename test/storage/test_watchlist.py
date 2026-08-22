@@ -9,6 +9,7 @@ from sqlalchemy import Engine
 
 from models.listing import RawListing
 from pipeline.discover import run_discovery
+from storage.schema import site_settings
 from storage.watchlist import (
     SiteOverrideRepository,
     SiteSettingsRepository,
@@ -120,6 +121,29 @@ def test_site_settings_and_overrides(in_memory_engine: Engine) -> None:
     assert overrides.as_map(tracked.id) == {}
     with pytest.raises(ValueError, match="site_key"):
         overrides.set_override(tracked.id, " ", included=False)
+
+
+def test_site_settings_collection_method(in_memory_engine: Engine) -> None:
+    sites = SiteSettingsRepository(in_memory_engine)
+    assert sites.non_server_scrape_keys() == set()
+
+    # A site with no row defaults to server_scrape (never in the non-scrape set).
+    sites.set_enabled("pccomponentes", True)
+    assert sites.non_server_scrape_keys() == set()
+    assert sites.list_all()[0].collection_method == "server_scrape"
+
+    # Flag Leboncoin as client_extension -> it is no longer server-scraped.
+    with in_memory_engine.begin() as conn:
+        conn.execute(
+            site_settings.insert().values(
+                site_key="leboncoin",
+                enabled=True,
+                collection_method="client_extension",
+            )
+        )
+    assert sites.non_server_scrape_keys() == {"leboncoin"}
+    by_key = {row.site_key: row for row in sites.list_all()}
+    assert by_key["leboncoin"].collection_method == "client_extension"
 
 
 class _FakeScraper:

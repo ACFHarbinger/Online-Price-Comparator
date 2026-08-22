@@ -125,12 +125,16 @@ def _record_to_raw_listing(record: dict[str, Any]) -> RawListing | None:
     )
 
 
-def import_extension_file(
-    path: str | Path,
-    engine: Engine,
+def import_records(
+    records: list[dict[str, Any]], engine: Engine
 ) -> ExtensionImportResult:
-    """Import detected changes from ``path`` into the price-history pipeline."""
-    records = read_extension_records(path)
+    """Import detected-change records into the price-history pipeline.
+
+    Shared by the file-based import (``import_extension_file``) and the v2.20
+    v1 localhost HTTP callback (``dashboard.extension_api``): both feed the same
+    list of records through identity-matching -> condition -> FX ->
+    ``persist_snapshot``.
+    """
     raw_by_query: dict[str, list[RawListing]] = {}
     skipped: list[str] = []
 
@@ -163,3 +167,11 @@ def import_extension_file(
         products_handled=sorted(products_handled),
         skipped=skipped,
     )
+
+
+def import_extension_file(
+    path: str | Path,
+    engine: Engine,
+) -> ExtensionImportResult:
+    """Import detected changes from ``path`` into the price-history pipeline."""
+    return import_records(read_extension_records(path), engine)

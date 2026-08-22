@@ -6,6 +6,7 @@ from dash import Dash
 
 from config.settings import get_settings
 from dashboard.callbacks import register_callbacks
+from dashboard.extension_api import register_extension_api
 from dashboard.layout import build_layout
 from dashboard.theme import APP_CSS
 from storage.db import create_db_engine
@@ -43,4 +44,6 @@ def create_app() -> Dash:
         f"<style>{APP_CSS}</style>{{%css%}}",
     )
     register_callbacks(app, engine)
+    # v2.20 v1: localhost-only endpoint the browser extension POSTs to.
+    register_extension_api(app.server, engine)
     return app

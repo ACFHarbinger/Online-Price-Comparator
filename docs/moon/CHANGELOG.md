@@ -120,8 +120,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `cli refresh --import-extension-file <path>` flag, which pushes each record
   through `src/pipeline/extension_import.py` (identity-matching → condition →
   FX → `persist_snapshot`) — an extension observation is not a trust shortcut.
-  Untracked/unattributed URLs are skipped. **Not yet**: the v1 localhost HTTP
-  callback for near-real-time dashboard updates.
+  Untracked/unattributed URLs are skipped.
+
+- **v2.20 client-side monitor: v1 localhost callback + `collection_method`
+  (2026-08-22):** the extension popup can now **POST** detected changes straight
+  to a `localhost`-bound `POST /api/extension/import` endpoint on the Dash
+  (Flask) server (`src/dashboard/extension_api.py`), reusing the same
+  `import_records` → `persist_snapshot` pipeline, instead of the manual
+  JSON-lines round-trip. Added a first-class per-site `collection_method` column
+  on `site_settings` (`server_scrape`/`client_extension`/`search_api`/
+  `hint_only`, default `server_scrape`); `pipeline.discover` now structurally
+  refuses to server-side scrape any site whose method is not `server_scrape`, so
+  a `client_extension` site can never silently downgrade to a server scrape.
+  (This replaces yesterday's point `SERVER_SIDE_BLOCKED_DOMAINS` blocklist as the
+  general mechanism.)
 
 - **RAM `module_type` + storage `interface` hard-gates (2026-08-21):**
   `ProductIdentityProfile` now carries category-specific compatibility

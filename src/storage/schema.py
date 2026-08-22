@@ -132,6 +132,17 @@ site_settings = Table(
     Column("cache_ttl_seconds", Integer, nullable=True),
     Column("browser_rendering_allowed", Boolean, nullable=False, default=False),
     Column("min_refresh_interval_hours", Float, nullable=True),
+    # v2.20: which pipeline path is allowed to touch this site. "server_scrape"
+    # (default) is the scrapers/ registry adapter; "client_extension" is the
+    # browser extension (no server-side scraping allowed); "search_api" and
+    # "hint_only" mirror v2.17a / v2.8. `pipeline.discover` must never fall
+    # back to server-side scraping for anything other than "server_scrape".
+    Column(
+        "collection_method",
+        String,
+        nullable=False,
+        default="server_scrape",
+    ),
 )
 
 tracked_product_site_overrides = Table(

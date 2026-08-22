@@ -54,13 +54,18 @@ def run_discovery(
             if tracked_product_id is not None
             else {}
         )
+        site_settings_repo = SiteSettingsRepository(engine)
         allowed = set(
             resolve_site_keys(
                 [scraper.site_key for scraper in scrapers],
-                globally_disabled=SiteSettingsRepository(engine).disabled_keys(),
+                globally_disabled=site_settings_repo.disabled_keys(),
                 overrides=overrides,
             )
         )
+        # A site flagged `client_extension` (or `search_api`/`hint_only`) is
+        # never server-side scraped - a documented per-site decision, not a
+        # fallback. A missing row means `server_scrape` (the default).
+        allowed -= site_settings_repo.non_server_scrape_keys()
         scrapers = [scraper for scraper in scrapers if scraper.site_key in allowed]
 
     if skip_site_keys:

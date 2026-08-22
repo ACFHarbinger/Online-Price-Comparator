@@ -23,6 +23,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Dashboard search site_settings and collection_method enforcement (2026-08-22):**
+  verified and locked down `select_product` in `src/dashboard/callbacks.py` passing
+  `engine=engine` and `tracked_product_id` to `run_discovery`, ensuring that ad-hoc
+  dashboard searches strictly enforce globally disabled site settings (`SiteSettingsRepository`),
+  `client_extension` / non-server-scrape collection method gating, and per-product site
+  exceptions (`SiteOverrideRepository`). Added component tests in
+  `test/dashboard/test_search_site_settings.py`.
+
 - **Closed a real policy-enforcement gap on Leboncoin (2026-08-22):** while
   reviewing today's landed v2.20 extension work, found that v2.15 Tier A's
   server-side custom-URL fetcher had **no code-level check** preventing a

@@ -129,3 +129,29 @@ def test_cli_refresh_roundtrip(
     assert main(["refresh", "--force"]) == 0
     out3 = capsys.readouterr().out
     assert "Refreshed 1 watchlist product(s)" in out3
+
+
+def test_cli_sites_collection_method_roundtrip(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """sites set-collection + collection-methods persist without scraping."""
+    db_path = tmp_path / "collection.db"
+    monkeypatch.setenv("DATABASE_PATH", str(db_path))
+
+    assert main(["sites", "set-collection", "amazon.es", "client_extension"]) == 0
+    out = capsys.readouterr().out
+    assert "client_extension" in out
+    assert "amazon.es" in out
+
+    assert main(["sites", "collection-methods"]) == 0
+    out = capsys.readouterr().out
+    # amazon.es was just flagged -> shows client_extension; never bare "server_scrape".
+    amazon_line = [line for line in out.splitlines() if "amazon.es" in line]
+    assert amazon_line and "client_extension" in amazon_line[0]
+
+    # Unknown method is rejected.
+    assert main(["sites", "set-collection", "amazon.es", "bogus"]) == 1
+    # Unregistered site is rejected (mirrors enable/disable behaviour).
+    assert main(["sites", "set-collection", "not-a-site", "client_extension"]) == 1

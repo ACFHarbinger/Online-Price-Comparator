@@ -27,6 +27,12 @@ SEARCH_SCOPE_TIERS = frozenset({"local", "eu_wide", "global"})
 HISTORICAL_LOW_ALERT_MODES = frozenset({"tiered", "percentile", "both"})
 DEFAULT_SEARCH_SCOPE_TIER = "local"
 DEFAULT_HISTORICAL_LOW_ALERT_MODE = "tiered"
+#: Valid `site_settings.collection_method` values (v2.20). `server_scrape` is the
+#: default; `client_extension` means the browser extension collects it (never a
+#: server scrape); `search_api` / `hint_only` mirror v2.17a / v2.8.
+COLLECTION_METHODS = frozenset(
+    {"server_scrape", "client_extension", "search_api", "hint_only"}
+)
 
 
 @dataclass(frozen=True)
@@ -240,6 +246,15 @@ class TrackedProductRepository:
                 .values(last_checked_at=when or datetime.now())
             )
 
+    def untrack(self, tracked_product_id: int) -> None:
+        """Remove a watchlist entry."""
+        with self.engine.begin() as conn:
+            conn.execute(
+                tracked_products.delete().where(
+                    tracked_products.c.id == tracked_product_id
+                )
+            )
+
 
 class SiteSettingsRepository:
     """Reads/writes ``site_settings``. Missing keys are treated as enabled."""
@@ -270,12 +285,46 @@ class SiteSettingsRepository:
             cache_ttl_seconds=None,
             browser_rendering_allowed=False,
             min_refresh_interval_hours=None,
-            shipping_cost_estimate_eur=None,
             collection_method="server_scrape",
         )
         stmt = stmt.on_conflict_do_update(
             index_elements=["site_key"],
             set_={"enabled": enabled},
+        )
+        with self.engine.begin() as conn:
+            conn.execute(stmt)
+
+    def set_collection_method(self, site_key: str, method: str) -> None:
+        """Set the v2.20 collection method for ``site_key``.
+
+        Upserts the row (defaults ``enabled`` to True on first insert, which
+        matches the v2.1 "no row = enabled" default; an existing row keeps its
+        ``enabled`` flag untouched - only ``collection_method`` is updated).
+        Raises ``ValueError`` for an empty site key or an unknown method.
+        """
+        cleaned = site_key.strip()
+        if not cleaned:
+            raise ValueError("site_key must not be empty")
+        cleaned_method = method.strip()
+        if cleaned_method not in COLLECTION_METHODS:
+            allowed = ", ".join(sorted(COLLECTION_METHODS))
+            raise ValueError(
+                f"unknown collection_method {cleaned_method!r} "
+                f"(must be one of {allowed})"
+            )
+        stmt = sqlite_insert(site_settings).values(
+            site_key=cleaned,
+            enabled=True,
+            result_limit=None,
+            min_request_interval_seconds=None,
+            cache_ttl_seconds=None,
+            browser_rendering_allowed=False,
+            min_refresh_interval_hours=None,
+            collection_method=cleaned_method,
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["site_key"],
+            set_={"collection_method": cleaned_method},
         )
         with self.engine.begin() as conn:
             conn.execute(stmt)

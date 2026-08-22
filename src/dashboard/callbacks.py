@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+from collections import Counter
 from collections.abc import Mapping
 from datetime import datetime, timedelta
 from typing import Any
@@ -26,13 +27,20 @@ from dashboard.stats import (
     compute_price_stats,
 )
 from fetch.circuit_breaker import CircuitBreaker
-from forecasting.holt import ForecastResult, forecast_prices
+from forecasting.holt import (
+    EurPricePoint,
+    ForecastResult,
+    forecast_eur_prices,
+    forecast_prices,
+)
 from matching.condition import extract_verbatim_label
 from pipeline.custom_url import track_and_process_custom_url
 from pipeline.discover import run_discovery
 from pipeline.snapshot import persist_snapshot
 from pipeline.source_discovery import discover_sources_for_product
 from scoring import Dimension, SiteScorecard, scorecards_for_product
+from scrapers.base import ScraperAdapter
+from scrapers.registry import _build_all_scrapers
 from storage.candidates import CandidateListing, CandidateListingRepository
 from storage.custom_urls import CustomListingUrl, CustomListingUrlRepository
 from storage.repository import (
@@ -43,7 +51,13 @@ from storage.repository import (
     ProductRepository,
 )
 from storage.shipping_costs import shipping_cost_for_site
-from storage.watchlist import SiteSettingsRepository, TrackedProductRepository
+from storage.watchlist import (
+    SiteOverrideRepository,
+    SiteSetting,
+    SiteSettingsRepository,
+    TrackedProduct,
+    TrackedProductRepository,
+)
 
 STALE_THRESHOLD_HOURS = 24
 
@@ -729,6 +743,223 @@ def _custom_urls_panel(
     )
 
 
+def _tracked_products_panel(
+    tracked_products: list[TrackedProduct],
+    *,
+    as_of: datetime | None = None,
+) -> html.Div | html.Table:
+    """Build the tracked products watchlist management table."""
+    if not tracked_products:
+        return html.Div(
+            "No tracked products in watchlist yet. Search above to track a product.",
+            className="empty-message",
+        )
+    ref_time = as_of or datetime.now()
+    rows = []
+    for tp in tracked_products:
+        status_color = "#3FB950" if tp.enabled else "#8B949E"
+        status_badge = html.Span(
+            "Active" if tp.enabled else "Paused",
+            style={"color": status_color, "fontWeight": "600"},
+        )
+        last_checked = (
+            _format_time_ago(tp.last_checked_at, ref_time)
+            if tp.last_checked_at
+            else "Never"
+        )
+        toggle_btn = html.Button(
+            "Pause" if tp.enabled else "Resume",
+            id={"type": "toggle-tracked-btn", "index": tp.id},
+            className="btn-toggle-pause" if tp.enabled else "btn-toggle-resume",
+        )
+        untrack_btn = html.Button(
+            "Untrack",
+            id={"type": "untrack-product-btn", "index": tp.id},
+            className="btn-untrack",
+        )
+        rows.append(
+            html.Tr(
+                [
+                    html.Td(tp.query_text, style={"fontWeight": "600"}),
+                    html.Td(
+                        html.Span(
+                            tp.search_scope_tier.upper(),
+                            className="hero-badge badge-trend-neutral",
+                        )
+                    ),
+                    html.Td(status_badge),
+                    html.Td(last_checked, className="price-value"),
+                    html.Td([toggle_btn, untrack_btn]),
+                ]
+            )
+        )
+    return html.Table(
+        className="settings-table",
+        children=[
+            html.Thead(
+                html.Tr(
+                    [
+                        html.Th("Product Query"),
+                        html.Th("Scope"),
+                        html.Th("Status"),
+                        html.Th("Last Checked"),
+                        html.Th("Actions"),
+                    ]
+                )
+            ),
+            html.Tbody(rows),
+        ],
+    )
+
+
+def _site_settings_panel(
+    all_scrapers: list[ScraperAdapter],
+    site_settings: list[SiteSetting],
+    disabled_keys: set[str],
+    shipping_estimates: dict[str, float],
+) -> html.Div | html.Table:
+    """Build the global site scraper settings table."""
+    settings_map = {s.site_key: s for s in site_settings}
+    rows = []
+    for scraper in all_scrapers:
+        key = scraper.site_key
+        display_name = getattr(scraper, "site_display_name", key.title())
+        is_disabled = key in disabled_keys
+        s_obj = settings_map.get(key)
+        method = s_obj.collection_method if s_obj else "server_scrape"
+        shipping_est = shipping_estimates.get(key)
+        shipping_str = f"€{shipping_est:.2f}" if shipping_est is not None else "—"
+
+        status_color = "#F85149" if is_disabled else "#3FB950"
+        status_text = "Disabled" if is_disabled else "Enabled"
+        status_badge = html.Span(
+            status_text,
+            style={"color": status_color, "fontWeight": "600"},
+        )
+        toggle_btn = html.Button(
+            "Enable" if is_disabled else "Disable",
+            id={"type": "toggle-site-btn", "index": key},
+            className="btn-enable-site" if is_disabled else "btn-disable-site",
+        )
+        rows.append(
+            html.Tr(
+                [
+                    html.Td(display_name),
+                    html.Td(html.Code(key, className="mono-text")),
+                    html.Td(
+                        html.Span(
+                            method,
+                            className="hero-badge badge-trend-neutral",
+                        )
+                    ),
+                    html.Td(shipping_str, className="price-value"),
+                    html.Td(status_badge),
+                    html.Td(toggle_btn),
+                ]
+            )
+        )
+    return html.Table(
+        className="settings-table",
+        children=[
+            html.Thead(
+                html.Tr(
+                    [
+                        html.Th("Retailer"),
+                        html.Th("Site Key"),
+                        html.Th("Collection"),
+                        html.Th("Est. Shipping"),
+                        html.Th("Global Status"),
+                        html.Th("Action"),
+                    ]
+                )
+            ),
+            html.Tbody(rows),
+        ],
+    )
+
+
+def _site_overrides_panel(
+    all_scrapers: list[ScraperAdapter],
+    overrides: dict[str, bool],
+    tracked: TrackedProduct | None,
+    disabled_keys: set[str],
+) -> html.Div | html.Table:
+    """Build the per-product site overrides management table."""
+    if tracked is None:
+        return html.Div(
+            "Select a tracked product to view and manage its site overrides.",
+            className="empty-message",
+        )
+    rows = []
+    for scraper in all_scrapers:
+        key = scraper.site_key
+        display_name = getattr(scraper, "site_display_name", key.title())
+        is_globally_disabled = key in disabled_keys
+        default_policy = (
+            "Disabled (Global)" if is_globally_disabled else "Enabled (Global)"
+        )
+
+        if key in overrides:
+            included = overrides[key]
+            override_text = "Forced Include" if included else "Forced Exclude"
+            override_color = "#3FB950" if included else "#F85149"
+            override_badge = html.Span(
+                override_text,
+                style={"color": override_color, "fontWeight": "600"},
+            )
+            action_btn: Any = html.Button(
+                "Clear Override",
+                id={"type": "clear-override-btn", "index": f"{tracked.id}:{key}"},
+                className="btn-clear-override",
+            )
+        else:
+            override_badge = html.Span("Follows Default", style={"color": "#8B949E"})
+            btn_inc = html.Button(
+                "Include",
+                id={
+                    "type": "set-override-btn",
+                    "index": f"{tracked.id}:{key}:include",
+                },
+                className="btn-override-include",
+            )
+            btn_exc = html.Button(
+                "Exclude",
+                id={
+                    "type": "set-override-btn",
+                    "index": f"{tracked.id}:{key}:exclude",
+                },
+                className="btn-override-exclude",
+            )
+            action_btn = html.Div([btn_inc, btn_exc])
+
+        rows.append(
+            html.Tr(
+                [
+                    html.Td(display_name),
+                    html.Td(default_policy, style={"color": "#8B949E"}),
+                    html.Td(override_badge),
+                    html.Td(action_btn),
+                ]
+            )
+        )
+    return html.Table(
+        className="settings-table",
+        children=[
+            html.Thead(
+                html.Tr(
+                    [
+                        html.Th("Retailer"),
+                        html.Th("Global Policy"),
+                        html.Th("Product Override"),
+                        html.Th("Action"),
+                    ]
+                )
+            ),
+            html.Tbody(rows),
+        ],
+    )
+
+
 def _build_trend_indicator(price_stats: PriceSeriesStats) -> html.Span:
     """Build the trend/gradient arrow + rate badge for the hero.
 
@@ -776,11 +1007,35 @@ def _forecast_metadata(forecast: ForecastResult) -> str:
     if not forecast.is_available:
         return f"Forecast unavailable: {forecast.unavailable_reason}"
     assert forecast.trained_at is not None
+    condition = f"exact {forecast.condition} condition · " if forecast.condition else ""
+    prefix = "80% confidence band · Holt linear trend · "
     return (
-        f"80% confidence band · Holt linear trend · {forecast.observation_count} "
+        f"{prefix}{condition}{forecast.observation_count} "
         "compatible observations · last retrained from data through "
         f"{forecast.trained_at:%Y-%m-%d}"
     )
+
+
+def _eur_forecast_for_histories(histories: list[ListingHistory]) -> ForecastResult:
+    """Train only the most-observed exact known condition in persisted EUR data."""
+    points = [
+        EurPricePoint(
+            observed_at=observation.observed_at,
+            eur_amount=observation.eur_amount,
+            condition=observation.condition,
+        )
+        for history in histories
+        for observation in history.observations
+    ]
+    known_conditions = [
+        point.condition
+        for point in points
+        if point.condition not in (None, "", "unknown")
+    ]
+    condition = (
+        Counter(known_conditions).most_common(1)[0][0] if known_conditions else None
+    )
+    return forecast_eur_prices(points, condition=condition)
 
 
 def _build_tiered_low_badge(tier_label: str) -> html.Span:
@@ -913,11 +1168,10 @@ def _product_view(
         history, window_days=DEFAULT_VOLATILITY_WINDOW_DAYS
     )
     trend = compute_price_stats(history, window_days=DEFAULT_TREND_WINDOW_DAYS)
-    forecast = forecast_prices(history)
-
     histories = listing_histories_for_product(
         product_repository.engine, product_id, include_anomalous=include_anomalous
     )
+    forecast = _eur_forecast_for_histories(histories)
     timeline = product_eur_timeline(histories)
     ref_time = datetime.now()
 
@@ -1243,4 +1497,124 @@ def register_callbacks(app: Dash, engine: Engine) -> None:
             status_msg,
             status_style,
             input_clear,
+        )
+
+    site_settings_repository = SiteSettingsRepository(engine)
+    site_override_repository = SiteOverrideRepository(engine)
+
+    @app.callback(
+        Output("tracked-products-table-container", "children"),
+        Output("site-settings-table-container", "children"),
+        Output("site-overrides-table-container", "children"),
+        Output("settings-status-message", "children"),
+        Output("settings-status-message", "style"),
+        Input("selected-product-id", "data"),
+        Input("tracked-products-loader", "n_intervals"),
+        Input({"type": "toggle-tracked-btn", "index": ALL}, "n_clicks"),
+        Input({"type": "untrack-product-btn", "index": ALL}, "n_clicks"),
+        Input({"type": "toggle-site-btn", "index": ALL}, "n_clicks"),
+        Input({"type": "set-override-btn", "index": ALL}, "n_clicks"),
+        Input({"type": "clear-override-btn", "index": ALL}, "n_clicks"),
+        prevent_initial_call=False,
+    )
+    def manage_settings_ui(
+        product_id: int | None,
+        _loader_intervals: int | None,
+        _toggle_tracked_clicks: list[int | None] | None,
+        _untrack_clicks: list[int | None] | None,
+        _toggle_site_clicks: list[int | None] | None,
+        _set_override_clicks: list[int | None] | None,
+        _clear_override_clicks: list[int | None] | None,
+    ) -> tuple[Any, Any, Any, str, dict[str, str]]:
+        """Handle tracked product management, global site settings, and overrides."""
+        empty_style = {"display": "none"}
+        status_msg = ""
+        status_style = empty_style
+
+        triggered = ctx.triggered_id
+        if isinstance(triggered, dict):
+            btn_type = triggered.get("type")
+            index_val = triggered.get("index")
+
+            if btn_type == "toggle-tracked-btn" and isinstance(index_val, int):
+                for tp in tracked_repository.list_all():
+                    if tp.id == index_val:
+                        tracked_repository.set_enabled(tp.id, not tp.enabled)
+                        action_str = "Paused" if tp.enabled else "Resumed"
+                        status_msg = f"{action_str} tracking for '{tp.query_text}'."
+                        status_style = {"color": "#F59E0B" if tp.enabled else "#3FB950"}
+                        break
+
+            elif btn_type == "untrack-product-btn" and isinstance(index_val, int):
+                tracked_repository.untrack(index_val)
+                status_msg = "Removed product from tracked watchlist."
+                status_style = {"color": "#8B949E"}
+
+            elif btn_type == "toggle-site-btn" and isinstance(index_val, str):
+                is_disabled = index_val in site_settings_repository.disabled_keys()
+                site_settings_repository.set_enabled(index_val, is_disabled)
+                action_str = "Enabled" if is_disabled else "Disabled"
+                status_msg = f"{action_str} scraper for {index_val}."
+                status_style = {"color": "#3FB950" if is_disabled else "#F85149"}
+
+            elif btn_type == "set-override-btn" and isinstance(index_val, str):
+                parts = index_val.split(":")
+                if len(parts) == 3:
+                    t_id = int(parts[0])
+                    site_key = parts[1]
+                    action = parts[2]
+                    included = action == "include"
+                    site_override_repository.set_override(
+                        t_id, site_key, included=included
+                    )
+                    inc_str = "included" if included else "excluded"
+                    status_msg = f"Set override: {site_key} is {inc_str}."
+                    status_style = {"color": "#3FB950" if included else "#F59E0B"}
+
+            elif btn_type == "clear-override-btn" and isinstance(index_val, str):
+                parts = index_val.split(":")
+                if len(parts) == 2:
+                    t_id = int(parts[0])
+                    site_key = parts[1]
+                    site_override_repository.clear_override(t_id, site_key)
+                    status_msg = (
+                        f"Cleared override for {site_key}; now follows global default."
+                    )
+                    status_style = {"color": "#8B949E"}
+
+        tracked_selected = None
+        if product_id is not None:
+            for tp in tracked_repository.list_all():
+                if tp.product_id == product_id:
+                    tracked_selected = tp
+                    break
+
+        all_scrapers_list = _build_all_scrapers(get_settings())
+        tracked_all = tracked_repository.list_all()
+        persisted_settings = site_settings_repository.list_all()
+        disabled_keys = site_settings_repository.disabled_keys()
+        shipping_estimates = site_settings_repository.shipping_cost_estimates()
+
+        overrides_map = (
+            site_override_repository.as_map(tracked_selected.id)
+            if tracked_selected is not None
+            else {}
+        )
+
+        return (
+            _tracked_products_panel(tracked_all),
+            _site_settings_panel(
+                all_scrapers_list,
+                persisted_settings,
+                disabled_keys,
+                shipping_estimates,
+            ),
+            _site_overrides_panel(
+                all_scrapers_list,
+                overrides_map,
+                tracked_selected,
+                disabled_keys,
+            ),
+            status_msg,
+            status_style,
         )

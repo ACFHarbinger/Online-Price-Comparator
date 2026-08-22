@@ -252,6 +252,34 @@ def build_layout() -> html.Div:
                                 ),
                             ],
                         ),
+                        html.Section(
+                            className="panel settings-panel",
+                            children=[
+                                html.H3(
+                                    "Watchlist & Retailer Settings",
+                                    className="panel-heading",
+                                ),
+                                html.Div(
+                                    id="settings-status-message",
+                                    className="settings-status",
+                                ),
+                                html.H4(
+                                    "Tracked Products Watchlist",
+                                    className="settings-subheading",
+                                ),
+                                html.Div(id="tracked-products-table-container"),
+                                html.H4(
+                                    "Global Retailer Scraper Settings",
+                                    className="settings-subheading",
+                                ),
+                                html.Div(id="site-settings-table-container"),
+                                html.H4(
+                                    "Per-Product Site Overrides",
+                                    className="settings-subheading",
+                                ),
+                                html.Div(id="site-overrides-table-container"),
+                            ],
+                        ),
                     ],
                 ),
             ),

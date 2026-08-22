@@ -137,5 +137,19 @@ button, input {{ font: inherit; }}
 .dash-dropdown .Select-value-label, .dash-dropdown .Select-placeholder {{ color: {MUTED_TEXT} !important; }}
 .dash-dropdown .VirtualizedSelectOption {{ background-color: {PANEL_BACKGROUND}; color: {PRIMARY_TEXT}; }}
 .dash-dropdown .VirtualizedSelectFocusedOption {{ background-color: {PANEL_BORDER}; }}
+.settings-panel {{ margin-top: 18px; }}
+.settings-subheading {{ color: {PRIMARY_TEXT}; font-size: .88rem; font-weight: 600; margin: 16px 0 8px 0; letter-spacing: .02em; text-transform: uppercase; }}
+.settings-status {{ font-size: .80rem; margin-bottom: 8px; font-weight: 500; }}
+.settings-table {{ width: 100%; border-collapse: collapse; margin-bottom: 12px; }}
+.settings-table th, .settings-table td {{ padding: 8px 10px; text-align: left; border-top: 1px solid {PANEL_BORDER}; font-size: .84rem; vertical-align: middle; }}
+.settings-table th {{ color: {MUTED_TEXT}; font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; }}
+.mono-text {{ font-family: {MONO_FONT}; font-size: .80rem; }}
+.btn-toggle-pause, .btn-toggle-resume, .btn-untrack, .btn-enable-site, .btn-disable-site, .btn-clear-override, .btn-override-include, .btn-override-exclude {{
+    padding: 3px 8px; border-radius: 4px; font-size: .74rem; font-weight: 600; border: 1px solid; cursor: pointer; margin-right: 4px; background: transparent; font-family: {UI_FONT};
+}}
+.btn-toggle-pause, .btn-disable-site, .btn-override-exclude {{ color: #F59E0B; border-color: rgba(245, 158, 11, 0.4); }}
+.btn-toggle-resume, .btn-enable-site, .btn-override-include {{ color: {POSITIVE}; border-color: rgba(63, 185, 80, 0.4); }}
+.btn-untrack {{ color: #F85149; border-color: rgba(248, 81, 73, 0.4); }}
+.btn-clear-override {{ color: {MUTED_TEXT}; border-color: rgba(139, 148, 158, 0.4); }}
 @media (max-width: 800px) {{ .dashboard-shell {{ padding: 16px; }} .chart-grid {{ grid-template-columns: 1fr; }} .hero {{ align-items: flex-start; }} .product-image {{ width: 100px; height: 100px; }} }}
 """

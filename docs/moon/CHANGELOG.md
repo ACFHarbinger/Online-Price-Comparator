@@ -33,6 +33,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Dashboard Watchlist & Retailer Settings UI (2026-08-22):** added a dedicated
+  settings and watchlist management section in the Plotly Dash interface
+  (`src/dashboard/layout.py`, `callbacks.py`, `theme.py`). Allows users to:
+  1) view and manage the tracked products watchlist (toggle active/pause, untrack),
+  2) view and toggle global scraper site enablements (`SiteSettingsRepository`), and
+  3) view and configure per-product site overrides (force include / force exclude / clear override via `SiteOverrideRepository`)
+  for the selected product. Tests in `test/dashboard/test_settings_ui.py`.
+
 - **v2.9 local shipping-cost sanity (2026-08-22):** added nullable
   `site_settings.shipping_cost_estimate_eur` and repository methods to set,
   clear, and read per-site EUR estimates. The retailer table now shows either

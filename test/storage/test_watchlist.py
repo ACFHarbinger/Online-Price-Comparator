@@ -222,3 +222,23 @@ def test_run_discovery_honors_global_and_per_product_site_flags(
     )
     assert amazon.calls == 0
     assert pcc.calls == 1
+
+
+def test_site_settings_set_collection_method(in_memory_engine: Engine) -> None:
+    sites = SiteSettingsRepository(in_memory_engine)
+    assert sites.non_server_scrape_keys() == set()
+
+    sites.set_collection_method("leboncoin", "client_extension")
+    assert sites.non_server_scrape_keys() == {"leboncoin"}
+    by_key = {row.site_key: row for row in sites.list_all()}
+    assert by_key["leboncoin"].collection_method == "client_extension"
+
+    with pytest.raises(ValueError, match="collection_method"):
+        sites.set_collection_method("leboncoin", "bogus")
+    with pytest.raises(ValueError, match="site_key"):
+        sites.set_collection_method("  ", "client_extension")
+
+    # set_enabled alone leaves the default server_scrape.
+    sites.set_enabled("pccomponentes", False)
+    by_key2 = {row.site_key: row for row in sites.list_all()}
+    assert by_key2["pccomponentes"].collection_method == "server_scrape"

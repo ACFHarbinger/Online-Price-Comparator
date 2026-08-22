@@ -33,6 +33,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.20 `collection_method` flip enabler (2026-08-22):** a real way to turn a
+  verified site's collection method on without a raw DB edit.
+  `SiteSettingsRepository` gained `set_collection_method(site_key, method)`
+  (validated against `server_scrape`/`client_extension`/`search_api`/
+  `hint_only`; preserves a site's `enabled` flag) and the CLI gained
+  `online-price-comparator sites set-collection <site_key> <method>` plus
+  `sites collection-methods` (list each registered site's current method). This
+  is the deliberate single step that accompanies Harbinger's per-site live
+  verification — no script is flipped by default.
+
 - **Dashboard Watchlist & Retailer Settings UI (2026-08-22):** added a dedicated
   settings and watchlist management section in the Plotly Dash interface
   (`src/dashboard/layout.py`, `callbacks.py`, `theme.py`). Allows users to:

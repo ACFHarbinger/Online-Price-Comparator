@@ -175,6 +175,37 @@ def _run_sites_set(site_key: str, enabled: bool) -> int:
     return 0
 
 
+def _run_sites_set_collection(site_key: str, method: str) -> int:
+    """Set a registered site's v2.20 collection method."""
+    cleaned = _require_registered_site(site_key)
+    if cleaned is None:
+        return 1
+    settings = get_settings()
+    engine = create_db_engine(settings.database_path)
+    try:
+        SiteSettingsRepository(engine).set_collection_method(cleaned, method)
+    except ValueError as exc:
+        print(f"Error: {exc}")
+        return 1
+    print(f"Site {cleaned} collection method set to {method.strip()!r}.")
+    return 0
+
+
+def _run_sites_collection_methods() -> int:
+    """Print each registered site's current collection method."""
+    settings = get_settings()
+    engine = create_db_engine(settings.database_path)
+    methods = {
+        row.site_key: row.collection_method
+        for row in SiteSettingsRepository(engine).list_all()
+    }
+    print("Site collection methods:")
+    for site_key in registered_site_keys(settings):
+        method = methods.get(site_key, "server_scrape")
+        print(f"  {method:<16}  {site_key}")
+    return 0
+
+
 def _run_site_override(
     keywords: str,
     site_key: str,
@@ -403,6 +434,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     clear_parser.add_argument("keywords")
     clear_parser.add_argument("site_key")
+    set_collection_parser = sites_sub.add_parser(
+        "set-collection",
+        help=(
+            "Set a site's collection method "
+            "(server_scrape / client_extension / search_api / hint_only)"
+        ),
+    )
+    set_collection_parser.add_argument("site_key")
+    set_collection_parser.add_argument("method")
+    sites_sub.add_parser(
+        "collection-methods",
+        help="Show each registered site's current collection method",
+    )
 
     args = parser.parse_args(argv)
 
@@ -454,6 +498,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _run_site_override(
                 args.keywords, args.site_key, included=None, reason=None
             )
+        if sites_command == "set-collection":
+            return _run_sites_set_collection(args.site_key, args.method)
+        if sites_command == "collection-methods":
+            return _run_sites_collection_methods()
 
     parser.print_help()
     return 0

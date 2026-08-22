@@ -2,28 +2,64 @@
 
 v2.11: IQR runs **per exact condition bucket** on EUR-equivalent stickers.
 ``unknown`` and missing EUR values never enter a sample. Sparse buckets
-(n<4 in that condition) never auto-hide.
+(n<4 in that condition) never auto-hide. They may raise an inspect-
+seller/condition **review** flag when the sticker is below a per-category
+fraction of the ``new`` median.
 """
 
 from __future__ import annotations
 
 import statistics
 from collections import defaultdict
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+
+from normalize.text import dedupe_key
+
+from .aliases import apply_aliases
+from .profile import ProductCategory, detect_product_category
+
+# Starting values from product_matching.md — not a universal fence.
+# Keyed (category, exact-condition). Callers may override.
+DEFAULT_SPARSE_REVIEW_FRACTIONS: dict[tuple[str, str], float] = {
+    ("gpu", "enterprise_surplus"): 0.40,
+    ("ram", "used"): 0.50,
+}
+
+_GPU_CATEGORY_TOKENS = frozenset(
+    {
+        "gpu",
+        "rtx",
+        "gtx",
+        "geforce",
+        "radeon",
+        "grafikkarte",
+        "graphicscard",
+    }
+)
 
 
 @dataclass(frozen=True)
 class AnomalyResult:
     is_anomalous: bool
-    reason: str | None  # None when not anomalous
-    basis: str | None  # None when not anomalous; else a short human-readable
-    # summary of the numbers behind the decision, e.g.
-    # "n=6, median=520.00, IQR=45.00, high_fence=610.00"
+    reason: str | None  # None when not anomalous and not review
+    basis: str | None  # None when not anomalous and not review
+    needs_review: bool = False  # inspect seller/condition; never hides
 
 
 _NOT_ANOMALOUS = AnomalyResult(is_anomalous=False, reason=None, basis=None)
 _UNSAMPLED = frozenset({"", "unknown"})
+
+
+def review_category_for(text: str) -> str:
+    """Category key for sparse-review fractions. GPU is not a hard-gate."""
+    detected = detect_product_category(text)
+    if detected is not ProductCategory.OTHER:
+        return detected.value
+    tokens = frozenset(apply_aliases(dedupe_key(text)).split())
+    if tokens & _GPU_CATEGORY_TOKENS:
+        return "gpu"
+    return ProductCategory.OTHER.value
 
 
 def detect_anomalies(
@@ -31,14 +67,18 @@ def detect_anomalies(
     titles: Sequence[str],
     *,
     conditions: Sequence[str | None],
+    category: str | None = None,
+    fractions: Mapping[tuple[str, str], float] | None = None,
+    prior_eur: Sequence[float | None] | None = None,
 ) -> list[AnomalyResult]:
     """Flag EUR-equivalent outliers within each exact condition bucket.
 
     Parallel arrays, same length/order. A listing is left unflagged when
     its condition is ``unknown``/missing, its EUR equivalent is missing,
-    or its condition bucket has fewer than 4 sampled prices. ``titles`` is
-    kept for call-site compatibility; sparse buckets no longer auto-hide
-    on excluded-term matches.
+    or its condition bucket has fewer than 4 sampled prices. Sparse
+    buckets never auto-hide; they may ``needs_review`` when the sticker
+    is below the configured fraction of the ``new`` median (or of
+    ``prior_eur`` when no new reference exists).
     """
     n = min(len(prices_eur), len(titles), len(conditions))
     results = [_NOT_ANOMALOUS] * n
@@ -55,7 +95,65 @@ def detect_anomalies(
         flagged = _iqr_fence(sample, condition=condition)
         for index, result in zip(indexes, flagged, strict=True):
             results[index] = result
+
+    resolved_category = category or (
+        review_category_for(titles[0]) if titles else ProductCategory.OTHER.value
+    )
+    table = dict(DEFAULT_SPARSE_REVIEW_FRACTIONS)
+    if fractions is not None:
+        table.update(fractions)
+    new_median = _median_of([prices_eur[i] for i in buckets.get("new", ())])
+    for condition, indexes in buckets.items():
+        if len(indexes) >= 4:
+            continue
+        fraction = table.get((resolved_category, condition))
+        if fraction is None:
+            continue
+        for index in indexes:
+            if results[index].is_anomalous:
+                continue
+            price = prices_eur[index]
+            if price is None:
+                continue
+            prior = None
+            if prior_eur is not None and index < len(prior_eur):
+                prior = prior_eur[index]
+            reference, reference_kind = _review_reference(new_median, prior)
+            if reference is None or reference <= 0:
+                continue
+            threshold = fraction * reference
+            if float(price) < threshold:
+                results[index] = AnomalyResult(
+                    is_anomalous=False,
+                    needs_review=True,
+                    reason="inspect seller/condition",
+                    basis=(
+                        f"n={len(indexes)}, condition={condition}, "
+                        f"category={resolved_category}, fraction={fraction:.2f}, "
+                        f"reference={reference_kind}:{reference:.2f}, "
+                        f"threshold={threshold:.2f}, price={float(price):.2f}"
+                    ),
+                )
     return results
+
+
+def _median_of(values: Sequence[float | None]) -> float | None:
+    clean = [float(value) for value in values if value is not None]
+    if not clean:
+        return None
+    return float(statistics.median(clean))
+
+
+def _review_reference(
+    new_median: float | None,
+    prior: float | None,
+) -> tuple[float | None, str]:
+    """Prefer the snapshot's new median; fall back to a prior sticker."""
+    if new_median is not None:
+        return new_median, "new_median"
+    if prior is not None:
+        return float(prior), "prior_sticker"
+    return None, "none"
 
 
 def _normalize_condition(value: str | None) -> str:

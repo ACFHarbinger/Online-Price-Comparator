@@ -14,6 +14,7 @@ from matching import (
     detect_anomalies,
     extract_condition,
     match_listing,
+    review_category_for,
 )
 from models.listing import RawListing
 from normalize.price import parse_price
@@ -126,11 +127,20 @@ def persist_snapshot(
         [observation.conversion.price_eur_equivalent for observation in confirmed],
         [observation.raw.title for observation in confirmed],
         conditions=[observation.condition for observation in confirmed],
+        category=review_category_for(profile.canonical_name),
     )
     for observation, anomaly in zip(confirmed, anomalies, strict=True):
         if anomaly.is_anomalous:
             logger.warning(
                 "Anomalous price flagged (%s) for %r from %s: %s",
+                anomaly.reason,
+                observation.raw.title,
+                observation.raw.source,
+                anomaly.basis,
+            )
+        elif anomaly.needs_review:
+            logger.info(
+                "Sparse-bucket review (%s) for %r from %s: %s",
                 anomaly.reason,
                 observation.raw.title,
                 observation.raw.source,

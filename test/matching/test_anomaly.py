@@ -142,6 +142,90 @@ def test_iqr_runs_independently_per_condition_bucket() -> None:
     assert "condition=used" in results[9].basis
 
 
+def test_sparse_ram_used_below_fraction_needs_review_not_hide() -> None:
+    """n=1 used at 0.40x the new median is review, never auto-hidden."""
+    prices = [200.0, 210.0, 220.0, 80.0]
+    titles = [_CPU_TITLE] * 4
+    conditions = [_NEW, _NEW, _NEW, _USED]
+    results = detect_anomalies(prices, titles, conditions=conditions, category="ram")
+    assert results[3].is_anomalous is False
+    assert results[3].needs_review is True
+    assert results[3].reason == "inspect seller/condition"
+    assert results[3].basis is not None
+    assert "fraction=0.50" in results[3].basis
+    assert "reference=new_median:210.00" in results[3].basis
+    assert all(item.needs_review is False for item in results[:3])
+
+
+def test_sparse_ram_used_above_fraction_is_not_review() -> None:
+    prices = [200.0, 210.0, 220.0, 180.0]
+    titles = [_CPU_TITLE] * 4
+    conditions = [_NEW, _NEW, _NEW, _USED]
+    results = detect_anomalies(prices, titles, conditions=conditions, category="ram")
+    assert results[3].is_anomalous is False
+    assert results[3].needs_review is False
+    assert results[3].reason is None
+
+
+def test_sparse_gpu_surplus_uses_0_40_fraction() -> None:
+    prices = [1000.0, 1020.0, 980.0, 300.0]
+    titles = ["NVIDIA RTX 4070"] * 4
+    conditions = [_NEW, _NEW, _NEW, "enterprise_surplus"]
+    results = detect_anomalies(prices, titles, conditions=conditions, category="gpu")
+    assert results[3].is_anomalous is False
+    assert results[3].needs_review is True
+    assert results[3].basis is not None
+    assert "fraction=0.40" in results[3].basis
+    assert "category=gpu" in results[3].basis
+
+
+def test_no_new_median_falls_back_to_prior_sticker() -> None:
+    prices = [80.0]
+    titles = [_CPU_TITLE]
+    conditions = [_USED]
+    results = detect_anomalies(
+        prices,
+        titles,
+        conditions=conditions,
+        category="ram",
+        prior_eur=[200.0],
+    )
+    assert results[0].needs_review is True
+    assert results[0].is_anomalous is False
+    assert results[0].basis is not None
+    assert "reference=prior_sticker:200.00" in results[0].basis
+
+
+def test_no_reference_does_not_invent_a_review() -> None:
+    results = detect_anomalies([80.0], [_CPU_TITLE], conditions=[_USED], category="ram")
+    assert results[0].needs_review is False
+    assert results[0].is_anomalous is False
+
+
+def test_unconfigured_category_does_not_use_a_global_fraction() -> None:
+    prices = [200.0, 210.0, 220.0, 80.0]
+    titles = [_CPU_TITLE] * 4
+    conditions = [_NEW, _NEW, _NEW, _USED]
+    results = detect_anomalies(prices, titles, conditions=conditions, category="cpu")
+    assert all(item.needs_review is False for item in results)
+
+
+def test_review_fractions_are_overridable() -> None:
+    prices = [200.0, 210.0, 220.0, 180.0]
+    titles = [_CPU_TITLE] * 4
+    conditions = [_NEW, _NEW, _NEW, _USED]
+    results = detect_anomalies(
+        prices,
+        titles,
+        conditions=conditions,
+        category="ram",
+        fractions={("ram", "used"): 0.90},
+    )
+    assert results[3].needs_review is True
+    assert results[3].basis is not None
+    assert "fraction=0.90" in results[3].basis
+
+
 def test_unknown_and_missing_eur_never_enter_the_sample() -> None:
     prices: list[float | None] = [600.0, 610.0, 620.0, 630.0, 100.0, None]
     titles = [_CPU_TITLE] * 6

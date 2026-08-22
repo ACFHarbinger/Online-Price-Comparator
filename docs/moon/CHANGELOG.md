@@ -30,6 +30,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.11 sparse-bucket review flag (2026-08-22):** a sparse exact-condition
+  bucket (`n<4`) whose EUR sticker is below a per-category fraction of the
+  snapshot's `new` median (GPU surplus `0.40`, RAM used `0.50`, overridable;
+  falls back to that listing's prior sticker if no new reference exists)
+  raises `needs_review` — never auto-hide, never auto-accept. Fraction,
+  reference series, and evidence persist on `anomaly_reason`/`anomaly_basis`
+  with `is_anomalous=False`. No global 0.20/0.25/0.95 fence. [#29](https://github.com/ACFHarbinger/Online-Price-Comparator/issues/29).
+
 - **Richer condition-label and verbatim grading display in dashboard (2026-08-22):**
   surfaced the seller's own verbatim condition/grading text (e.g. `Recertified`,
   `OEM`, `Grade A`, `Hervorragend`, `Neu (Sonstige)`, `Factory Sealed`,

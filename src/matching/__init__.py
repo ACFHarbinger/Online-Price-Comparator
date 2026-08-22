@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 from .aliases import apply_aliases
-from .anomaly import AnomalyResult, detect_anomalies
+from .anomaly import (
+    AnomalyResult,
+    detect_anomalies,
+    review_category_for,
+)
 from .condition import (
     ConditionResult,
     ConditionSource,
@@ -45,4 +49,5 @@ __all__ = [
     "extract_storage_interface",
     "find_excluded_term",
     "match_listing",
+    "review_category_for",
 ]

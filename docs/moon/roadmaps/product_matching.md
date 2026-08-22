@@ -104,9 +104,9 @@ for statistics):
 
 - Never auto-hide and never auto-accept (v2.11). A kit/bundle title in a
   sparse bucket stays visible rather than being IQR-flagged from n=2/3.
-- An inspect-seller/condition review badge (when EUR-equivalent is a
-  documented fraction of the `new` median) is a later surfacing, not an
-  auto-hide.
+- An inspect-seller/condition review flag (when EUR-equivalent is a
+  documented fraction of the `new` median) is a review, not an auto-hide
+  — see the v2.11 condition section. Dashboard badge display is later.
 
 Anomalous listings are excluded from "best price," charts, and alerts by
 default, with a way to reveal them. Store `is_anomalous`, `anomaly_reason`, and
@@ -175,8 +175,12 @@ profile:
 `persist_snapshot` writes current belief on `listings` and an observation-time
 copy on `price_history`, then runs `detect_anomalies` per exact condition on
 `price_eur_equivalent`. `unknown` and missing EUR never enter a sample;
-sparse buckets never auto-hide. Pre-v2.11 rows stay NULL. Dashboard
-badges/filters are not this slice.
+sparse buckets never auto-hide. Sparse RAM-used / GPU-surplus buckets
+below the documented per-category fraction of the `new` median (or a
+prior sticker if no new reference exists) set `needs_review` with the
+fraction, reference, and evidence on `anomaly_reason`/`anomaly_basis`
+and `is_anomalous=False`. Pre-v2.11 rows stay NULL. Dashboard
+review-badge display is not this slice.
 
 This does not weaken the anomaly detector's original purpose (catching
 mispriced/scam listings within a condition bucket) — it just stops applying

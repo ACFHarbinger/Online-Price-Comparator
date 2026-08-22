@@ -34,16 +34,16 @@ itself a forecast.
 
 ## v1 design: a real forecasting model
 
-**Implemented first slice (2026-08-21):** `forecasting.holt.forecast_prices`
-uses Holt's linear trend over daily medians from the dominant same-currency
-population. It requires at least eight compatible observations spanning 21
-days, projects 14 days, and renders only a widening 80% confidence band in a
-dedicated dashboard panel labelled **Projected — not a guarantee**. The panel
-shows the training-data timestamp and its minimum-history failure reason.
-Until v2.10's EUR-equivalent data and v2.11's condition field exist, it cannot
-filter by those absent fields; it explicitly avoids mixing native currencies.
-Persisting/retraining forecasts on v2.2's refresh cadence remains pending, so
-the in-memory model is recomputed only when this product view is refreshed.
+**Implemented slices (2026-08-21/22):** the original
+`forecasting.holt.forecast_prices` uses Holt's linear trend over daily medians
+from the dominant same-currency population. The v2.18 EUR-condition slice adds
+`forecast_eur_prices`, which trains only one exact known condition from
+persisted `price_eur_equivalent` observations. It rejects `unknown` as a
+training bucket and never mixes native currencies or condition states. The
+dashboard selects its most-observed known condition, shows that selection in
+the dedicated **Projected — not a guarantee** panel's metadata, and keeps the
+same eight-observation/21-day gate plus widening 80% confidence band.
+Persisting/retraining forecasts on v2.2's refresh cadence remains pending.
 
 - **Model**: start simple — a seasonal-naive or lightweight exponential-
   smoothing model (e.g. Holt's linear trend) over each tracked product's

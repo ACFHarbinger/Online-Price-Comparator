@@ -42,8 +42,11 @@ persisted `price_eur_equivalent` observations. It rejects `unknown` as a
 training bucket and never mixes native currencies or condition states. The
 dashboard selects its most-observed known condition, shows that selection in
 the dedicated **Projected — not a guarantee** panel's metadata, and keeps the
-same eight-observation/21-day gate plus widening 80% confidence band.
-Persisting/retraining forecasts on v2.2's refresh cadence remains pending.
+same eight-observation/21-day gate plus widening 80% confidence band. Each
+v2.2 tracked-product refresh now replaces a small persisted forecast snapshot;
+the dashboard reads that snapshot and explains when it has not yet been
+trained, rather than fitting a model during a page view. Failed retraining is
+logged and does not interrupt the underlying collection or alert pass.
 
 - **Model**: start simple — a seasonal-naive or lightweight exponential-
   smoothing model (e.g. Holt's linear trend) over each tracked product's

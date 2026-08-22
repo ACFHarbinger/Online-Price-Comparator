@@ -33,6 +33,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.18 refresh-cadence forecast retraining (2026-08-22):** tracked-product
+  refreshes now train the exact-condition EUR forecast from persisted,
+  confirmed non-anomalous history and atomically replace its SQLite snapshot.
+  The dashboard reads that snapshot instead of recomputing Holt on every view;
+  it reports an explicit untrained/insufficient-history state until a refresh
+  has produced a usable result. Forecast persistence is read-only decision
+  context and retraining failures never interrupt collection or alerts.
+
 - **eBay.de Browse API SearchProvider (#40, 2026-08-22):** implemented official
   eBay REST Browse API integration (`src/search/providers/ebay.py`) fulfilling the
   `SearchProvider` Protocol. Uses OAuth2 client-credentials authentication with in-memory

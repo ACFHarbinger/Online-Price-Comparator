@@ -121,7 +121,12 @@ button, input {{ font: inherit; }}
 .scorecard-table th, .scorecard-table td {{ padding: 12px 10px; text-align: left; border-top: 1px solid {PANEL_BORDER}; font-size: .84rem; vertical-align: top; }}
 .scorecard-table th {{ color: {MUTED_TEXT}; font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; }}
 .scorecard-site-name {{ font-weight: 600; color: {PRIMARY_TEXT}; }}
-.badge-condition {{ display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: .70rem; font-family: {MONO_FONT}; font-weight: 600; background: rgba(139, 148, 158, 0.15); color: {MUTED_TEXT}; border: 1px solid {PANEL_BORDER}; text-transform: uppercase; }}
+.badge-condition {{ display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: .70rem; font-family: {MONO_FONT}; font-weight: 600; background: rgba(139, 148, 158, 0.15); color: {MUTED_TEXT}; border: 1px solid {PANEL_BORDER}; text-transform: uppercase; margin-left: 6px; vertical-align: middle; }}
+.badge-condition-new {{ background: rgba(63, 185, 80, 0.15); color: {POSITIVE}; border-color: rgba(63, 185, 80, 0.35); }}
+.badge-condition-used {{ background: rgba(245, 158, 11, 0.15); color: #F59E0B; border-color: rgba(245, 158, 11, 0.35); }}
+.badge-condition-refurb {{ background: rgba(6, 182, 212, 0.15); color: #06B6D4; border-color: rgba(6, 182, 212, 0.35); }}
+.badge-condition-enterprise_surplus {{ background: rgba(168, 85, 247, 0.15); color: #A855F7; border-color: rgba(168, 85, 247, 0.35); }}
+.badge-condition-unknown {{ background: rgba(139, 148, 158, 0.15); color: {MUTED_TEXT}; border-color: rgba(139, 148, 158, 0.3); }}
 .scorecard-cell {{ display: flex; flex-direction: column; gap: 3px; }}
 .scorecard-dim-ok {{ font-family: {MONO_FONT}; font-size: .82rem; font-weight: 600; color: {POSITIVE}; }}
 .scorecard-dim-low {{ font-family: {MONO_FONT}; font-size: .82rem; font-weight: 600; color: #F59E0B; }}

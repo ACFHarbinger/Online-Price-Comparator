@@ -39,6 +39,8 @@ class ListingSummary:
     price_amount: float | None
     currency: str | None
     observed_at: datetime | None
+    condition: str | None = None
+    condition_source: str | None = None
 
 
 class ProductRepository:
@@ -220,6 +222,8 @@ class ListingRepository:
                 latest_price.c.price_amount,
                 latest_price.c.currency,
                 latest_price.c.observed_at,
+                listings.c.condition,
+                listings.c.condition_source,
             )
             .select_from(listings)
             .outerjoin(latest_price, latest_price.c.listing_id == listings.c.id)
@@ -242,6 +246,8 @@ class ListingRepository:
                 price_amount=row.price_amount,
                 currency=row.currency,
                 observed_at=row.observed_at,
+                condition=row.condition,
+                condition_source=row.condition_source,
             )
             for row in rows
         ]

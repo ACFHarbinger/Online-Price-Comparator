@@ -60,24 +60,40 @@ _STRUCTURED_MAP: dict[str, ListingCondition] = {
 }
 
 _SURPLUS_PHRASES = (
-    "enterprise surplus",
     "datacenter surplus",
+    "enterprise surplus",
+    "data center surplus",
+    "server pull",
+    "datacenter pull",
     "data center",
     "datacenter",
     "surplus",
 )
 _REFURB_PHRASES = (
+    "recertified",
+    "recertificado",
+    "grade a",
+    "grade b",
+    "hervorragend",
+    "generalüberholt",
+    "generaluberholt",
     "reacondicionado",
     "reacondicionada",
     "recondicionado",
     "refurbished",
     "remanufactured",
-    "generaluberholt",
 )
 _USED_PHRASES = (
+    "neu (sonstige)",
+    "neu sonstige",
+    "new (other)",
+    "new other",
+    "open box",
+    "caja abierta",
     "segunda mano",
     "2a mano",
     "second hand",
+    "oem",
     "usado",
     "usada",
     "usados",
@@ -90,10 +106,87 @@ _NEW_PHRASES = (
     "factory sealed",
     "nuevo de fabrica",
     "a estrenar",
+    "neuf sous blister",
+    "neuf",
     "nuevo",
     "nova",
     "novo",
 )
+
+_VERBATIM_CANONICAL: dict[str, str] = {
+    "recertified": "Recertified",
+    "recertificado": "Recertificado",
+    "grade a": "Grade A",
+    "grade b": "Grade B",
+    "hervorragend": "Hervorragend",
+    "generalüberholt": "Generalüberholt",
+    "generaluberholt": "Generalüberholt",
+    "reacondicionado": "Reacondicionado",
+    "reacondicionada": "Reacondicionado",
+    "recondicionado": "Recondicionado",
+    "remanufactured": "Remanufactured",
+    "datacenter surplus": "Datacenter Surplus",
+    "enterprise surplus": "Enterprise Surplus",
+    "server pull": "Server Pull",
+    "datacenter pull": "Datacenter Pull",
+    "neu (sonstige)": "Neu (Sonstige)",
+    "neu sonstige": "Neu (Sonstige)",
+    "new (other)": "New (Other)",
+    "new other": "New (Other)",
+    "open box": "Open Box",
+    "caja abierta": "Open Box",
+    "oem": "OEM",
+    "factory sealed": "Factory Sealed",
+    "brand new": "Brand New",
+    "nuevo de fabrica": "Nuevo de Fábrica",
+    "a estrenar": "A Estrenar",
+    "neuf sous blister": "Neuf sous blister",
+    "segunda mano": "Segunda Mano",
+    "second hand": "Second Hand",
+    "gebraucht": "Gebraucht",
+    "occasion": "Occasion",
+}
+
+
+def extract_verbatim_label(
+    text: str | None,
+    extra: dict[str, Any] | None = None,
+) -> str | None:
+    """Extract verbatim grading or condition phrase from raw metadata or title text."""
+    if extra:
+        raw = (
+            extra.get("condition_label")
+            or extra.get("grading")
+            or extra.get("seller_condition")
+            or extra.get("condition_raw")
+            or extra.get("item_condition")
+            or extra.get("itemCondition")
+        )
+        if isinstance(raw, str) and raw.strip():
+            raw_str = raw.strip()
+            clean = raw_str.rsplit("/", 1)[-1]
+            if clean.lower() in _VERBATIM_CANONICAL:
+                return _VERBATIM_CANONICAL[clean.lower()]
+            if clean and not clean.startswith("http"):
+                return clean
+
+    if not text:
+        return None
+
+    norm = dedupe_key(text)
+    norm_tokens = norm.split()
+    for phrase, canonical in sorted(
+        _VERBATIM_CANONICAL.items(), key=lambda item: len(item[0]), reverse=True
+    ):
+        phrase_norm = dedupe_key(phrase)
+        phrase_tokens = phrase_norm.split()
+        width = len(phrase_tokens)
+        if width == 0:
+            continue
+        for idx in range(len(norm_tokens) - width + 1):
+            if norm_tokens[idx : idx + width] == phrase_tokens:
+                return canonical
+    return None
 
 
 @dataclass(frozen=True)
@@ -103,6 +196,7 @@ class ConditionResult:
     condition: ListingCondition
     source: ConditionSource
     confidence: float
+    raw_label: str | None = None
 
 
 def extract_condition(
@@ -118,15 +212,30 @@ def extract_condition(
     without a separate API; it is not consulted this slice.
     """
     del profile
+    raw_label = extract_verbatim_label(title, extra)
     structured = _from_structured(extra)
     if structured is not None:
-        return ConditionResult(structured, ConditionSource.STRUCTURED_DATA, 0.9)
+        return ConditionResult(
+            structured, ConditionSource.STRUCTURED_DATA, 0.9, raw_label=raw_label
+        )
     titled = _from_title(title)
     if titled is not None:
-        return ConditionResult(titled, ConditionSource.TITLE_HEURISTIC, 0.7)
+        return ConditionResult(
+            titled, ConditionSource.TITLE_HEURISTIC, 0.7, raw_label=raw_label
+        )
     if site_key in NEW_STOCK_SITE_KEYS:
-        return ConditionResult(ListingCondition.NEW, ConditionSource.SOURCE_POLICY, 0.4)
-    return ConditionResult(ListingCondition.UNKNOWN, ConditionSource.UNKNOWN, 0.0)
+        return ConditionResult(
+            ListingCondition.NEW,
+            ConditionSource.SOURCE_POLICY,
+            0.4,
+            raw_label=raw_label,
+        )
+    return ConditionResult(
+        ListingCondition.UNKNOWN,
+        ConditionSource.UNKNOWN,
+        0.0,
+        raw_label=raw_label,
+    )
 
 
 def _from_structured(extra: dict[str, Any] | None) -> ListingCondition | None:

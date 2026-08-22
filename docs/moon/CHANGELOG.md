@@ -30,6 +30,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Richer condition-label and verbatim grading display in dashboard (2026-08-22):**
+  surfaced the seller's own verbatim condition/grading text (e.g. `Recertified`,
+  `OEM`, `Grade A`, `Hervorragend`, `Neu (Sonstige)`, `Factory Sealed`,
+  `Datacenter Surplus`) alongside coarse condition badges in both the retailer links
+  table (`_retailer_table`) and the value-proposition scorecards table
+  (`_build_scorecard_table`). Added `extract_verbatim_label` and populated `raw_label`
+  on `ConditionResult` in `src/matching/condition.py`; enriched `ListingSummary` in
+  `src/storage/repository.py` with `condition` and `condition_source`; and added
+  financial-terminal styling for condition badges (`.badge-condition-{new,used,refurb,enterprise_surplus,unknown}`)
+  in `src/dashboard/theme.py`. Unit tests in `test/dashboard/test_condition_display.py`.
+
+- **v2.13 global-tier Newegg first slice (2026-08-22):** added a polite,
+  structured-data-first/CSS-fallback Newegg US RAM adapter. Listings carry
+  `import_regime = row` and a transparent Portugal landed-cost range in
+  `RawListing.extra`: rough USD 15–30 shipping, USD 0–15 customs/clearance,
+  and a 23% rough import-VAT basis. The range rounds up to whole USD and says
+  plainly that it is an estimate, not a checkout quote; delivery timing is
+  unavailable until checkout. This is source metadata only — no global
+  landed-cost engine, persistence, or dashboard ranking is implied.
+
 - **3rd market-scan report translated into roadmap findings (2026-08-21):**
   read the new `docs/moon/reports/ssd_4tb_hdd_2022tb_market_scan_report.md`
   (4TB SSD / 20-22TB HDD scan). No new candidate sites (Geizhals/eBay/

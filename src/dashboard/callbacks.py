@@ -26,6 +26,7 @@ from dashboard.stats import (
 )
 from fetch.circuit_breaker import CircuitBreaker
 from forecasting.holt import ForecastResult, forecast_prices
+from matching.condition import extract_verbatim_label
 from pipeline.custom_url import track_and_process_custom_url
 from pipeline.discover import run_discovery
 from pipeline.snapshot import persist_snapshot
@@ -125,6 +126,33 @@ def _format_delta_vs_avg(
     )
 
 
+def _format_condition_badge(
+    condition: str | None,
+    verbatim_text: str | None = None,
+    *,
+    condition_source: str | None = None,
+) -> html.Span:
+    """Render condition badge with coarse bucket and verbatim text if available."""
+    cond_norm = (condition or "unknown").lower()
+    coarse_label = cond_norm.replace("_", " ").upper()
+
+    if (
+        verbatim_text
+        and verbatim_text.lower() != cond_norm
+        and verbatim_text.lower() != coarse_label.lower()
+    ):
+        display_text = f"{coarse_label} · {verbatim_text}"
+    else:
+        display_text = coarse_label
+
+    css_class = f"badge-condition badge-condition-{cond_norm}"
+    title_text = None
+    if condition_source:
+        title_text = f"Condition: {coarse_label} (source: {condition_source})"
+
+    return html.Span(display_text, className=css_class, title=title_text)
+
+
 def _retailer_table(
     listings: list[ListingSummary],
     avg_30d: float | None,
@@ -180,6 +208,15 @@ def _retailer_table(
 
         # Store cell
         store_children: list[Any] = [listing.site_display_name]
+        if listing.condition:
+            verbatim = extract_verbatim_label(listing.url)
+            store_children.append(
+                _format_condition_badge(
+                    listing.condition,
+                    verbatim,
+                    condition_source=listing.condition_source,
+                )
+            )
         if is_blocked:
             store_children.append(html.Span("PAUSED", className="badge-blocked"))
         elif is_stale and listing.observed_at is not None:
@@ -385,7 +422,7 @@ def _build_scorecard_table(scorecards: list[SiteScorecard]) -> html.Table:
                             className="scorecard-site-name",
                         )
                     ),
-                    html.Td(html.Span(card.condition, className="badge-condition")),
+                    html.Td(_format_condition_badge(card.condition)),
                     html.Td(_format_scorecard_cell(card.extreme_value)),
                     html.Td(_format_scorecard_cell(card.consistency)),
                     html.Td(_format_scorecard_cell(card.fulfillment_sla)),

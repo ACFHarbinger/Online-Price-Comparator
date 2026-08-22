@@ -1,6 +1,6 @@
 # Dashboard UX & Aesthetics Roadmap
 
-**Status:** ✅ Done (v1.4, v2.6, v2.14 historical-low badge, v2.19) · 📋 Planned (v2.11, v2.13) · **Source:** agy research (aesthetics), grok research (borrowed UX patterns); v2.11/v2.13/v2.14 from the 2026-08-15 global-scope brainstorm
+**Status:** ✅ Done (v1.4, v2.6, v2.14 historical-low badge, v2.16 scorecard wiring, v2.19, richer condition-labels) · 📋 Planned (v2.11, v2.13) · **Source:** agy research (aesthetics), grok research (borrowed UX patterns); v2.11/v2.13/v2.14 from the 2026-08-15 global-scope brainstorm
 
 ## Aesthetic direction: "Financial Terminal" dark-slate
 

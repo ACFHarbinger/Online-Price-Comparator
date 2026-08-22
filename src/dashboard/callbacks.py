@@ -422,6 +422,39 @@ def _format_scorecard_cell(dim: Dimension) -> html.Div:
     )
 
 
+def _candidate_scorecard_cell(card: SiteScorecard) -> html.Div:
+    """Four independent cells for a discovery candidate. Never a composite."""
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Span("Extreme", className="scorecard-detail"),
+                    _format_scorecard_cell(card.extreme_value),
+                ],
+            ),
+            html.Div(
+                [
+                    html.Span("Consistency", className="scorecard-detail"),
+                    _format_scorecard_cell(card.consistency),
+                ],
+            ),
+            html.Div(
+                [
+                    html.Span("Fulfillment", className="scorecard-detail"),
+                    _format_scorecard_cell(card.fulfillment_sla),
+                ],
+            ),
+            html.Div(
+                [
+                    html.Span("Reliability", className="scorecard-detail"),
+                    _format_scorecard_cell(card.reliability),
+                ],
+            ),
+        ],
+        className="candidate-scorecard",
+    )
+
+
 def _build_scorecard_table(scorecards: list[SiteScorecard]) -> html.Table:
     """Render site scorecards into an independent 4-cell table (never composite)."""
     rows = []
@@ -521,17 +554,7 @@ def _candidate_sources_panel(
         )
 
         if scorecards and cand.site_key in scorecards:
-            card = scorecards[cand.site_key]
-            scorecard_cell: Any = html.Div(
-                [
-                    html.Span(
-                        f"Consistency: {card.consistency.confidence.upper()}",
-                        className=f"scorecard-dim-{card.consistency.confidence}",
-                    ),
-                    html.Div(card.reliability.detail, className="scorecard-detail"),
-                ],
-                className="scorecard-cell",
-            )
+            scorecard_cell: Any = _candidate_scorecard_cell(scorecards[cand.site_key])
         else:
             scorecard_cell = html.Span(
                 "Not enough data yet", className="scorecard-dim-unavail"

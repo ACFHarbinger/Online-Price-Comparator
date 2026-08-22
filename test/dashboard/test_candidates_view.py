@@ -116,7 +116,15 @@ def test_candidate_sources_panel_rendered_with_scorecard() -> None:
     row = tbody.children[0]
     cells = row.children
 
-    # Check scorecard cell shows consistency and reliability
+    # Four independent cells, no composite — reuse _format_scorecard_cell.
     scorecard_cell = cells[4].children
-    assert "Consistency: OK" in scorecard_cell.children[0].children
-    assert "0 failures" in scorecard_cell.children[1].children
+    rendered = str(scorecard_cell)
+    assert "Extreme" in rendered
+    assert "10th percentile" in rendered
+    assert "Consistency" in rendered
+    assert "50th pct median" in rendered
+    assert "Fulfillment" in rendered
+    assert "Unavailable" in rendered
+    assert "Reliability" in rendered
+    assert "Healthy (0 failures)" in rendered
+    assert "composite" not in rendered.lower()

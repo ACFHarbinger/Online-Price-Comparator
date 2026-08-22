@@ -23,13 +23,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **v2.16 site scorecards in v2.17b discovery candidates panel (2026-08-22):**
-  wired `scorecards_for_product` lookups into the "Discovered Source Candidates"
-  approval table in `src/dashboard/callbacks.py` (`_candidate_sources_panel`).
-  When candidate sources are discovered, each pending candidate row presents its site's
-  consistency rank and reliability status (or an honest "Not enough data yet" when the
-  site has no prior history), helping users make informed approval decisions before
-  persisting new sources into their watchlist. Tests in `test/dashboard/test_candidates_view.py`.
+- **v2.16 four-cell scorecards on v2.17b discovery candidates (2026-08-22):**
+  each pending candidate row now renders the four independent scorecard cells
+  (extreme-value, consistency, fulfillment SLA, reliability) via
+  `_format_scorecard_cell`, or an honest "Not enough data yet" when the site
+  has no history. Never a composite. Tests in
+  `test/dashboard/test_candidates_view.py`.
 
 - **Dashboard search site_settings and collection_method enforcement (2026-08-22):**
   verified and locked down `select_product` in `src/dashboard/callbacks.py` passing

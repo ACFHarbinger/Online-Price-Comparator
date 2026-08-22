@@ -12,9 +12,13 @@ user-initiated localhost send.
 **Scope (2026-08-22):** PT/ES tier — Amazon.es (`/dp/*`), PcComponentes
 (`.pt`/`.com`), PCDIGA, Worten.pt, Fnac.pt, Chip7.pt, Wallapop.es (`/item/*`);
 FR tier — LDLC.com; DE tier — Mindfactory.de (`product_info.php*`),
-Alternate.de (`*/html`), Geizhals.de, Kleinanzeigen.de (`/s-anzeige/*`); plus the
-original Leboncoin.fr (`/ad/*`). Listings are matched by the
-`content_scripts.matches` in `manifest.json`.
+Alternate.de (`*/html`), Geizhals.de, Kleinanzeigen.de (`/s-anzeige/*`);
+Others — Scan.co.uk (`/products/*`), Overclockers.co.uk (`*.html`),
+Newegg (`/p/*`); plus the original Leboncoin.fr (`/ad/*`). Listings are matched
+by the `content_scripts.matches` in `manifest.json`. **eBay.de is deliberately
+NOT included** — the roadmap flags it as likely better served by eBay's official
+Browse API (`search_api`) and needs a Harbinger decision before assuming the
+extension is the right mechanism.
 
 > **Verification status:** no site beyond the original Leboncoin test has been
 > verified against a live page from this environment. PT/ES, LDLC, Mindfactory

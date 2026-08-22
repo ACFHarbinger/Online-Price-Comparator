@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "OPC Client-Side Monitor (PT/ES + FR/DE)",
-  "version": "0.5.0",
+  "name": "OPC Client-Side Monitor (PT/ES + FR/DE + others)",
+  "version": "0.6.0",
   "description": "Reads the price/title JSON-LD from a tracked retailer listing page the user has open, records detected changes locally, and sends them to OPC for the identity-matching -> condition -> FX -> persist_snapshot pipeline.",
   "permissions": ["storage", "downloads"],
   "host_permissions": [
@@ -20,6 +20,9 @@
     "https://www.alternate.de/*/html",
     "https://geizhals.de/*",
     "https://www.kleinanzeigen.de/s-anzeige/*",
+    "https://www.scan.co.uk/products/*",
+    "https://www.overclockers.co.uk/*.html",
+    "https://www.newegg.com/p/*",
     "http://127.0.0.1/*",
     "http://localhost/*"
   ],
@@ -44,7 +47,10 @@
         "https://www.mindfactory.de/product_info.php*",
         "https://www.alternate.de/*/html",
         "https://geizhals.de/*",
-        "https://www.kleinanzeigen.de/s-anzeige/*"
+        "https://www.kleinanzeigen.de/s-anzeige/*",
+        "https://www.scan.co.uk/products/*",
+        "https://www.overclockers.co.uk/*.html",
+        "https://www.newegg.com/p/*"
       ],
       "js": ["site_fallbacks.js", "content.js"],
       "run_at": "document_idle"

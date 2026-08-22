@@ -39,6 +39,9 @@ const SITES = {
   "alternate.de": { site_key: "alternate", site_display_name: "Alternate" },
   "geizhals.de": { site_key: "geizhals", site_display_name: "Geizhals" },
   "kleinanzeigen.de": { site_key: "kleinanzeigen", site_display_name: "Kleinanzeigen" },
+  "scan.co.uk": { site_key: "scan.co.uk", site_display_name: "Scan" },
+  "overclockers.co.uk": { site_key: "overclockers.co.uk", site_display_name: "Overclockers" },
+  "newegg.com": { site_key: "newegg", site_display_name: "Newegg" },
 };
 
 /** Resolve the site metadata for a page hostname (www. stripped). */

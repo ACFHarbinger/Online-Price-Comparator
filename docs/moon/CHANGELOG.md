@@ -60,6 +60,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.20 "others" tier content scripts (2026-08-22):** the extension's
+  hostname-driven `SITES` + `manifest.json` coverage expands to Scan.co.uk
+  (`/products/*`), Overclockers.co.uk (`*.html`), and Newegg (`/p/*`),
+  completing the documented rollout (PT/ES → FR → DE → others). **eBay.de is
+  deliberately excluded** — the roadmap flags it as likely better served by
+  eBay's official Browse API and needs a Harbinger decision. These patterns are
+  grounded in each site's Python scraper base URL but are still
+  **code-only/unverified** against a live page; `site_fallbacks.js` stays empty;
+  no site is flipped to `client_extension`.
+
 - **v2.20 FR + DE tier content scripts (2026-08-22):** the extension's
   hostname-driven `SITES` table + `manifest.json` coverage expand to LDLC.com
   (FR) and Mindfactory.de, Alternate.de, Geizhals.de, Kleinanzeigen.de (DE),

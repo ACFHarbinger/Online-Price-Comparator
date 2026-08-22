@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, cast
 
+from alerting.observations import ListingHistory, ListingObservation
 from dashboard.callbacks import (
     _build_hero_metrics,
     _build_trend_indicator,
     _build_volatility_badge,
+    _eur_forecast_for_histories,
     _forecast_metadata,
     _format_delta_vs_avg,
     _retailer_table,
@@ -125,6 +127,54 @@ def test_build_forecast_chart_has_only_a_projected_confidence_band() -> None:
     metadata = _forecast_metadata(forecast)
     assert "80% confidence band" in metadata
     assert "last retrained" in metadata
+
+
+def test_eur_forecast_uses_most_observed_known_condition() -> None:
+    start = datetime(2026, 1, 1, 12, 0, 0)
+    new_history = ListingHistory(
+        listing_id=1,
+        site_key="amazon.es",
+        site_display_name="Amazon.es",
+        url="https://amazon.es/dp/example",
+        observations=[
+            ListingObservation(
+                listing_id=1,
+                site_key="amazon.es",
+                site_display_name="Amazon.es",
+                url="https://amazon.es/dp/example",
+                observed_at=start + timedelta(days=day * 3),
+                eur_amount=500.0 - day,
+                condition="new",
+            )
+            for day in range(8)
+        ],
+    )
+    used_history = ListingHistory(
+        listing_id=2,
+        site_key="pccomponentes",
+        site_display_name="PcComponentes",
+        url="https://pccomponentes.com/example",
+        observations=[
+            ListingObservation(
+                listing_id=2,
+                site_key="pccomponentes",
+                site_display_name="PcComponentes",
+                url="https://pccomponentes.com/example",
+                observed_at=start + timedelta(days=day * 3),
+                eur_amount=200.0,
+                condition="used",
+            )
+            for day in range(2)
+        ],
+    )
+
+    forecast = _eur_forecast_for_histories([new_history, used_history])
+
+    assert forecast.is_available is True
+    assert forecast.currency == "EUR"
+    assert forecast.condition == "new"
+    assert forecast.observation_count == 8
+    assert "exact new condition" in _forecast_metadata(forecast)
 
 
 def test_build_hero_metrics() -> None:

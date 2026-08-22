@@ -33,6 +33,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.18 exact-condition EUR forecast training (2026-08-22):** Holt
+  forecasting now trains on persisted `price_eur_equivalent` observations from
+  one exact known condition, never a mixed native-currency/condition series.
+  The dashboard forecast panel selects the most-observed known condition and
+  names it in its honesty metadata; `unknown` is excluded rather than treated
+  as a legitimate bucket. The eight-observation/21-day minimum and widening
+  80% confidence band remain unchanged. Refresh-cadence retraining is still a
+  separate follow-up.
+
 - **v2.20 `collection_method` flip enabler (2026-08-22):** a real way to turn a
   verified site's collection method on without a raw DB edit.
   `SiteSettingsRepository` gained `set_collection_method(site_key, method)`

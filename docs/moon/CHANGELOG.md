@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **eBay.de decided as `search_api`, not `client_extension` (2026-08-22,
+  Harbinger's call):** unlike every other v2.20 site, eBay.de gets its
+  official Browse API (OAuth2 client-credentials), the same integration
+  shape as v2.17a's `SerpApiProvider` — not yet implemented. This closes
+  v2.20's extension rollout as fully decided across all four tiers
+  (PT/ES, FR, DE, others), with the "others" tier itself (Scan.co.uk,
+  Overclockers UK, Newegg) also shipping today.
+
+### Changed
+
 - **v2.20 scope expanded to every site (2026-08-22, Harbinger's call):**
   `client_extension` becomes the intended collection method for every
   tracked site, not only ones whose ToS objects to server-side automation

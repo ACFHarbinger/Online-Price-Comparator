@@ -32,11 +32,12 @@ site's `collection_method` as its script ships, don't batch a whole tier):
    becomes a price source, see v2.8).
 2. **France**: LDLC.com, Leboncoin.fr (done).
 3. **Germany**: Mindfactory.de, Alternate.de, Geizhals.de, Kleinanzeigen.de.
-4. **Others**: Scan.co.uk, Overclockers UK, Newegg (global tier), eBay.de
-   (eBay has an official Browse API — `search_api` may be the better fit
-   for eBay specifically once that's wired up, not necessarily extension;
-   flag this to Harbinger when this tier's turn comes rather than
-   defaulting silently).
+4. **Others**: Scan.co.uk, Overclockers UK, Newegg (global tier) — shipped
+   2026-08-22. **eBay.de decided 2026-08-22 (Harbinger): `search_api`, not
+   `client_extension`** — eBay's official Browse API (OAuth2
+   client-credentials) is purpose-built for this, same shape as v2.17a's
+   `SerpApiProvider`. Not yet implemented; see
+   `scrapers_and_retailers.md`'s eBay.de row.
 
 **Technical approach — generalize, don't duplicate per site.** Leboncoin's
 `content.js` (`findProduct`/`extractSnapshot`) already reads generic

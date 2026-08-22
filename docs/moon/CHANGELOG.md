@@ -33,6 +33,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.16 fulfillment-SLA cell wired to v2.9 shipping data (2026-08-22):** the
+  scorecard's `fulfillment_sla` cell no longer reports `unavailable` for every
+  site. It now derives a real, honestly-low-confidence value from v2.9's
+  per-site shipping-cost estimate (a **cost proxy only** — there is still no
+  delivery-*time* data, so the detail says so and confidence is `low`); where a
+  site has no configured or documented shipping estimate the cell stays
+  `unavailable` rather than inventing a number. Wiring lives in
+  `scoring.scorecard` via `shipping_cost_for_site` +
+  `SiteSettingsRepository.shipping_cost_estimates`.
+
 - **v2.17a Google CSE SearchProvider (2026-08-22):** wired the reserved
   `GOOGLE_CSE_API_KEY` / `GOOGLE_CSE_CX` Settings fields to
   `src/search/providers/google_cse.py`. Fail-closed Programmable Search

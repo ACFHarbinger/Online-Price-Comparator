@@ -8,6 +8,12 @@ from sqlalchemy import Engine
 
 from fetch.circuit_breaker import CircuitBreaker
 from scoring import SiteSeries, score_sites, scorecards_for_product
+from storage.repository import (
+    ListingRepository,
+    PriceHistoryRepository,
+    ProductRepository,
+)
+from storage.shipping_costs import ShippingCostEstimate
 
 _NOW = datetime(2026, 8, 21, 12, 0, 0)
 
@@ -141,3 +147,59 @@ def test_empty_series_are_skipped() -> None:
 def test_unknown_condition_is_not_scored(in_memory_engine: Engine) -> None:
     assert scorecards_for_product(in_memory_engine, 1, condition="unknown") == []
     assert scorecards_for_product(in_memory_engine, 1, condition="") == []
+
+
+def test_fulfillment_sla_uses_shipping_estimate_as_low_confidence_proxy() -> None:
+    series = _series("worten", [90.0, 95.0, 92.0], display="Worten")
+    other = _series("amazon.es", [100.0, 110.0, 105.0])
+
+    cards = score_sites(
+        [series, other],
+        condition="new",
+        shipping_estimates={
+            "worten": ShippingCostEstimate(2.99, "from €2.99 to mainland PT"),
+        },
+    )
+    by_site = {card.site_key: card for card in cards}
+    sla = by_site["worten"].fulfillment_sla
+    assert sla.confidence == "low"
+    assert sla.value == 2.99
+    assert "cost proxy" in sla.detail
+    # A site with no estimate stays unavailable (never invented).
+    assert by_site["amazon.es"].fulfillment_sla.confidence == "unavailable"
+
+
+def test_scorecards_for_product_wires_documented_shipping_estimate(
+    in_memory_engine: Engine,
+) -> None:
+    product_id = ProductRepository(in_memory_engine).get_or_create(
+        "AMD Ryzen 9 9950X3D"
+    )
+    listing_id = ListingRepository(in_memory_engine).upsert(
+        product_id=product_id,
+        site_key="worten",
+        site_display_name="Worten",
+        url="https://www.worten.pt/amd-ryzen-9-9950x3d",
+        image_url=None,
+        seen_at=_NOW,
+        match_status="confirmed",
+        match_score=95.0,
+        match_reason="model token match",
+    )
+    price_repo = PriceHistoryRepository(in_memory_engine)
+    for i, price in enumerate([90.0, 95.0, 92.0]):
+        price_repo.add(
+            listing_id=listing_id,
+            price_amount=price,
+            currency="EUR",
+            observed_at=_NOW - timedelta(days=3 - i),
+            raw_price_text=str(price),
+            price_eur_equivalent=price,
+            condition="new",
+        )
+
+    cards = scorecards_for_product(in_memory_engine, product_id, condition="new")
+    worten = next(card for card in cards if card.site_key == "worten")
+    # Worten has a documented local shipping default (v2.9) -> real low-confidence SLA.
+    assert worten.fulfillment_sla.confidence == "low"
+    assert worten.fulfillment_sla.value is not None

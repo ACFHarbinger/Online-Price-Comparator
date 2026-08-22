@@ -8,21 +8,39 @@ run inside one exact condition bucket on EUR-equivalent stickers.
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from statistics import median
+from statistics import median, pstdev
 
 from sqlalchemy import Engine
 
 from alerting.observations import listing_histories_for_product
 from alerting.rules import UNRESOLVED_CONDITIONS, percentile_low_reached
-from dashboard.stats import coefficient_of_variation
 from fetch.circuit_breaker import CircuitBreaker
+from storage.shipping_costs import ShippingCostEstimate, shipping_cost_for_site
+from storage.watchlist import SiteSettingsRepository
 
 #: Need this many sites in the bucket before a cross-site rank is meaningful.
 _MIN_SITES = 2
 _RARITY_PERCENTILE = 5.0
+
+
+def _coefficient_of_variation(values: Sequence[float]) -> float | None:
+    """Population coefficient of variation (``stdev / mean``).
+
+    Inlined here (rather than importing ``dashboard.stats``) to keep the
+    ``scoring`` package importable without triggering the eager
+    ``dashboard`` package -> ``dashboard.app`` -> ``dashboard.callbacks`` ->
+    ``scoring`` import cycle. Same formula and ``MIN_OBSERVATIONS`` floor as
+    v2.19's ``dashboard.stats.coefficient_of_variation``.
+    """
+    if len(values) < 3:
+        return None
+    mean = sum(values) / len(values)
+    if mean == 0:
+        return None
+    return pstdev(values) / mean
 
 
 @dataclass(frozen=True)
@@ -64,8 +82,14 @@ def score_sites(
     condition: str,
     breaker: CircuitBreaker | None = None,
     reference: datetime | None = None,
+    shipping_estimates: Mapping[str, ShippingCostEstimate | None] | None = None,
 ) -> list[SiteScorecard]:
-    """Compute scorecards for every site in ``series``. No composite score."""
+    """Compute scorecards for every site in ``series``. No composite score.
+
+    ``shipping_estimates`` (site_key -> estimate-or-None) supplies the
+    fulfillment-SLA cell's data (v2.9). When omitted, that cell stays
+    ``unavailable`` - the cell never invents a delivery-time estimate.
+    """
     breaker = breaker if breaker is not None else CircuitBreaker()
     open_until = breaker.open_sites()
     usable = [item for item in series if item.eur_prices]
@@ -88,7 +112,7 @@ def score_sites(
                     reference=latest_at or datetime.now(),
                 ),
                 consistency=_consistency(item, site_medians),
-                fulfillment_sla=_fulfillment_sla(),
+                fulfillment_sla=_fulfillment_sla(item.site_key, shipping_estimates),
                 reliability=_reliability(
                     item.site_key,
                     breaker,
@@ -133,7 +157,16 @@ def scorecards_for_product(
                 observed_at=tuple(when for when, _, _ in ordered),
             )
         )
-    return score_sites(series, condition=bucket)
+    configured_shipping = SiteSettingsRepository(engine).shipping_cost_estimates()
+    shipping_estimates = {
+        site_key: shipping_cost_for_site(site_key, configured_shipping.get(site_key))
+        for site_key in grouped
+    }
+    return score_sites(
+        series,
+        condition=bucket,
+        shipping_estimates=shipping_estimates,
+    )
 
 
 def _extreme_value(
@@ -177,7 +210,7 @@ def _extreme_value(
 
 
 def _consistency(item: SiteSeries, site_medians: dict[str, float]) -> Dimension:
-    volatility = coefficient_of_variation(item.eur_prices)
+    volatility = _coefficient_of_variation(item.eur_prices)
     medians = list(site_medians.values())
     this_median = site_medians[item.site_key]
     if len(medians) < _MIN_SITES:
@@ -207,12 +240,33 @@ def _consistency(item: SiteSeries, site_medians: dict[str, float]) -> Dimension:
     )
 
 
-def _fulfillment_sla() -> Dimension:
+def _fulfillment_sla(
+    site_key: str,
+    shipping_estimates: Mapping[str, ShippingCostEstimate | None] | None,
+) -> Dimension:
+    """Fulfillment SLA cell.
+
+    v2.9 provides a per-site shipping *cost* estimate, not a delivery *time*
+    estimate -- a real but coarse, honestly-low-confidence proxy. Where no
+    shipping/delivery estimate is configured the cell stays ``unavailable``
+    rather than inventing a number.
+    """
+    estimate = (shipping_estimates or {}).get(site_key)
+    if estimate is None:
+        return Dimension(
+            "fulfillment_sla",
+            None,
+            "no shipping/delivery estimate configured (v2.9/v2.13); unavailable",
+            "unavailable",
+        )
     return Dimension(
         "fulfillment_sla",
-        None,
-        "no delivery estimates persisted yet (v2.13)",
-        "unavailable",
+        estimate.amount_eur,
+        (
+            f"shipping estimate ~€{estimate.amount_eur:.2f} ({estimate.label}) - "
+            "cost proxy, no delivery-time estimate"
+        ),
+        "low",
     )
 
 

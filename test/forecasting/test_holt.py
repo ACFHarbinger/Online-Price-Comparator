@@ -10,6 +10,8 @@ from forecasting.holt import (
     DEFAULT_HORIZON_DAYS,
     MIN_OBSERVATIONS,
     MIN_TIME_SPAN_DAYS,
+    EurPricePoint,
+    forecast_eur_prices,
     forecast_prices,
 )
 from storage.repository import SitePricePoint
@@ -64,3 +66,45 @@ def test_forecast_returns_widening_confidence_band_for_dominant_currency() -> No
 def test_forecast_rejects_invalid_horizon() -> None:
     with pytest.raises(ValueError, match="horizon_days"):
         forecast_prices([], horizon_days=0)
+
+
+def test_eur_forecast_uses_one_exact_condition_only() -> None:
+    points = [
+        EurPricePoint(
+            observed_at=datetime(2026, 1, 1) + timedelta(days=day * 3),
+            eur_amount=500.0 - day,
+            condition="new",
+        )
+        for day in range(8)
+    ]
+    points.extend(
+        EurPricePoint(
+            observed_at=datetime(2026, 1, 1) + timedelta(days=day * 3),
+            eur_amount=100.0,
+            condition="used",
+        )
+        for day in range(8)
+    )
+    points.append(
+        EurPricePoint(
+            observed_at=datetime(2026, 2, 1),
+            eur_amount=1.0,
+            condition="unknown",
+        )
+    )
+
+    result = forecast_eur_prices(points, condition="new")
+
+    assert result.is_available is True
+    assert result.currency == "EUR"
+    assert result.condition == "new"
+    assert result.observation_count == 8
+
+
+def test_eur_forecast_refuses_unknown_condition_bucket() -> None:
+    with pytest.raises(ValueError, match="known exact condition"):
+        forecast_eur_prices([], condition="unknown")
+
+    result = forecast_eur_prices([], condition=None)
+    assert result.is_available is False
+    assert result.unavailable_reason == "need observations with a known condition"

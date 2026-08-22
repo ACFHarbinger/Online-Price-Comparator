@@ -1,8 +1,9 @@
 """A lightweight Holt linear-trend forecast with an 80% uncertainty band.
 
-This module is intentionally read-only decision context. It forecasts a
-same-currency observed series and must never feed price ranking, anomaly
-detection, historical-low badges, or the descriptive history chart.
+This module is intentionally read-only decision context. It forecasts either a
+same-currency observed series or one exact-condition EUR-equivalent series, and
+must never feed price ranking, anomaly detection, historical-low badges, or the
+descriptive history chart.
 """
 
 from __future__ import annotations
@@ -33,10 +34,20 @@ class ForecastPoint:
 
 
 @dataclass(frozen=True)
+class EurPricePoint:
+    """One persisted EUR observation eligible for condition-bucket training."""
+
+    observed_at: datetime
+    eur_amount: float
+    condition: str | None
+
+
+@dataclass(frozen=True)
 class ForecastResult:
     """A read-only forecast result or an explicit insufficient-history status."""
 
     currency: str | None
+    condition: str | None
     trained_at: datetime | None
     last_observed_at: datetime | None
     observation_count: int
@@ -64,11 +75,16 @@ def _dominant_currency_points(
     return currency, sorted(compatible, key=lambda point: point.observed_at)
 
 
-def _daily_medians(points: list[SitePricePoint]) -> list[tuple[datetime, float]]:
+def _daily_medians(
+    points: list[SitePricePoint] | list[EurPricePoint], *, eur: bool = False
+) -> list[tuple[datetime, float]]:
     daily_prices: dict[datetime, list[float]] = {}
     for point in points:
         day = point.observed_at.replace(hour=0, minute=0, second=0, microsecond=0)
-        daily_prices.setdefault(day, []).append(point.price_amount)
+        value = (
+            point.eur_amount if isinstance(point, EurPricePoint) else point.price_amount
+        )
+        daily_prices.setdefault(day, []).append(value)
     return [
         (day, float(median(prices))) for day, prices in sorted(daily_prices.items())
     ]
@@ -77,6 +93,7 @@ def _daily_medians(points: list[SitePricePoint]) -> list[tuple[datetime, float]]
 def _unavailable(
     *,
     currency: str | None,
+    condition: str | None,
     last_observed_at: datetime | None,
     observation_count: int,
     day_count: int,
@@ -85,6 +102,7 @@ def _unavailable(
 ) -> ForecastResult:
     return ForecastResult(
         currency=currency,
+        condition=condition,
         trained_at=None,
         last_observed_at=last_observed_at,
         observation_count=observation_count,
@@ -117,6 +135,7 @@ def forecast_prices(
     if observation_count < MIN_OBSERVATIONS:
         return _unavailable(
             currency=currency,
+            condition=None,
             last_observed_at=last_observed_at,
             observation_count=observation_count,
             day_count=day_count,
@@ -126,6 +145,7 @@ def forecast_prices(
     if day_count < 2:
         return _unavailable(
             currency=currency,
+            condition=None,
             last_observed_at=last_observed_at,
             observation_count=observation_count,
             day_count=day_count,
@@ -137,6 +157,7 @@ def forecast_prices(
     if span_days < MIN_TIME_SPAN_DAYS:
         return _unavailable(
             currency=currency,
+            condition=None,
             last_observed_at=last_observed_at,
             observation_count=observation_count,
             day_count=day_count,
@@ -180,10 +201,148 @@ def forecast_prices(
     )
     return ForecastResult(
         currency=currency,
+        condition=None,
         trained_at=last_observed_at,
         last_observed_at=last_observed_at,
         observation_count=observation_count,
         day_count=day_count,
+        horizon_days=horizon_days,
+        confidence_level=CONFIDENCE_LEVEL,
+        points=forecast_points,
+        unavailable_reason=None,
+    )
+
+
+def forecast_eur_prices(
+    points: list[EurPricePoint],
+    *,
+    condition: str | None,
+    horizon_days: int = DEFAULT_HORIZON_DAYS,
+) -> ForecastResult:
+    """Forecast one exact-condition EUR-equivalent series.
+
+    Observations without the requested exact condition are excluded. In
+    particular, ``unknown`` is never a valid training bucket: it records an
+    absence of evidence, not an evidence-backed product state.
+    """
+    if horizon_days < 1:
+        raise ValueError("horizon_days must be at least 1")
+    if condition is None:
+        return _unavailable(
+            currency="EUR",
+            condition=None,
+            last_observed_at=None,
+            observation_count=0,
+            day_count=0,
+            horizon_days=horizon_days,
+            reason="need observations with a known condition",
+        )
+    if not condition or condition == "unknown":
+        raise ValueError("condition must be a known exact condition")
+
+    compatible = sorted(
+        (point for point in points if point.condition == condition),
+        key=lambda point: point.observed_at,
+    )
+    last_observed_at = compatible[-1].observed_at if compatible else None
+    observation_count = len(compatible)
+    daily = _daily_medians(compatible, eur=True)
+    day_count = len(daily)
+    if observation_count < MIN_OBSERVATIONS:
+        return _unavailable(
+            currency="EUR",
+            condition=condition,
+            last_observed_at=last_observed_at,
+            observation_count=observation_count,
+            day_count=day_count,
+            horizon_days=horizon_days,
+            reason=f"need at least {MIN_OBSERVATIONS} compatible observations",
+        )
+    if day_count < 2:
+        return _unavailable(
+            currency="EUR",
+            condition=condition,
+            last_observed_at=last_observed_at,
+            observation_count=observation_count,
+            day_count=day_count,
+            horizon_days=horizon_days,
+            reason="need observations on more than one day",
+        )
+
+    span_days = (daily[-1][0] - daily[0][0]).days
+    if span_days < MIN_TIME_SPAN_DAYS:
+        return _unavailable(
+            currency="EUR",
+            condition=condition,
+            last_observed_at=last_observed_at,
+            observation_count=observation_count,
+            day_count=day_count,
+            horizon_days=horizon_days,
+            reason=f"need at least {MIN_TIME_SPAN_DAYS} days of history",
+        )
+
+    return _forecast_daily(
+        daily,
+        currency="EUR",
+        condition=condition,
+        observation_count=observation_count,
+        last_observed_at=last_observed_at,
+        horizon_days=horizon_days,
+    )
+
+
+def _forecast_daily(
+    daily: list[tuple[datetime, float]],
+    *,
+    currency: str,
+    condition: str | None,
+    observation_count: int,
+    last_observed_at: datetime | None,
+    horizon_days: int,
+) -> ForecastResult:
+    """Run Holt after callers have applied their compatibility gate."""
+    span_days = (daily[-1][0] - daily[0][0]).days
+    values = [value for _, value in daily]
+    level = values[0]
+    trend = (values[-1] - values[0]) / max(span_days, 1)
+    residuals: list[float] = []
+    previous_day = daily[0][0]
+    for day, value in daily[1:]:
+        elapsed_days = max((day - previous_day).days, 1)
+        fitted = level + (trend * elapsed_days)
+        residuals.append(value - fitted)
+        updated_level = _LEVEL_SMOOTHING * value + (1 - _LEVEL_SMOOTHING) * fitted
+        trend = (
+            _TREND_SMOOTHING * ((updated_level - level) / elapsed_days)
+            + (1 - _TREND_SMOOTHING) * trend
+        )
+        level = updated_level
+        previous_day = day
+
+    residual_scale = sqrt(sum(residual**2 for residual in residuals) / len(residuals))
+    floor_scale = max(abs(sum(values) / len(values)) * 0.01, 0.01)
+    uncertainty_scale = max(residual_scale, floor_scale)
+    final_day = daily[-1][0]
+    forecast_points = tuple(
+        ForecastPoint(
+            forecast_for=final_day + timedelta(days=step),
+            lower_bound=max(
+                0.0,
+                level + (trend * step) - (_Z_SCORE_80 * uncertainty_scale * sqrt(step)),
+            ),
+            upper_bound=level
+            + (trend * step)
+            + (_Z_SCORE_80 * uncertainty_scale * sqrt(step)),
+        )
+        for step in range(1, horizon_days + 1)
+    )
+    return ForecastResult(
+        currency=currency,
+        condition=condition,
+        trained_at=last_observed_at,
+        last_observed_at=last_observed_at,
+        observation_count=observation_count,
+        day_count=len(daily),
         horizon_days=horizon_days,
         confidence_level=CONFIDENCE_LEVEL,
         points=forecast_points,

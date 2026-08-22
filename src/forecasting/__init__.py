@@ -2,6 +2,18 @@
 
 from __future__ import annotations
 
-from forecasting.holt import ForecastPoint, ForecastResult, forecast_prices
+from forecasting.holt import (
+    EurPricePoint,
+    ForecastPoint,
+    ForecastResult,
+    forecast_eur_prices,
+    forecast_prices,
+)
 
-__all__ = ["ForecastPoint", "ForecastResult", "forecast_prices"]
+__all__ = [
+    "EurPricePoint",
+    "ForecastPoint",
+    "ForecastResult",
+    "forecast_eur_prices",
+    "forecast_prices",
+]

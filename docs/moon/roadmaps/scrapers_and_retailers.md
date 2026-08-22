@@ -1,6 +1,6 @@
 # Scrapers & Retailer Coverage Roadmap
 
-**Status:** ✅ v1.8 reliability hardening complete (including structured-data-first parsing for both original live scrapers — verified 2026-08-21) · ✅ v2.7 Portugal retailer coverage (2026-08-21) · ✅ v2.8 KuantoKusta external-URL hints + real-shop verification (2026-08-21) · 🚧 v2.12 EU + UK new-retail start (Mindfactory.de, Alternate.de, Scan.co.uk, Overclockers UK) · ✅ v2.15 Tier A custom listing URLs (2026-08-21) · ✅ v2.16 four-cell site scorecard (2026-08-21) · ✅ v2.17a SerpAPI SearchProvider (2026-08-21) · ✅ v2.17b discover-and-approve UX (2026-08-21) · 📋 Planned (v2.13, v2.15 Tier B) · **Source:** codex research (reliability), grok research (retailer priority); v2.12/v2.13/v2.15-v2.17 from the 2026-08-15 global-scope brainstorm
+**Status:** ✅ v1.8 reliability hardening complete (including structured-data-first parsing for both original live scrapers — verified 2026-08-21) · ✅ v2.7 Portugal retailer coverage (2026-08-21) · ✅ v2.8 KuantoKusta external-URL hints + real-shop verification (2026-08-21) · 🚧 v2.12 EU + UK new-retail start (Mindfactory.de, Alternate.de, Scan.co.uk, Overclockers UK) · 🚧 v2.13 Newegg US + labeled Portugal landed-cost range (2026-08-22) · ✅ v2.15 Tier A custom listing URLs (2026-08-21) · ✅ v2.16 four-cell site scorecard (2026-08-21) · ✅ v2.17a SerpAPI SearchProvider (2026-08-21) · ✅ v2.17b discover-and-approve UX (2026-08-21) · 📋 Planned (v2.15 Tier B) · **Source:** codex research (reliability), grok research (retailer priority); v2.12/v2.13/v2.15-v2.17 from the 2026-08-15 global-scope brainstorm
 
 ## Current state
 
@@ -254,6 +254,16 @@ covers. Precise customs/duty calculation is genuinely hard (depends on
 declared value, carrier, IOSS pre-collection) — ship an honest **estimate**
 labeled as such, not a false-precision number, and never claim a landed cost
 as final before actual checkout.
+
+**First implemented slice (2026-08-22):** Newegg US is registered as a
+structured-data-first/CSS-fallback RAM source. Every listing is marked
+`import_regime = row`. USD observations carry an explicitly labeled Portugal
+landed-cost range in `RawListing.extra`: rough USD 15–30 shipping, USD 0–15
+customs/clearance, and a 23% rough import-VAT basis, rounded up to whole USD.
+It deliberately states that delivery timing is unavailable on the search page
+and checkout can change the result. This is metadata for the source slice,
+not a checkout quote, persisted landed-price field, or reusable customs engine;
+those remain follow-up work before the dashboard can rank on landed cost.
 
 ## Custom user-added sites (v2.15)
 

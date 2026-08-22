@@ -14,6 +14,7 @@ from scrapers.chip7 import Chip7Scraper
 from scrapers.fnac import FnacScraper
 from scrapers.kuantokusta import KuantoKustaHintSource
 from scrapers.mindfactory import MindfactoryScraper
+from scrapers.newegg import NeweggScraper
 from scrapers.overclockers import OverclockersScraper
 from scrapers.pccomponentes import PcComponentesScraper
 from scrapers.pcdiga import PcdigaScraper
@@ -34,6 +35,7 @@ def _build_all_scrapers(settings: Settings) -> list[ScraperAdapter]:
         AlternateScraper(),
         ScanScraper(),
         OverclockersScraper(),
+        NeweggScraper(),
     ]
 
 

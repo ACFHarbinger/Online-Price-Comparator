@@ -52,6 +52,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.20 FR + DE tier content scripts (2026-08-22):** the extension's
+  hostname-driven `SITES` table + `manifest.json` coverage expand to LDLC.com
+  (FR) and Mindfactory.de, Alternate.de, Geizhals.de, Kleinanzeigen.de (DE),
+  alongside the PT/ES set + Leboncoin. Mindfactory and Alternate are
+  listing-pattern scoped (`product_info.php*`, `*/html`); LDLC and Geizhals use
+  domain-level patterns as best-guesses (their exact listing path wasn't
+  knowable here, and the script self-limits by requiring Product JSON-LD).
+  `site_fallbacks.js` stays empty. All five are **code-only/unverified** against
+  a live page; no site is flipped to `client_extension` (that stays a separate,
+  deliberate step after a script is confirmed working live).
+
 - **v2.3 ATL/meaningful-drop same-condition buckets (2026-08-22):** all-time-low
   and meaningful-drop now evaluate inside a listing's own exact `condition`
   bucket on `price_eur_equivalent`, matching v2.11 IQR and v2.14 historical-low.

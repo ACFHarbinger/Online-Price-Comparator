@@ -34,6 +34,11 @@ const SITES = {
   "chip7.pt": { site_key: "chip7", site_display_name: "Chip7" },
   "wallapop.com": { site_key: "wallapop", site_display_name: "Wallapop" },
   "leboncoin.fr": { site_key: "leboncoin", site_display_name: "Leboncoin" },
+  "ldlc.com": { site_key: "ldlc", site_display_name: "LDLC" },
+  "mindfactory.de": { site_key: "mindfactory", site_display_name: "Mindfactory" },
+  "alternate.de": { site_key: "alternate", site_display_name: "Alternate" },
+  "geizhals.de": { site_key: "geizhals", site_display_name: "Geizhals" },
+  "kleinanzeigen.de": { site_key: "kleinanzeigen", site_display_name: "Kleinanzeigen" },
 };
 
 /** Resolve the site metadata for a page hostname (www. stripped). */

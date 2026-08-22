@@ -10,9 +10,20 @@ to a remote server; the extension makes zero network calls of its own except the
 user-initiated localhost send.
 
 **Scope (2026-08-22):** PT/ES tier — Amazon.es (`/dp/*`), PcComponentes
-(`.pt`/`.com`), PCDIGA, Worten.pt, Fnac.pt, Chip7.pt, Wallapop.es (`/item/*`),
-plus the original Leboncoin.fr (`/ad/*`). Listings are matched by the
+(`.pt`/`.com`), PCDIGA, Worten.pt, Fnac.pt, Chip7.pt, Wallapop.es (`/item/*`);
+FR tier — LDLC.com; DE tier — Mindfactory.de (`product_info.php*`),
+Alternate.de (`*/html`), Geizhals.de, Kleinanzeigen.de (`/s-anzeige/*`); plus the
+original Leboncoin.fr (`/ad/*`). Listings are matched by the
 `content_scripts.matches` in `manifest.json`.
+
+> **Verification status:** no site beyond the original Leboncoin test has been
+> verified against a live page from this environment. PT/ES, LDLC, Mindfactory
+> and Alternate patterns are derived from the Python scrapers' base URLs; LDLC,
+> Geizhals and some others use a **domain-level** pattern (my best availability
+> guess) because the exact listing path wasn't knowable here — the content
+> script is a no-op unless a Product JSON-LD is present, so a broader pattern is
+> safe for coverage but should be **narrowed after** confirming a real listing
+> page. Treat `manifest.json`'s patterns as code-only/unverified until then.
 
 ## What's here
 

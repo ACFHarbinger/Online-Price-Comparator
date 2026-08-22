@@ -44,6 +44,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.20 PT/ES tier content scripts (2026-08-22):** the extension's content
+  script is generalized from Leboncoin-only to a single hostname-driven script
+  (`deriveSite` from `window.location.hostname`), and `manifest.json` now
+  covers the PT/ES-tier listing-page patterns — Amazon.es (`/dp/*`),
+  PcComponentes (`.pt`/`.com`), PCDIGA, Worten.pt, Fnac.pt, Chip7.pt, and
+  Wallapop.es (`/item/*`), alongside the original Leboncoin.fr. Added
+  `site_fallbacks.js`, a per-site CSS-selector fallback framework consulted only
+  when JSON-LD is absent (selectors deliberately left empty pending per-site
+  real-page verification — no guessed selectors). Sites are **not** flipped to
+  `client_extension` yet: `server_scrape` stays the active default per site
+  until each site's script is verified working. FR/DE/others tiers remain.
+
 - **v2.11 sparse-bucket review flag (2026-08-22):** a sparse exact-condition
   bucket (`n<4`) whose EUR sticker is below a per-category fraction of the
   snapshot's `new` median (GPU surplus `0.40`, RAM used `0.50`, overridable;

@@ -1,22 +1,42 @@
 {
   "manifest_version": 3,
-  "name": "OPC Client-Side Monitor (Leboncoin)",
-  "version": "0.3.0",
-  "description": "Reads the price/title JSON-LD from a Leboncoin ad page the user has open, records detected changes locally, and exports them for OPC's cli refresh --import-extension-file.",
+  "name": "OPC Client-Side Monitor (PT/ES)",
+  "version": "0.4.0",
+  "description": "Reads the price/title JSON-LD from a tracked retailer listing page the user has open, records detected changes locally, and sends them to OPC for the identity-matching -> condition -> FX -> persist_snapshot pipeline.",
   "permissions": ["storage", "downloads"],
   "host_permissions": [
+    "https://www.amazon.es/dp/*",
+    "https://www.pccomponentes.pt/*",
+    "https://www.pccomponentes.com/*",
+    "https://www.pcdiga.com/*",
+    "https://www.worten.pt/*",
+    "https://www.fnac.pt/*",
+    "https://chip7.pt/*",
+    "https://www.chip7.pt/*",
+    "https://es.wallapop.com/item/*",
     "https://www.leboncoin.fr/ad/*",
     "http://127.0.0.1/*",
     "http://localhost/*"
   ],
   "action": {
-    "default_title": "OPC Leboncoin monitor",
+    "default_title": "OPC client-side monitor",
     "default_popup": "popup.html"
   },
   "content_scripts": [
     {
-      "matches": ["https://www.leboncoin.fr/ad/*"],
-      "js": ["content.js"],
+      "matches": [
+        "https://www.amazon.es/dp/*",
+        "https://www.pccomponentes.pt/*",
+        "https://www.pccomponentes.com/*",
+        "https://www.pcdiga.com/*",
+        "https://www.worten.pt/*",
+        "https://www.fnac.pt/*",
+        "https://chip7.pt/*",
+        "https://www.chip7.pt/*",
+        "https://es.wallapop.com/item/*",
+        "https://www.leboncoin.fr/ad/*"
+      ],
+      "js": ["site_fallbacks.js", "content.js"],
       "run_at": "document_idle"
     }
   ]

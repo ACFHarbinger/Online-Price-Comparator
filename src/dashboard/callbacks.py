@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+from collections.abc import Mapping
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -41,7 +42,8 @@ from storage.repository import (
     ProductPriceStats,
     ProductRepository,
 )
-from storage.watchlist import TrackedProductRepository
+from storage.shipping_costs import shipping_cost_for_site
+from storage.watchlist import SiteSettingsRepository, TrackedProductRepository
 
 STALE_THRESHOLD_HOURS = 24
 
@@ -160,6 +162,7 @@ def _retailer_table(
     circuit_breaker: CircuitBreaker | None = None,
     as_of: datetime | None = None,
     listing_histories: list[ListingHistory] | None = None,
+    shipping_cost_estimates: Mapping[str, float] | None = None,
 ) -> html.Div | html.Table:
     if not listings:
         return html.Div(
@@ -328,6 +331,21 @@ def _retailer_table(
                 ]
             )
 
+        shipping = shipping_cost_for_site(
+            listing.site_key, (shipping_cost_estimates or {}).get(listing.site_key)
+        )
+        shipping_elem: Any = (
+            html.Span(
+                f"Est. EUR {shipping.amount_eur:,.2f}",
+                className="price-value",
+                title=shipping.label,
+            )
+            if shipping is not None
+            else html.Span(
+                "Unknown", className="price-value", title="Confirm at checkout"
+            )
+        )
+
         table_rows.append(
             html.Tr(
                 className=" ".join(row_classes) if row_classes else None,
@@ -335,7 +353,7 @@ def _retailer_table(
                     html.Td(html.Span(store_children)),
                     html.Td(price_elem),
                     html.Td(stock_elem),
-                    html.Td("—", className="price-value"),
+                    html.Td(shipping_elem),
                     html.Td(
                         _format_delta_vs_avg(
                             listing.price_amount, avg_30d, listing.currency
@@ -950,7 +968,14 @@ def _product_view(
         hero_metrics,
         build_bar_chart(latest_prices),
         build_line_chart(history, all_time_low=stats.all_time_low),
-        _retailer_table(listings, stats.avg_30d, listing_histories=histories),
+        _retailer_table(
+            listings,
+            stats.avg_30d,
+            listing_histories=histories,
+            shipping_cost_estimates=SiteSettingsRepository(
+                product_repository.engine
+            ).shipping_cost_estimates(),
+        ),
         build_forecast_chart(forecast),
         _forecast_metadata(forecast),
         scorecard_panel,

@@ -1,6 +1,6 @@
 # Settings & Persistent Config Roadmap
 
-**Status:** ✅ Done (v1.7 runtime Settings; v2.1 watchlist + global/per-product site enable/disable; v2.2 scheduled/passive refresh; v2.10 native + EUR-equivalent persistence — 2026-08-21) · 📋 Planned (v2.14) · **Source:** codex research, grounded in `src/config/settings.py`; v2.10/v2.14 from the 2026-08-15 global-scope brainstorm
+**Status:** ✅ Done (v1.7 runtime Settings; v2.1 watchlist + global/per-product site enable/disable; v2.2 scheduled/passive refresh; v2.9 local shipping-cost sanity; v2.10 native + EUR-equivalent persistence — 2026-08-22) · 📋 Planned (v2.14) · **Source:** codex research, grounded in `src/config/settings.py`; v2.10/v2.14 from the 2026-08-15 global-scope brainstorm
 
 ## Two-layer config split
 
@@ -103,6 +103,24 @@ anomaly detection, dashboard ranking, and forecasting are **not** switched
 onto `price_eur_equivalent` yet. Landed-cost / `import_regime` columns and
 dual native+EUR dashboard display remain later v2.10 follow-ups.
 
+## Local-tier shipping-cost sanity (v2.9, shipped 2026-08-22)
+
+`site_settings.shipping_cost_estimate_eur` is an additive, nullable per-site
+setting. `NULL` is deliberately **unknown**, never free delivery. The dashboard
+retailer table shows either `Est. EUR …` with a checkout-confirmation tooltip or
+`Unknown`; the estimate does not change historical price, FX conversion, alerts,
+or price ranking.
+
+`SiteSettingsRepository.set_shipping_cost_estimate(site_key, amount_eur)` lets
+the local operator set or clear a site value. The initial narrow defaults are
+only for starting costs that the retailer documents for mainland Portugal:
+Fnac (`from €2.50`) and Worten (`from €2.99`). They remain estimates because
+product size, seller/Marketplace status, membership, destination, and checkout
+can change the actual delivery charge. Other local-tier retailers remain
+`Unknown` until manually configured; no generalized shipping calculator is
+implied. Sources checked 2026-08-22: [Fnac delivery terms](https://www.fnac.pt/entregasfnac)
+and [Worten delivery policy](https://www.worten.pt/worten-entregas).
+
 ## `search_scope_tier` — per-tracked-product geography (v2.1, extended)
 
 Extends the existing `tracked_products` design (below) with one more field:
@@ -144,7 +162,9 @@ New tables alongside the existing `products` / `listings` / `price_history`
 - **`site_settings`** — site key, enabled flag, result limit, min request
   interval, cache TTL, browser-rendering-allowed flag,
   `min_refresh_interval_hours` (site-level refresh-cadence floor, see
-  [alerting.md](alerting.md#refresh-scheduling-per-site-cadence-via-a-tick-script-not-a-daemon-v214)).
+  [alerting.md](alerting.md#refresh-scheduling-per-site-cadence-via-a-tick-script-not-a-daemon-v214)),
+  plus nullable `shipping_cost_estimate_eur` (v2.9 — unknown is never treated
+  as free).
   Overrides the runtime defaults above per-site (e.g. Amazon at 8s,
   PcComponentes at 15s, per [scrapers_and_retailers.md](scrapers_and_retailers.md)).
 - **`alert_deliveries`** — product, alert type, triggering listing/observation,

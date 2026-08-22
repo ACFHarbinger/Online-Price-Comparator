@@ -132,6 +132,10 @@ site_settings = Table(
     Column("cache_ttl_seconds", Integer, nullable=True),
     Column("browser_rendering_allowed", Boolean, nullable=False, default=False),
     Column("min_refresh_interval_hours", Float, nullable=True),
+    # v2.9: optional local-delivery estimate. NULL means unknown, never free.
+    # It is a site-level starting point, not a checkout quote or a historical
+    # price component, and can be set manually through SiteSettingsRepository.
+    Column("shipping_cost_estimate_eur", Float, nullable=True),
     # v2.20: which pipeline path is allowed to touch this site. "server_scrape"
     # (default) is the scrapers/ registry adapter; "client_extension" is the
     # browser extension (no server-side scraping allowed); "search_api" and

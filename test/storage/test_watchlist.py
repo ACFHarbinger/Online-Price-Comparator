@@ -146,6 +146,22 @@ def test_site_settings_collection_method(in_memory_engine: Engine) -> None:
     assert by_key["leboncoin"].collection_method == "client_extension"
 
 
+def test_site_settings_shipping_cost_estimate(in_memory_engine: Engine) -> None:
+    sites = SiteSettingsRepository(in_memory_engine)
+    assert sites.shipping_cost_estimates() == {}
+
+    sites.set_shipping_cost_estimate("fnac", 2.5)
+    assert sites.shipping_cost_estimates() == {"fnac": 2.5}
+    assert sites.list_all()[0].shipping_cost_estimate_eur == 2.5
+
+    sites.set_shipping_cost_estimate("fnac", None)
+    assert sites.shipping_cost_estimates() == {}
+    assert sites.list_all()[0].shipping_cost_estimate_eur is None
+
+    with pytest.raises(ValueError, match="negative"):
+        sites.set_shipping_cost_estimate("fnac", -0.01)
+
+
 class _FakeScraper:
     def __init__(self, site_key: str) -> None:
         self.site_key = site_key

@@ -23,6 +23,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.9 local shipping-cost sanity (2026-08-22):** added nullable
+  `site_settings.shipping_cost_estimate_eur` and repository methods to set,
+  clear, and read per-site EUR estimates. The retailer table now shows either
+  `Est. EUR …` with a checkout-confirmation tooltip or explicit `Unknown` —
+  never a silent zero. Narrow, documented mainland-Portugal starting defaults
+  exist for Fnac (€2.50) and Worten (€2.99); all other sites remain unknown
+  until manually configured. Shipping estimates do not alter sticker-price
+  history, FX, alerts, or price ranking.
+
 - **v2.16 four-cell scorecards on v2.17b discovery candidates (2026-08-22):**
   each pending candidate row now renders the four independent scorecard cells
   (extreme-value, consistency, fulfillment SLA, reliability) via

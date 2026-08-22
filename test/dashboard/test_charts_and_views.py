@@ -211,6 +211,51 @@ def test_retailer_table_columns() -> None:
     headers = [th.children for th in thead.children.children]
     assert headers == ["Store", "Price", "Stock", "Shipping", "Price vs Avg", "Link"]
 
+    rows = table_any.children[1].children
+    assert rows[0].children[3].children.children == "Unknown"
+    assert rows[1].children[3].children.children == "Unknown"
+
+
+def test_retailer_table_prefers_configured_shipping_estimate() -> None:
+    now = datetime(2026, 8, 22, 12, 0, 0)
+    listing = ListingSummary(
+        site_key="pccomponentes",
+        site_display_name="PcComponentes",
+        url="https://pccomponentes.com/item",
+        image_url=None,
+        price_amount=100.0,
+        currency="EUR",
+        observed_at=now,
+    )
+    table = _retailer_table(
+        [listing],
+        avg_30d=None,
+        as_of=now,
+        shipping_cost_estimates={"pccomponentes": 4.5},
+    )
+    row = cast(Any, table).children[1].children[0]
+    shipping = row.children[3].children
+    assert shipping.children == "Est. EUR 4.50"
+    assert shipping.title == "site estimate; checkout confirms"
+
+
+def test_retailer_table_shows_documented_shipping_default() -> None:
+    now = datetime(2026, 8, 22, 12, 0, 0)
+    listing = ListingSummary(
+        site_key="fnac",
+        site_display_name="Fnac.pt",
+        url="https://fnac.pt/item",
+        image_url=None,
+        price_amount=100.0,
+        currency="EUR",
+        observed_at=now,
+    )
+    table = _retailer_table([listing], avg_30d=None, as_of=now)
+    row = cast(Any, table).children[1].children[0]
+    shipping = row.children[3].children
+    assert shipping.children == "Est. EUR 2.50"
+    assert shipping.title == "from €2.50 to mainland Portugal; checkout confirms"
+
 
 def test_retailer_table_blocked_scraper_banner_and_badge() -> None:
     from datetime import timedelta

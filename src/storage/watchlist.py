@@ -61,6 +61,7 @@ class SiteSetting:
     cache_ttl_seconds: int | None
     browser_rendering_allowed: bool
     min_refresh_interval_hours: float | None
+    shipping_cost_estimate_eur: float | None
     collection_method: str = "server_scrape"
 
 
@@ -269,6 +270,7 @@ class SiteSettingsRepository:
             cache_ttl_seconds=None,
             browser_rendering_allowed=False,
             min_refresh_interval_hours=None,
+            shipping_cost_estimate_eur=None,
             collection_method="server_scrape",
         )
         stmt = stmt.on_conflict_do_update(
@@ -291,10 +293,53 @@ class SiteSettingsRepository:
                 cache_ttl_seconds=row.cache_ttl_seconds,
                 browser_rendering_allowed=bool(row.browser_rendering_allowed),
                 min_refresh_interval_hours=row.min_refresh_interval_hours,
+                shipping_cost_estimate_eur=row.shipping_cost_estimate_eur,
                 collection_method=str(row.collection_method or "server_scrape"),
             )
             for row in rows
         ]
+
+    def set_shipping_cost_estimate(
+        self, site_key: str, amount_eur: float | None
+    ) -> None:
+        """Set a local shipping estimate, or clear it when checkout is required."""
+        cleaned = site_key.strip()
+        if not cleaned:
+            raise ValueError("site_key must not be empty")
+        if amount_eur is not None and amount_eur < 0:
+            raise ValueError("shipping cost estimate must not be negative")
+
+        stmt = sqlite_insert(site_settings).values(
+            site_key=cleaned,
+            enabled=True,
+            result_limit=None,
+            min_request_interval_seconds=None,
+            cache_ttl_seconds=None,
+            browser_rendering_allowed=False,
+            min_refresh_interval_hours=None,
+            shipping_cost_estimate_eur=amount_eur,
+            collection_method="server_scrape",
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["site_key"],
+            set_={"shipping_cost_estimate_eur": amount_eur},
+        )
+        with self.engine.begin() as conn:
+            conn.execute(stmt)
+
+    def shipping_cost_estimates(self) -> dict[str, float]:
+        """Configured site estimates only; absent values remain unknown."""
+        with self.engine.connect() as conn:
+            rows = conn.execute(
+                select(
+                    site_settings.c.site_key,
+                    site_settings.c.shipping_cost_estimate_eur,
+                ).where(site_settings.c.shipping_cost_estimate_eur.is_not(None))
+            ).all()
+        estimates = {
+            str(row.site_key): float(row.shipping_cost_estimate_eur) for row in rows
+        }
+        return estimates
 
     def non_server_scrape_keys(self) -> set[str]:
         """Site keys whose collection method is anything but ``server_scrape``.

@@ -165,7 +165,8 @@ def _seed_listing_history(
     site_key: str,
     url: str,
     observations: list[tuple[datetime, float]],
-    condition: str | None = None,
+    condition: str = "new",
+    conditions: list[str] | None = None,
 ) -> None:
     """One confirmed listing with EUR-equivalent observations (oldest -> newest)."""
     now = datetime(2026, 8, 21, 12, 0, 0)
@@ -182,7 +183,8 @@ def _seed_listing_history(
         match_score=95.0,
         match_reason="model token match",
     )
-    for observed_at, eur in observations:
+    for index, (observed_at, eur) in enumerate(observations):
+        row_condition = conditions[index] if conditions is not None else condition
         price_repo.add(
             listing_id=listing_id,
             price_amount=eur,
@@ -192,7 +194,7 @@ def _seed_listing_history(
             price_eur_equivalent=eur,
             price_native=eur,
             currency_native="EUR",
-            condition=condition,
+            condition=row_condition,
         )
 
 
@@ -410,6 +412,55 @@ def test_evaluate_tracked_product_unknown_condition_not_bucketed(
 
     delivered = service.evaluate_tracked_product(tracked_id, as_of=base)
 
-    # unknown condition never forms a comparison bucket -> no v2.14 fire.
+    # unknown condition never forms a comparison bucket.
     assert TIERED_HISTORICAL_LOW not in delivered
     assert PERCENTILE_RARITY not in delivered
+    assert ALL_TIME_LOW not in delivered
+    assert MEANINGFUL_DROP not in delivered
+
+
+@respx.mock
+def test_atl_does_not_fire_used_against_new_history(
+    in_memory_engine: Engine,
+) -> None:
+    """A used sticker must not ATL against that listing's prior new prices."""
+    url = TELEGRAM_SEND_URL.format(token="tok")
+    respx.post(url).mock(return_value=httpx.Response(200, json={"ok": True}))
+    tracked_id = _seed_tracked(in_memory_engine, "AMD Ryzen 9 9950X3D")
+    pid = _product_id(in_memory_engine, tracked_id)
+    base = datetime(2026, 8, 21, 12, 0, 0)
+    _seed_listing_history(
+        in_memory_engine,
+        pid,
+        site_key="amazon.es",
+        url="https://amazon.es/dp/1",
+        observations=[(base - timedelta(days=20), 600.0), (base, 200.0)],
+        conditions=["new", "used"],
+    )
+    service = AlertingService(in_memory_engine, _settings())
+
+    delivered = service.evaluate_tracked_product(tracked_id, as_of=base)
+
+    assert ALL_TIME_LOW not in delivered
+
+
+@respx.mock
+def test_atl_fires_inside_used_bucket(in_memory_engine: Engine) -> None:
+    url = TELEGRAM_SEND_URL.format(token="tok")
+    respx.post(url).mock(return_value=httpx.Response(200, json={"ok": True}))
+    tracked_id = _seed_tracked(in_memory_engine, "AMD Ryzen 9 9950X3D")
+    pid = _product_id(in_memory_engine, tracked_id)
+    base = datetime(2026, 8, 21, 12, 0, 0)
+    _seed_listing_history(
+        in_memory_engine,
+        pid,
+        site_key="amazon.es",
+        url="https://amazon.es/dp/1",
+        observations=[(base - timedelta(days=20), 400.0), (base, 200.0)],
+        condition="used",
+    )
+    service = AlertingService(in_memory_engine, _settings())
+
+    delivered = service.evaluate_tracked_product(tracked_id, as_of=base)
+
+    assert delivered.get(ALL_TIME_LOW) == ["telegram"]

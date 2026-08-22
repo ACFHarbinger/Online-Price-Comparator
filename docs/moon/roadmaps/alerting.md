@@ -1,6 +1,6 @@
 # Alerting Roadmap
 
-**Status:** ✅ v2.4 channels done (2026-08-21) · ✅ v2.3 all three rules done (target-price + all-time-low + meaningful-drop, 2026-08-21) · ✅ v2.14 alert logic + per-site tick cadence done (2026-08-21; matching dashboard badge now shipped too) · **Source:** grok research (channels), codex research (thresholds); v2.14 from the 2026-08-15 global-scope brainstorm
+**Status:** ✅ v2.4 channels done (2026-08-21) · ✅ v2.3 all three rules done (target-price + all-time-low + meaningful-drop, 2026-08-21; ATL/meaningful-drop same-condition buckets 2026-08-22) · ✅ v2.14 alert logic + per-site tick cadence done (2026-08-21; matching dashboard badge now shipped too) · **Source:** grok research (channels), codex research (thresholds); v2.14 from the 2026-08-15 global-scope brainstorm
 
 The v2.3/v2.4 slice shipped 2026-08-21 the **target-price** rule, the Telegram/
 Discord dispatch protocol, the `alert_deliveries` delivery log, and (in the
@@ -31,7 +31,7 @@ new price, whether it's a new 30-day low, direct buy link.
 | Alert | Default rule |
 |---|---|
 | New all-time low | Current confirmed, non-anomalous **item sticker** (`price_eur_equivalent` persisted with the observation) is at least `max(2%, EUR 5)` below that listing's prior same-condition sticker ATL. Never computed on landed-cost. |
-| Meaningful drop | Current price is at least `10%` **and** `EUR 10` below that listing's 7-day rolling median; requires ≥3 observations in that window. |
+| Meaningful drop | Current price is at least `10%` **and** `EUR 10` below that listing's 7-day rolling median of **same-condition** EUR stickers; requires ≥3 observations in that window. `unknown` never forms a bucket. |
 | Target price | Current price `<= user_target_price`; notify once on crossing below, not on every refresh. |
 | Tiered historical low (v2.14) | Current confirmed **item sticker** is at/below the minimum of that listing's confirmed, same-[condition](product_matching.md#condition-as-a-first-class-field-v211)-bucket **sticker** observations (`price_eur_equivalent` snapshotted on the row, using that row's `condition`) over a fixed ladder of lookback windows — **30-day / 90-day / 180-day / 365-day / all-time**. Fires at the *highest* tier reached (an all-time-low implies all the shorter tiers too; notify once, at the strongest claim, not five separate messages). Each tier requires data coverage proportional to its own window. Never uses landed-cost (shipping/VAT edits must not fire a tier). Generalizes the existing [30-day-low / ATL badge](dashboard_ux.md#borrowed-ux-ideas-v25-v26) pattern. Purely descriptive — "the lowest confirmed sticker seen in the last N days," never a forecast. |
 | Percentile rarity (v2.14) | Current **item sticker** is at/below a **configurable percentile** (default 5th) of that listing's confirmed, same-condition-bucket sticker observations over a **configurable trailing window** (default 180 days), requiring a minimum sample size scaled to that window. A second, independent mode alongside the tiered rule, not a replacement — see [Two configurable modes](#two-configurable-historical-low-modes-v214) below. Also purely descriptive, also not landed-cost. |

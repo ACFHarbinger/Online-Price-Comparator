@@ -7,9 +7,9 @@ sticker), and all-time-low / meaningful-drop use ``price_eur_equivalent``
 (v2.10). The service honors ``alert_cooldown_hours`` per (product, alert type)
 and only records a delivery on success so a failed send retries next refresh.
 
-Condition bucketing for ATL/meaningful-drop is intentionally NOT done yet
-(``matching/anomaly.py`` also treats all conditions as one pool): see the
-v2.11 note in `docs/moon/roadmaps/product_matching.md`.
+ATL and meaningful-drop run inside the listing's own exact-condition
+bucket on ``price_eur_equivalent`` (same discipline as v2.11 IQR and
+v2.14 historical-low). ``unknown``/missing condition never forms a bucket.
 """
 
 from __future__ import annotations
@@ -42,12 +42,14 @@ from alerting.models import (
 )
 from alerting.observations import (
     ListingHistory,
+    ListingObservation,
     listing_histories_for_product,
     product_eur_timeline,
 )
 from alerting.repository import AlertDeliveryRepository
 from alerting.rules import (
     TIERED_HISTORICAL_LOW_WINDOWS,
+    UNRESOLVED_CONDITIONS,
     percentile_low_reached,
     should_fire_all_time_low,
     should_fire_meaningful_drop,
@@ -182,10 +184,11 @@ class AlertingService:
     ) -> dict[str, list[str]]:
         results: dict[str, list[str]] = {}
         for history in histories:
-            if len(history.observations) < 2:
+            bucket = self._same_condition_bucket(history)
+            if len(bucket) < 2:
                 continue
-            current = history.observations[-1].eur_amount
-            prior_eur = [obs.eur_amount for obs in history.observations[:-1]]
+            current = bucket[-1].eur_amount
+            prior_eur = [obs.eur_amount for obs in bucket[:-1]]
 
             prior_atl = min(prior_eur)
             if should_fire_all_time_low(
@@ -215,7 +218,7 @@ class AlertingService:
 
             if not self._minimum_tracking_age_met(tracked, as_of):
                 continue
-            window = self._historically_older_eur(history, as_of=as_of)
+            window = self._historically_older_eur(bucket, as_of=as_of)
             if len(window) < 3:
                 continue
             baseline_median = median(window)
@@ -248,15 +251,29 @@ class AlertingService:
         return results
 
     def _historically_older_eur(
-        self, history: ListingHistory, *, as_of: datetime | None
+        self, bucket: list[ListingObservation], *, as_of: datetime | None
     ) -> list[float]:
-        """EUR observations strictly before the current one, within the window."""
+        """Same-condition EUR observations strictly before the current one."""
         reference = as_of or datetime.now()
         cutoff = reference - timedelta(days=self.settings.alert_rolling_window_days)
+        return [obs.eur_amount for obs in bucket[:-1] if obs.observed_at >= cutoff]
+
+    @staticmethod
+    def _same_condition_bucket(
+        history: ListingHistory,
+    ) -> list[ListingObservation]:
+        """Latest observation's exact condition only. ``unknown`` is empty."""
+        if not history.observations:
+            return []
+        current = history.observations[-1]
+        if current.condition in UNRESOLVED_CONDITIONS:
+            return []
+        key = (current.condition or "").strip().lower()
         return [
-            obs.eur_amount
-            for obs in history.observations[:-1]
-            if obs.observed_at >= cutoff
+            obs
+            for obs in history.observations
+            if (obs.condition or "").strip().lower() == key
+            and obs.condition not in UNRESOLVED_CONDITIONS
         ]
 
     def _minimum_tracking_age_met(

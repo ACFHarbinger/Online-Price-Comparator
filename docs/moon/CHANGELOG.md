@@ -44,6 +44,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.3 ATL/meaningful-drop same-condition buckets (2026-08-22):** all-time-low
+  and meaningful-drop now evaluate inside a listing's own exact `condition`
+  bucket on `price_eur_equivalent`, matching v2.11 IQR and v2.14 historical-low.
+  `unknown`/missing condition never forms a bucket, so a used sticker cannot
+  ATL against that listing's prior new prices. [#12](https://github.com/ACFHarbinger/Online-Price-Comparator/issues/12).
+
 - **v2.20 PT/ES tier content scripts (2026-08-22):** the extension's content
   script is generalized from Leboncoin-only to a single hostname-driven script
   (`deriveSite` from `window.location.hostname`), and `manifest.json` now

@@ -106,6 +106,20 @@ def test_extension_endpoint_rejects_bad_body(in_memory_engine: Engine) -> None:
     )
 
 
+def test_extension_endpoint_rejects_non_loopback_request(
+    in_memory_engine: Engine,
+) -> None:
+    """Even if the server were bound to 0.0.0.0, a LAN request must be refused."""
+    resp = _client(in_memory_engine).post(
+        "/api/extension/import",
+        data=json.dumps([]),
+        content_type="application/json",
+        environ_overrides={"REMOTE_ADDR": "192.168.1.50"},
+    )
+
+    assert resp.status_code == 403
+
+
 def test_extension_endpoint_skips_unattributed(in_memory_engine: Engine) -> None:
     resp = _client(in_memory_engine).post(
         "/api/extension/import",

@@ -8,8 +8,14 @@ identity-matching -> condition -> FX -> ``persist_snapshot`` pipeline
 a trust shortcut.
 
 Security: this is intentionally a localhost-only, unauthenticated endpoint for
-a personal tool. The Dash dev server it hangs off is what the user binds to
-``127.0.0.1``; never expose it on a non-loopback interface.
+a personal tool. The Dash dev server defaults to binding ``127.0.0.1``, but
+that default is a `--host` CLI flag, not an enforced guarantee - a user who
+runs `dashboard --host 0.0.0.0` (e.g. to view it from their phone on the same
+LAN) would otherwise silently expose this unauthenticated write endpoint to
+every device on that LAN too. The route itself rejects any request whose
+remote address is not loopback, regardless of what host the server is bound
+to - the same "don't just document the constraint, enforce it in code"
+lesson as the v2.15/Leboncoin server-side-collection fix.
 """
 
 from __future__ import annotations
@@ -25,6 +31,7 @@ from pipeline.extension_import import import_records
 logger = logging.getLogger(__name__)
 
 DEFAULT_ENDPOINT = "/api/extension/import"
+_LOOPBACK_ADDRESSES = frozenset({"127.0.0.1", "::1"})
 
 
 def register_extension_api(server: Flask, engine: Engine) -> None:
@@ -32,6 +39,14 @@ def register_extension_api(server: Flask, engine: Engine) -> None:
 
     @server.route(DEFAULT_ENDPOINT, methods=["POST"])
     def _extension_import() -> tuple[Any, int]:
+        if request.remote_addr not in _LOOPBACK_ADDRESSES:
+            logger.warning(
+                "Rejected non-loopback request to %s from %s",
+                DEFAULT_ENDPOINT,
+                request.remote_addr,
+            )
+            return jsonify({"error": "loopback requests only"}), 403
+
         payload = request.get_json(silent=True)
         if payload is None:
             return jsonify({"error": "expected a JSON body"}), 400

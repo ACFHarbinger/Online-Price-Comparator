@@ -33,6 +33,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v2.17a Google CSE SearchProvider (2026-08-22):** wired the reserved
+  `GOOGLE_CSE_API_KEY` / `GOOGLE_CSE_CX` Settings fields to
+  `src/search/providers/google_cse.py`. Fail-closed Programmable Search
+  web results (title+URL required; price from `pagemap.offer` when
+  present, otherwise a URL hint). Both key and cx required;
+  unconfigured runs skip the provider. Mocked `respx` tests in
+  `test/search/test_google_cse.py`. CSE is a URL-hint source, not a
+  shopping feed — SerpAPI remains the Google Shopping path.
+
 - **v2.18 refresh-cadence forecast retraining (2026-08-22):** tracked-product
   refreshes now train the exact-condition EUR forecast from persisted,
   confirmed non-anomalous history and atomically replace its SQLite snapshot.

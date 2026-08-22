@@ -36,7 +36,6 @@ class Settings(BaseSettings):
     ebay_client_id: str | None = None
     ebay_client_secret: str | None = None
     ebay_marketplace_id: str = "EBAY_DE"
-    # Reserved for future search-API provider implementations.
     google_cse_api_key: str | None = None
     google_cse_cx: str | None = None
 

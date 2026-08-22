@@ -368,10 +368,13 @@ and must not start until v2.17a returns real rows.
 queries Google Shopping (`engine=google_shopping`, `gl=es`/`hl=es`) when
 `SERPAPI_KEY` is set, maps `shopping_results` to `RawListing` (`source_kind=
 search_api`), and fail-closes to `[]` on transport/HTTP/API/parse errors.
-Unconfigured keys are skipped by `enabled_providers()`. Google CSE is still
-a commented registry stub. v2.17b (approve-before-persist, host allowlist,
-credit budget) is not this slice — `run_discovery` will currently persist
-SerpAPI rows through the existing matcher when a key is configured.
+Unconfigured keys are skipped by `enabled_providers()`. **Google CSE shipped
+2026-08-22:** `GoogleCseProvider` (`src/search/providers/google_cse.py`)
+queries Programmable Search when both `GOOGLE_CSE_API_KEY` and
+`GOOGLE_CSE_CX` are set, maps `items` to `RawListing` URL hints (price from
+`pagemap.offer` when present), and fail-closes to `[]`. CSE is a web-result
+hint source, not a shopping feed — SerpAPI remains the Google Shopping path.
+eBay.de Browse API is #40, not this row.
 
 **Flow (v2.17b):** initial discovery is strictly **manual and
 user-triggered** for one tracked product, never periodic. Query the real

@@ -142,3 +142,36 @@ def test_retailer_table_renders_condition_badges_with_verbatim() -> None:
         c.children for c in store_cell_1.children.children if hasattr(c, "children")
     ]
     assert any("NEW" in str(b) for b in badges_1)
+
+
+def test_retailer_table_renders_review_badge() -> None:
+    now = datetime(2026, 8, 22, 1, 0, 0)
+    listings = [
+        ListingSummary(
+            site_key="ebay_de",
+            site_display_name="eBay.de",
+            url="https://ebay.de/itm/ram-used-deal",
+            image_url=None,
+            price_amount=45.0,
+            currency="EUR",
+            observed_at=now,
+            condition="used",
+            condition_source="title_heuristic",
+            anomaly_reason="inspect seller/condition",
+            anomaly_basis=(
+                "n=1, condition=used, category=ram, fraction=0.50, "
+                "threshold=50.00, price=45.00"
+            ),
+        ),
+    ]
+
+    rendered = _retailer_table(listings, avg_30d=100.0, as_of=now)
+    assert rendered is not None
+    table_any = cast(Any, rendered)
+    rows = table_any.children[1].children
+
+    store_cell = rows[0].children[0]
+    badges = [
+        c.children for c in store_cell.children.children if hasattr(c, "children")
+    ]
+    assert any("REVIEW: Inspect Seller" in str(b) for b in badges)

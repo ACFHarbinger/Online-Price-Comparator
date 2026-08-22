@@ -180,7 +180,7 @@ below the documented per-category fraction of the `new` median (or a
 prior sticker if no new reference exists) set `needs_review` with the
 fraction, reference, and evidence on `anomaly_reason`/`anomaly_basis`
 and `is_anomalous=False`. Pre-v2.11 rows stay NULL. Dashboard
-review-badge display is not this slice.
+review-badge display shipped in retailer links table (`.badge-review`).
 
 This does not weaken the anomaly detector's original purpose (catching
 mispriced/scam listings within a condition bucket) — it just stops applying

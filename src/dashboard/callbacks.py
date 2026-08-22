@@ -225,6 +225,19 @@ def _retailer_table(
                 html.Span(f"STALE ({time_ago})", className="badge-stale")
             )
 
+        if listing.anomaly_reason == "inspect seller/condition":
+            store_children.append(
+                html.Span(
+                    "REVIEW: Inspect Seller",
+                    className="badge-review",
+                    title=(
+                        f"Sparse condition price check: {listing.anomaly_basis}"
+                        if listing.anomaly_basis
+                        else "Inspect seller and condition before buying"
+                    ),
+                )
+            )
+
         # Check historical low for this listing's own history
         if listing_histories and not is_out_of_stock:
             hist = next(

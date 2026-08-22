@@ -41,6 +41,8 @@ class ListingSummary:
     observed_at: datetime | None
     condition: str | None = None
     condition_source: str | None = None
+    anomaly_reason: str | None = None
+    anomaly_basis: str | None = None
 
 
 class ProductRepository:
@@ -204,6 +206,8 @@ class ListingRepository:
                 price_history.c.price_amount,
                 price_history.c.currency,
                 price_history.c.observed_at,
+                price_history.c.anomaly_reason,
+                price_history.c.anomaly_basis,
             )
             .where(*anomalous_filter)
             .join(
@@ -224,6 +228,8 @@ class ListingRepository:
                 latest_price.c.observed_at,
                 listings.c.condition,
                 listings.c.condition_source,
+                latest_price.c.anomaly_reason,
+                latest_price.c.anomaly_basis,
             )
             .select_from(listings)
             .outerjoin(latest_price, latest_price.c.listing_id == listings.c.id)
@@ -248,6 +254,8 @@ class ListingRepository:
                 observed_at=row.observed_at,
                 condition=row.condition,
                 condition_source=row.condition_source,
+                anomaly_reason=row.anomaly_reason,
+                anomaly_basis=row.anomaly_basis,
             )
             for row in rows
         ]

@@ -493,6 +493,7 @@ def _scorecard_panel_view(
 def _candidate_sources_panel(
     candidates: list[CandidateListing],
     *,
+    scorecards: dict[str, SiteScorecard] | None = None,
     as_of: datetime | None = None,
 ) -> html.Div | html.Table:
     """Render the pending candidate sources list with approve/reject actions."""
@@ -519,6 +520,23 @@ def _candidate_sources_panel(
             else html.Span("—", className="price-value")
         )
 
+        if scorecards and cand.site_key in scorecards:
+            card = scorecards[cand.site_key]
+            scorecard_cell: Any = html.Div(
+                [
+                    html.Span(
+                        f"Consistency: {card.consistency.confidence.upper()}",
+                        className=f"scorecard-dim-{card.consistency.confidence}",
+                    ),
+                    html.Div(card.reliability.detail, className="scorecard-detail"),
+                ],
+                className="scorecard-cell",
+            )
+        else:
+            scorecard_cell = html.Span(
+                "Not enough data yet", className="scorecard-dim-unavail"
+            )
+
         rows.append(
             html.Tr(
                 [
@@ -529,6 +547,7 @@ def _candidate_sources_panel(
                         className="price-value",
                     ),
                     html.Td(score_badge),
+                    html.Td(scorecard_cell),
                     html.Td(expiry_str, className="price-value"),
                     html.Td(
                         html.A(
@@ -566,6 +585,7 @@ def _candidate_sources_panel(
                         html.Th("Discovered Product Title"),
                         html.Th("Price"),
                         html.Th("Match Score"),
+                        html.Th("Site Scorecard"),
                         html.Th("Time Limit"),
                         html.Th("Link"),
                         html.Th("Actions"),
@@ -1087,7 +1107,12 @@ def register_callbacks(app: Dash, engine: Engine) -> None:
             discover_sources_for_product(tracked.id, engine, get_settings())
 
         pending = candidates_repository.list_pending(tracked.id)
-        return _candidate_sources_panel(pending)
+        scorecard_map: dict[str, SiteScorecard] = {}
+        for cond in ("new", "used", "refurb", "enterprise_surplus"):
+            for card in scorecards_for_product(engine, product_id, condition=cond):
+                if card.site_key not in scorecard_map:
+                    scorecard_map[card.site_key] = card
+        return _candidate_sources_panel(pending, scorecards=scorecard_map)
 
     custom_urls_repository = CustomListingUrlRepository(engine)
 

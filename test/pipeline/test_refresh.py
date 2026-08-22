@@ -17,6 +17,7 @@ from pipeline.refresh import (
     run_monitoring_loop,
     sites_within_min_interval,
 )
+from storage.forecasts import ForecastSnapshotRepository
 from storage.repository import ListingRepository
 from storage.schema import site_settings
 from storage.watchlist import TrackedProduct, TrackedProductRepository
@@ -126,6 +127,12 @@ def test_refresh_tracked_product(
     )
     assert len(listings) == 1
     assert listings[0].price_amount == 699.0
+
+    # Forecast context is retrained and persisted on the refresh tick, even
+    # when the initial history is honestly too thin to project.
+    forecast = ForecastSnapshotRepository(in_memory_engine).get(tracked.product_id)
+    assert forecast is not None
+    assert forecast.is_available is False
 
 
 def test_refresh_watchlist_filters_due_and_disabled(

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import contextlib
-from collections import Counter
 from collections.abc import Mapping
 from datetime import datetime, timedelta
 from typing import Any
@@ -27,12 +26,8 @@ from dashboard.stats import (
     compute_price_stats,
 )
 from fetch.circuit_breaker import CircuitBreaker
-from forecasting.holt import (
-    EurPricePoint,
-    ForecastResult,
-    forecast_eur_prices,
-    forecast_prices,
-)
+from forecasting.holt import ForecastResult, forecast_prices
+from forecasting.service import untrained_forecast
 from matching.condition import extract_verbatim_label
 from pipeline.custom_url import track_and_process_custom_url
 from pipeline.discover import run_discovery
@@ -43,6 +38,7 @@ from scrapers.base import ScraperAdapter
 from scrapers.registry import _build_all_scrapers
 from storage.candidates import CandidateListing, CandidateListingRepository
 from storage.custom_urls import CustomListingUrl, CustomListingUrlRepository
+from storage.forecasts import ForecastSnapshotRepository
 from storage.repository import (
     ListingRepository,
     ListingSummary,
@@ -1016,28 +1012,6 @@ def _forecast_metadata(forecast: ForecastResult) -> str:
     )
 
 
-def _eur_forecast_for_histories(histories: list[ListingHistory]) -> ForecastResult:
-    """Train only the most-observed exact known condition in persisted EUR data."""
-    points = [
-        EurPricePoint(
-            observed_at=observation.observed_at,
-            eur_amount=observation.eur_amount,
-            condition=observation.condition,
-        )
-        for history in histories
-        for observation in history.observations
-    ]
-    known_conditions = [
-        point.condition
-        for point in points
-        if point.condition not in (None, "", "unknown")
-    ]
-    condition = (
-        Counter(known_conditions).most_common(1)[0][0] if known_conditions else None
-    )
-    return forecast_eur_prices(points, condition=condition)
-
-
 def _build_tiered_low_badge(tier_label: str) -> html.Span:
     """Format a descriptive tiered-low badge (v2.14)."""
     labels = {
@@ -1171,7 +1145,9 @@ def _product_view(
     histories = listing_histories_for_product(
         product_repository.engine, product_id, include_anomalous=include_anomalous
     )
-    forecast = _eur_forecast_for_histories(histories)
+    forecast = ForecastSnapshotRepository(product_repository.engine).get(product_id)
+    if forecast is None:
+        forecast = untrained_forecast()
     timeline = product_eur_timeline(histories)
     ref_time = datetime.now()
 

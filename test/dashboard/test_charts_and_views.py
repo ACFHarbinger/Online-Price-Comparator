@@ -10,7 +10,6 @@ from dashboard.callbacks import (
     _build_hero_metrics,
     _build_trend_indicator,
     _build_volatility_badge,
-    _eur_forecast_for_histories,
     _forecast_metadata,
     _format_delta_vs_avg,
     _retailer_table,
@@ -18,6 +17,7 @@ from dashboard.callbacks import (
 from dashboard.charts import build_bar_chart, build_forecast_chart, build_line_chart
 from dashboard.stats import PriceSeriesStats
 from forecasting.holt import forecast_prices
+from forecasting.service import forecast_for_histories
 from storage.repository import ListingSummary, ProductPriceStats, SitePricePoint
 
 
@@ -168,7 +168,7 @@ def test_eur_forecast_uses_most_observed_known_condition() -> None:
         ],
     )
 
-    forecast = _eur_forecast_for_histories([new_history, used_history])
+    forecast = forecast_for_histories([new_history, used_history])
 
     assert forecast.is_available is True
     assert forecast.currency == "EUR"

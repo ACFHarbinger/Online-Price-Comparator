@@ -16,6 +16,7 @@ from sqlalchemy import Engine, func, select
 
 from alerting.service import AlertingService
 from config.settings import Settings, get_settings
+from forecasting.service import forecast_for_refresh
 from pipeline.discover import run_discovery
 from pipeline.snapshot import persist_snapshot
 from storage.repository import MATCHED_STATUSES
@@ -133,6 +134,14 @@ def refresh_tracked_product(
         skip_site_keys=skip_sites or None,
     )
     persist_snapshot(tracked.query_text, raw_listings, engine)
+    try:
+        forecast_for_refresh(engine, tracked.product_id)
+    except Exception:  # pragma: no cover - forecast context must not break refresh
+        logger.exception(
+            "Forecast retraining failed for tracked product %d (%r); continuing",
+            tracked.id,
+            tracked.query_text,
+        )
     try:
         from pipeline.custom_url import refresh_custom_urls_for_product
 

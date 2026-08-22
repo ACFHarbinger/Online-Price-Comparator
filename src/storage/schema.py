@@ -169,6 +169,26 @@ tracked_product_site_overrides = Table(
     ),
 )
 
+# v2.18 persisted, read-only forecast context. A refresh replaces the one
+# product-level snapshot atomically; historical observations remain the source
+# of truth in price_history.
+forecast_snapshots = Table(
+    "forecast_snapshots",
+    metadata,
+    Column("product_id", Integer, ForeignKey("products.id"), primary_key=True),
+    Column("currency", String, nullable=True),
+    Column("condition", String, nullable=True),
+    Column("trained_at", DateTime, nullable=True),
+    Column("last_observed_at", DateTime, nullable=True),
+    Column("observation_count", Integer, nullable=False),
+    Column("day_count", Integer, nullable=False),
+    Column("horizon_days", Integer, nullable=False),
+    Column("confidence_level", Float, nullable=False),
+    Column("points_json", String, nullable=False),
+    Column("unavailable_reason", String, nullable=True),
+    Column("refreshed_at", DateTime, nullable=False),
+)
+
 # v2.3/v2.4 alerting delivery log (see src/alerting/). One row per successful
 # channel dispatch. Used both for audit and for the per-product + alert-type
 # cooldown, so a crossing below a target notifies once rather than on every

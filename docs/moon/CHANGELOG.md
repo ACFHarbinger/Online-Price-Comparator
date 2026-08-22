@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **v2.20 scope expanded to every site (2026-08-22, Harbinger's call):**
+  `client_extension` becomes the intended collection method for every
+  tracked site, not only ones whose ToS objects to server-side automation
+  — also sidesteps Amazon.es's Akamai and PcComponentes's Cloudflare
+  blocking, and reduces server-side request volume generally. Rollout
+  order: Portugal + Spain first, then France, then Germany, then the
+  rest. `collection_method` stays `server_scrape` per site (existing
+  scrapers keep running) until that site's content script actually ships.
+  `client_side_monitor.md`'s new "Scope expansion" section has the full
+  site list and the technical approach (one shared, hostname-driven
+  content script, not N near-duplicates). Documentation only this pass.
+
 ### Fixed
 
 - **Closed a real policy-enforcement gap on Leboncoin (2026-08-22):** while

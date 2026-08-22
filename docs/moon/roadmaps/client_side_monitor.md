@@ -1,8 +1,58 @@
 # Client-Side Monitor (Browser Extension) Roadmap
 
-**Status:** 🚧 In progress (v2.20) — v0 detection + local-file handoff shipped 2026-08-21 (Leboncoin.fr MV3 extension + `cli refresh --import-extension-file` → `persist_snapshot`); the server-side enforcement gap this feature exists to close was found + fixed 2026-08-22 (`SERVER_SIDE_BLOCKED_DOMAINS` in `src/scrapers/custom_url.py`); **v1 localhost HTTP callback** (`POST /api/extension/import` on the Dash/Flask server, reusing `import_records` → `persist_snapshot`) and a **first-class per-site `collection_method` column** on `site_settings` (enforced by `pipeline.discover`) shipped 2026-08-22. What remains is a data decision, not code: flag specific sites `client_extension` once Harbinger confirms each one · **Source:** direct user request, 2026-08-21 —
+**Status:** 🚧 In progress (v2.20) — v0/v1 infra shipped 2026-08-21/22 (Leboncoin content script, JSON-lines + localhost-callback handoff, loopback-enforced, `collection_method` column). **Scope decision, 2026-08-22 (Harbinger)**: every tracked site gets a client-extension content script, not just Leboncoin — rollout order **PT/ES first, then FR, then DE, then the rest**. See [Scope expansion](#scope-expansion-2026-08-22-every-site-not-just-leboncoin) below · **Source:** direct user request, 2026-08-21 —
 un-parks `ROADMAP.md`'s "Browser extension / userscript" Parked row under a
 new, much more specific motivation than the original entry's "real UX win."
+
+## Scope expansion (2026-08-22): every site, not just Leboncoin
+
+Harbinger's call: `client_extension` becomes the collection method for
+**every** tracked site except where a better mechanism already exists
+(SerpAPI's `search_api`, KuantoKusta's `hint_only`) — not only the sites
+whose ToS specifically objects to server-side automation. This is a
+different (bigger) rationale than v2.20's original motivation, worth
+stating plainly: browser-based collection also sidesteps this repo's two
+worst *reliability* problems (Amazon.es's intermittent Akamai challenge,
+PcComponentes's Cloudflare Turnstile block — both documented in
+[Reliability hardening](scrapers_and_retailers.md#reliability-hardening-v18)
+as unsolved without the still-off-by-default Playwright fallback), reduces
+server-side request volume across the board, and gets fresher data for
+free whenever the user is naturally browsing a tracked listing. Existing
+`scrapers/` adapters are **not removed** — `collection_method` still
+defaults to `server_scrape` per site until its extension content script
+actually ships and is flagged over, so there's no coverage gap mid-rollout.
+
+**Rollout priority** (build order, not a hard gate — land and flip each
+site's `collection_method` as its script ships, don't batch a whole tier):
+
+1. **Portugal + Spain**: Amazon.es, PcComponentes, PCDIGA, Worten, Fnac.pt,
+   Chip7, Wallapop.es (Wallapop was already approved server-side/Tier-A-only
+   on 2026-08-21 — extension coverage is additive here, not a policy
+   change), KuantoKusta (stays `hint_only`, no extension needed — it never
+   becomes a price source, see v2.8).
+2. **France**: LDLC.com, Leboncoin.fr (done).
+3. **Germany**: Mindfactory.de, Alternate.de, Geizhals.de, Kleinanzeigen.de.
+4. **Others**: Scan.co.uk, Overclockers UK, Newegg (global tier), eBay.de
+   (eBay has an official Browse API — `search_api` may be the better fit
+   for eBay specifically once that's wired up, not necessarily extension;
+   flag this to Harbinger when this tier's turn comes rather than
+   defaulting silently).
+
+**Technical approach — generalize, don't duplicate per site.** Leboncoin's
+`content.js` (`findProduct`/`extractSnapshot`) already reads generic
+schema.org `Product`/`Offer` JSON-LD, the same structured-data-first
+preference every Python scraper uses — only `site_key="leboncoin"` and
+`manifest.json`'s `host_permissions`/`matches` are Leboncoin-specific. The
+right shape for N sites is **one shared content script** whose site_key
+derives from `window.location.hostname`, with `manifest.json`'s
+`host_permissions`/`content_scripts.matches` listing every site's known
+listing-page URL pattern (one array, added to per tier) — not N
+near-duplicate files. Per-site CSS-selector fallback (for a site whose
+listing pages lack complete JSON-LD) stays a small per-site module,
+mirroring how `scrapers/retailer_base.py` already splits shared plumbing
+from per-site fallback parsing. Reuse that Python-side fallback logic's
+*shape*, not the code itself (different language) — same design
+discipline, not a shared file.
 
 ## Why this exists: a legal/ethical distinction, not a technical workaround
 

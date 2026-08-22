@@ -33,6 +33,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **eBay.de Browse API SearchProvider (#40, 2026-08-22):** implemented official
+  eBay REST Browse API integration (`src/search/providers/ebay.py`) fulfilling the
+  `SearchProvider` Protocol. Uses OAuth2 client-credentials authentication with in-memory
+  token caching, queries `EBAY_DE` item summaries, tags item origin regime (`eu_domestic`,
+  `uk`, `non_eu`), and produces structured `RawListing` records with full condition and
+  pricing details. Fails closed gracefully when unconfigured or on network/API errors.
+  Registered in `src/search/registry.py` and configurable via `EBAY_CLIENT_ID` /
+  `EBAY_CLIENT_SECRET` / `EBAY_MARKETPLACE_ID`. Tests in `test/search/test_ebay_provider.py`.
+
 - **v2.18 exact-condition EUR forecast training (2026-08-22):** Holt
   forecasting now trains on persisted `price_eur_equivalent` observations from
   one exact known condition, never a mixed native-currency/condition series.

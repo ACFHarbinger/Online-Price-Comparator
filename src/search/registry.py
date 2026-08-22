@@ -10,6 +10,7 @@ import logging
 
 from config.settings import Settings
 from search.base import SearchProvider
+from search.providers.ebay import EbayBrowseProvider
 from search.providers.null_provider import NullProvider
 from search.providers.serpapi import SerpApiProvider
 
@@ -21,6 +22,11 @@ def _build_all_providers(settings: Settings) -> list[SearchProvider]:
     return [
         NullProvider(),
         SerpApiProvider(api_key=settings.serpapi_key or ""),
+        EbayBrowseProvider(
+            client_id=settings.ebay_client_id,
+            client_secret=settings.ebay_client_secret,
+            marketplace_id=settings.ebay_marketplace_id,
+        ),
         # GoogleCseProvider stays unwired (needs api_key + cx).
     ]
 
